@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\AppInfo;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -40,6 +41,7 @@ class Application
 	#[\Override]
 	public function register( IRegistrationContext $context ): void
 	{
+		$context->registerConfigLexicon( ConfigLexicon::class );
 	}
 
 	#[\Override]

@@ -1,13 +1,14 @@
 > **Fragment** — inlined by `tools/sync-docs.sh`; not a standalone document.
 
-# {{project_name}} — Project Contract (v1.0.0)
+# {{project_name}} — Project Contract (v1.1.0)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `{{guidelines_root}}/README.md` for people,
 so that the two cannot drift apart.
 
-A Nextcloud app, app id `large_file_previews`, that renders previews of files too large for
-Nextcloud's own providers by running a command-line renderer on the file's local path:
+A Nextcloud app, app id `large_file_previews`,
+that renders previews of files too large for Nextcloud's own providers
+by running a command-line renderer on the file's local path:
 `pdftoppm` (poppler) for PDF and Illustrator files first, libvips for large images later.
 
 ## 1. Project Facts
@@ -95,14 +96,22 @@ release:
 ### 3.3 Running external programs
 
 - A program is started with `proc_open()` and an argument **array**, never a shell string.
-- The renderer's path is found with `OCP\IBinaryFinder`. It is never read from app config:
-  a Nextcloud administrator can set app config over the provisioning API without any shell
-  access, and a path set that way would be code execution as the web server's user.
-- The limits that wrap it - `timeout`, `prlimit --as`, `choom -n` - are each switchable and
-  each has a configurable value with a default (the app's `ConfigLexicon`).
+- A program's path is found with `OCP\IBinaryFinder`,
+  or overridden in system config (`large_file_previews.binaries` in `config.php`),
+  and nowhere else.
+  It is never read from app config:
+  a Nextcloud administrator can set app config over the provisioning API without any shell access,
+  and a path set that way would be code execution as the web server's user.
+  Whoever can write `config.php` can run code already.
+  An override that is not an executable file leaves its program missing;
+  it does not fall back to the finder's.
+- The limits that wrap it - `timeout`, `prlimit --as`, `choom -n` -
+  are each switchable and each has a configurable value with a default
+  (the app's `ConfigLexicon`).
+  A limit switched on whose program is missing declines the file: it fails closed.
 - Success is judged by the exit status and the output file, not by stderr being empty.
-- Only a local, unencrypted file is rendered; anything else is declined, so the file is never
-  copied to a temporary file first.
+- Only a local, unencrypted file is rendered; anything else is declined,
+  so the file is never copied to a temporary file first.
 
 ### 3.4 Every user-facing text is translatable
 

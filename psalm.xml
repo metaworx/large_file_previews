@@ -27,4 +27,12 @@
 	<extraFiles>
 		<directory name="vendor" />
 	</extraFiles>
+
+	<!--
+		A server interface an OCP one extends, which the nextcloud/ocp package
+		does not ship: a stub for analysis, not a use of the server's code.
+	-->
+	<stubs>
+		<file name="tests/stubs/OC/Hooks/Emitter.php" />
+	</stubs>
 </psalm>

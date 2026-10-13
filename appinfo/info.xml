@@ -36,4 +36,10 @@ Only files on local, unencrypted storage are rendered. Everything else is left t
 		<nextcloud min-version="33"
 				   max-version="35"/>
 	</dependencies>
+	<commands>
+		<command>OCA\LargeFilePreviews\Command\ConfigShow</command>
+		<command>OCA\LargeFilePreviews\Command\ConfigGet</command>
+		<command>OCA\LargeFilePreviews\Command\ConfigSet</command>
+		<command>OCA\LargeFilePreviews\Command\ConfigUnset</command>
+	</commands>
 </info>

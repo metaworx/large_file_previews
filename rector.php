@@ -30,8 +30,9 @@ return RectorConfig::configure()
 	)
 	->withSkip(
 		[
-			// Fixtures are what they are on purpose.
+			// Fixtures and stubs are what they are on purpose.
 			__DIR__ . '/tests/fixtures',
+			__DIR__ . '/tests/stubs',
 			__DIR__ . '/tests/rector-bootstrap.php',
 		],
 	)

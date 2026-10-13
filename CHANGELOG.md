@@ -14,4 +14,13 @@ the first stable release.
 ### Added
 
 - `appinfo/info.xml`: the app, `large_file_previews`, for Nextcloud 33
-  to 35 and PHP 8.2 and later; it registers nothing yet.
+  to 35 and PHP 8.2 and later.
+
+- `README.md`, *Configuration*: which files are taken, per MIME type and
+  extension, by size; and the timeout, memory cap and OOM score of each.
+
+- `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
+  what a type or file resolves to, and validated changes.
+
+- `large_file_previews.binaries` in `config.php`: a program's path,
+  overriding the one Nextcloud finds.

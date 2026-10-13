@@ -81,3 +81,7 @@ foreach ( $candidates as $ncRoot )
 $loader = require $appRoot . '/vendor/autoload.php';
 $loader->addPsr4( 'OCP\\', $appRoot . '/vendor/nextcloud/ocp/OCP' );
 $loader->addPsr4( 'NCU\\', $appRoot . '/vendor/nextcloud/ocp/NCU' );
+
+// The server interface OCP\Files\IRootFolder extends, which nextcloud/ocp
+// does not ship; Psalm reads the same stub.
+$loader->addClassMap( [ 'OC\\Hooks\\Emitter' => __DIR__ . '/stubs/OC/Hooks/Emitter.php' ] );

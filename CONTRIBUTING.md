@@ -74,7 +74,12 @@ and runs in a test instance through `GUIDELINES/shared/lang/php/tools/phpunit`
 - **Public API only.**
   The app uses `OCP\` and never extends a class from `OC\`.
 - **Programs run through `proc_open()` with an argument array**,
-  never a shell string, and their paths are never read from app config.
+  never a shell string.
+  Their paths come from Nextcloud's binary finder or from system config,
+  never from app config, which the provisioning API can write.
+- **Settings are read and written through `ConfigurationService`**,
+  by the commands and the settings page alike,
+  so a value is validated the same way whichever way it comes.
 - **The preview provider never throws.**
   Every failure returns `null`, so the next provider is tried.
 - **Every text a person reads is translatable**:

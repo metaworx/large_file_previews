@@ -36,6 +36,60 @@ so the file is never loaded into PHP, copied, or sent to another service.
 - For the limits around each render, each optional:
   `timeout` (coreutils), `prlimit` and `choom` (util-linux).
 
+## Configuration
+
+Which files the app takes is set per MIME type and per extension:
+whether it takes them, and from which size up to which size.
+Anything it declines goes to Nextcloud's next preview provider.
+Each field is resolved on its own, the most specific level that sets it winning:
+the extension, then the MIME type, then the app's default.
+Out of the box, PDF and Illustrator files are taken at any size,
+and every image type is off, from 50 MB up once switched on.
+
+```bash
+occ lfp:config:show
+```
+
+```bash
+occ lfp:config:get --file /alice/files/scan.pdf
+```
+
+```bash
+occ lfp:config:set --mime image/tiff --enabled=yes
+```
+
+```bash
+occ lfp:config:set --ext tif --min=200
+```
+
+```bash
+occ lfp:config:set timeout_seconds 60
+```
+
+`config:show` lists everything, stored and resolved,
+and what is set but not used;
+`config:get` says what one MIME type, extension, size or file resolves to,
+and why;
+`config:unset` returns a setting or a rule to its default.
+Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
+
+Each render runs under three limits, each switchable:
+a timeout (`timeout_seconds`, 30 by default),
+a cap on its address space (`prlimit_as_mb`, 2048),
+and an out-of-memory score that has the kernel kill it before a web server worker
+(`choom_adjust`, 1000).
+A limit switched on whose program is missing declines the file rather than run without it.
+
+A program's path can be overridden, in `config.php` only:
+
+```bash
+occ config:system:set large_file_previews.binaries pdftoppm --value=/opt/poppler/bin/pdftoppm
+```
+
+App config is no place for a path:
+an administrator can write it over the provisioning API without shell access,
+and a path is code the web server runs.
+
 ## License
 
 AGPL-3.0-or-later; see [LICENSE](LICENSE).
