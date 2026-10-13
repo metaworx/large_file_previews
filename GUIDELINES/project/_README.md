@@ -2,19 +2,26 @@
 
 # {{project_name}} (v1.0.0)
 
-<!-- TEMPLATE: installed as {{guidelines_root}}/project/_README.md. This is the
-     opening of the generated {{guidelines_root}}/README.md, and the only
-     project document written for people first. Replace every {{TODO: …}}.
-     Keep it short: what this is, how to work on it, where the rules live. -->
-
-{{TODO: one paragraph: what this project is and who it is for}}
+Large File Previews is a Nextcloud app for instances that hold files too large for
+Nextcloud's own preview providers - multi-gigabyte PDFs, and later very large images. It
+renders the first page or a reduced image straight from the file's local path with a
+command-line renderer (`pdftoppm` first), so no file is copied into memory or sent over a
+socket, and every renderer runs under a time limit, a memory cap and a low out-of-memory
+priority. It is for administrators who run Nextcloud on local storage and want sharp
+previews of archives such as scanned catalogues.
 
 ## Working on it
 
-{{TODO: how to get from a fresh clone to a running checkout - the commands,
-not the theory.
-Anything an agent must also know belongs in _CONTRACT.md instead,
-where both audiences read it.}}
+```bash
+git clone --recurse-submodules git@gitlab.com:metaworx/open-source/nextcloud/large_file_previews.git
+cd large_file_previews
+composer install
+```
+
+The app is tested inside a `nextcloud_testing` instance, which mounts this checkout as
+`apps/large_file_previews`; put that instance's directory in
+`GUIDELINES/config.local.ini` under `[phpunit]` (see the contract below). The instance
+needs `poppler-utils` installed.
 
 ## The rules that apply here
 
