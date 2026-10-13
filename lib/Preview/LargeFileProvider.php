@@ -11,9 +11,11 @@ namespace OCA\LargeFilePreviews\Preview;
 
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\TypePolicy;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\File;
 use OCP\Files\FileInfo;
 use OCP\IImage;
@@ -43,11 +45,13 @@ class LargeFileProvider
 //  constructor
 
 	public function __construct(
-		private readonly TypePolicy      $policy,
-		private readonly Renderers       $renderers,
-		private readonly ImageLoader     $images,
-		private readonly ITempManager    $tempManager,
-		private readonly LoggerInterface $logger,
+		private readonly TypePolicy           $policy,
+		private readonly Renderers            $renderers,
+		private readonly ImageLoader          $images,
+		private readonly ITempManager         $tempManager,
+		private readonly ConfigurationService $config,
+		private readonly ITimeFactory         $time,
+		private readonly LoggerInterface      $logger,
 	)
 	{
 	}
@@ -183,6 +187,19 @@ class LargeFileProvider
 				],
 			);
 
+			try
+			{
+				$this->config->recordFailure(
+					$this->time->getTime(),
+					$file->getMimetype(),
+					new RenderOutcome( Outcome::START_FAILED, 'unexpected error: ' . $e->getMessage() ),
+				);
+			}
+			catch ( Throwable )
+			{
+				// Already logged; the record is a convenience.
+			}
+
 			return null;
 		}
 		finally
@@ -213,6 +230,22 @@ class LargeFileProvider
 				'exit_status' => $outcome->exitStatus,
 			],
 		);
+
+		// For the setup check: a log line alone goes unread.
+		try
+		{
+			$this->config->recordFailure( $this->time->getTime(), $file->getMimetype(), $outcome );
+		}
+		catch ( Throwable $e )
+		{
+			$this->logger->warning(
+				'Could not record the failure: {message}',
+				[
+					'message'   => $e->getMessage(),
+					'exception' => $e,
+				],
+			);
+		}
 
 		return null;
 	}

@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\AppInfo;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Preview\LargeFileProvider;
+use OCA\LargeFilePreviews\SetupCheck\RendererCheck;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -45,6 +46,7 @@ class Application
 	{
 		$context->registerConfigLexicon( ConfigLexicon::class );
 		$context->registerPreviewProvider( LargeFileProvider::class, SupportedTypes::MIME_REGEX );
+		$context->registerSetupCheck( RendererCheck::class );
 	}
 
 	#[\Override]

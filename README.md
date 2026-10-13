@@ -36,6 +36,23 @@ so the file is never loaded into PHP, copied, or sent to another service.
 - For the limits around each render, each optional:
   `timeout` (coreutils), `prlimit` and `choom` (util-linux).
 
+## When previews fail
+
+A failed render is a warning in the log,
+and the preview is left to the next provider.
+So that a failing renderer is noticed,
+the administration overview has a check of its own:
+an error while something the app needs is missing,
+and a warning naming the last render that failed, for a day after it did.
+
+```bash
+occ lfp:check
+```
+
+lists everything the app needs - the PHP functions that start a program,
+the extensions, and each program with its path and version -
+and exits 1 while something needed is missing.
+
 ## Configuration
 
 Which files the app takes is set per MIME type and per extension:

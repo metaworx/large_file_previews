@@ -190,7 +190,40 @@ class CommandRunner
 	/**
 	 * @param list<string> $command
 	 */
-	private function execute( array $command ): RenderOutcome
+	/**
+	 * Runs a program by name with no limits around it, its stdout kept with
+	 * its stderr: for a version, which some programs print to one and some
+	 * to the other. Not for rendering.
+	 *
+	 * @param list<string> $arguments
+	 */
+	public function runBare(
+		string $program,
+		array  $arguments,
+	): RenderOutcome
+	{
+		$location = $this->binaries->locate( $program );
+
+		if ( ! $location->isFound() )
+		{
+			return new RenderOutcome( Outcome::PROGRAM_MISSING, sprintf( '%s not found', $program ) );
+		}
+
+		if ( ! self::canStartProcesses() )
+		{
+			return new RenderOutcome( Outcome::PROC_OPEN_UNAVAILABLE, 'proc_open() is disabled' );
+		}
+
+		return $this->execute( [ (string) $location->path, ...$arguments ], true );
+	}
+
+	/**
+	 * @param list<string> $command
+	 */
+	private function execute(
+		array $command,
+		bool  $keepStdout = false,
+	): RenderOutcome
 	{
 		$stderrFile = $this->tempManager->getTemporaryFile( '.stderr' );
 
@@ -205,8 +238,10 @@ class CommandRunner
 				$command,
 				[
 					0 => [ 'file', '/dev/null', 'r' ],
-					1 => [ 'file', '/dev/null', 'w' ],
-					2 => [ 'file', $stderrFile, 'w' ],
+					1 => $keepStdout
+						? [ 'file', $stderrFile, 'a' ]
+						: [ 'file', '/dev/null', 'w' ],
+					2 => [ 'file', $stderrFile, 'a' ],
 				],
 				$pipes,
 				null,

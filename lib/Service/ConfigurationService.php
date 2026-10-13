@@ -319,6 +319,55 @@ class ConfigurationService
 		$this->storeMap( ConfigLexicon::EXTENSIONS, $stored );
 	}
 
+	/**
+	 * The last failed render, or null where none is recorded.
+	 *
+	 * @return array{time: int, mime: string, outcome: string, reason: string, exit_status: ?int}|null
+	 */
+	public function lastFailure(): ?array
+	{
+		$stored = $this->storedMap( ConfigLexicon::LAST_FAILURE );
+
+		if ( ! is_int( $stored['time'] ?? null ) || ! is_string( $stored['reason'] ?? null ) )
+		{
+			return null;
+		}
+
+		return [
+			'time'        => $stored['time'],
+			'mime'        => is_string( $stored['mime'] ?? null ) ? $stored['mime'] : '',
+			'outcome'     => is_string( $stored['outcome'] ?? null ) ? $stored['outcome'] : '',
+			'reason'      => $stored['reason'],
+			'exit_status' => is_int( $stored['exit_status'] ?? null ) ? $stored['exit_status'] : null,
+		];
+	}
+
+	/**
+	 * Records a failed render, replacing the one before.
+	 *
+	 * Written on failure only, so a render that succeeds costs no write.
+	 * Concurrent failures may overwrite each other; the last one wins,
+	 * which is all the record promises.
+	 */
+	public function recordFailure(
+		int           $time,
+		string        $mime,
+		RenderOutcome $outcome,
+	): void
+	{
+		$this->appConfig->setValueArray(
+			Application::APP_ID,
+			ConfigLexicon::LAST_FAILURE,
+			[
+				'time'        => $time,
+				'mime'        => $mime,
+				'outcome'     => $outcome->outcome->value,
+				'reason'      => $outcome->reason,
+				'exit_status' => $outcome->exitStatus,
+			],
+		);
+	}
+
 	private function getInt( string $key ): int
 	{
 		$spec  = self::scalarSpec( $key );

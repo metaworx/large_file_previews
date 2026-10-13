@@ -13,6 +13,8 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Outcome;
+use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\TestCase;
@@ -234,6 +236,26 @@ class ConfigurationServiceTest
 		$this->expectExceptionMessage( 'Unknown field colour' );
 
 		$this->service()->unsetExtensionRule( 'tif', [ 'colour' ] );
+	}
+
+	public function testTheLastFailureIsRecordedAndReadBack(): void
+	{
+		$service = $this->service();
+		self::assertNull( $service->lastFailure() );
+
+		$service->recordFailure( 1000, 'application/pdf', new RenderOutcome( Outcome::TIMED_OUT, 'timed out (exit status 124)', 124 ) );
+		$service->recordFailure( 2000, 'application/illustrator', new RenderOutcome( Outcome::FAILED, 'exit status 1', 1 ) );
+
+		self::assertSame(
+			[
+				'time'        => 2000,
+				'mime'        => 'application/illustrator',
+				'outcome'     => 'failed',
+				'reason'      => 'exit status 1',
+				'exit_status' => 1,
+			],
+			$service->lastFailure(),
+		);
 	}
 
 	/**

@@ -24,6 +24,7 @@ use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\Files\File;
 use OCP\Files\Storage\IStorage;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IImage;
 use OCP\ITempManager;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -164,6 +165,28 @@ class LargeFileProviderTest
 
 		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 ) );
 		self::assertDirectoryDoesNotExist( $this->folder );
+		self::assertSame(
+			[
+				'time'        => 1_760_000_000,
+				'mime'        => 'application/pdf',
+				'outcome'     => 'failed',
+				'reason'      => 'exit status 1',
+				'exit_status' => 1,
+			],
+			$this->appValues[ ConfigLexicon::LAST_FAILURE ],
+		);
+	}
+
+	public function testASuccessWritesNoRecord(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) );
+		$this->images->method( 'load' )
+		             ->willReturn( $this->createMock( IImage::class ) )
+		;
+
+		$this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 );
+
+		self::assertArrayNotHasKey( ConfigLexicon::LAST_FAILURE, $this->appValues );
 	}
 
 	public function testOutputThatIsNoImageIsNull(): void
@@ -249,11 +272,20 @@ class LargeFileProviderTest
 		            )
 		;
 
+		$config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() );
+
+		$time = $this->createMock( ITimeFactory::class );
+		$time->method( 'getTime' )
+		     ->willReturn( 1_760_000_000 )
+		;
+
 		return new LargeFileProvider(
-			new TypePolicy( new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() ) ),
+			new TypePolicy( $config ),
 			new Renderers( new PopplerRenderer( $this->runner ) ),
 			$this->images,
 			$tempManager,
+			$config,
+			$time,
 			$this->logger,
 		);
 	}

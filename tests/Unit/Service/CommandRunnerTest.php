@@ -195,6 +195,20 @@ class CommandRunnerTest
 		self::assertSame( '900', $outcome->stderr );
 	}
 
+	/**
+	 * For a version: no limits, so none missing stops it, and stdout kept.
+	 */
+	public function testABareRunHasNoLimitsAndKeepsStdout(): void
+	{
+		$this->requirePrograms( 'timeout' );
+
+		$outcome = $this->runner( [ 'version' => (string) self::which( 'timeout' ) ] )->runBare( 'version', [ '--version' ] );
+
+		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
+		self::assertStringContainsString( 'timeout', $outcome->stderr );
+		self::assertSame( Outcome::PROGRAM_MISSING, $this->runner( [] )->runBare( 'pdftoppm', [ '-v' ] )->outcome );
+	}
+
 	public function testJudgeReadsSignalsAndStatuses(): void
 	{
 		self::assertSame( Outcome::KILLED, CommandRunner::judge( null, 9, '' )->outcome );
