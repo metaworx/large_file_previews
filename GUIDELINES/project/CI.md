@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.0.0)
+# CI Conventions — Large File Previews (v1.0.1)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -80,8 +80,9 @@ Left out, for now:
   as a bump without a cut for as long as nothing has been released.
   It joins the job with the first release.
 - **The line-break check** (`reflow.sh`),
-  because the project contract carries findings
-  that are fixed when the contract is next amended.
+  because `GUIDELINES/shared/tools/check` chooses its files and runs no check alone.
+  It joins with the changelog check,
+  when the first release lets the job run `check` whole.
 - **Commit messages**, which need the push's range,
   as `GUIDELINES/shared/tools/check` explains;
   they are checked before each commit instead.
@@ -107,8 +108,10 @@ A version tag runs the same jobs as a branch, and publishes nothing yet.
 - **MariaDB is a service of the job**,
   since a composite action cannot declare one;
   the server action is told `database: mysql`.
-- **The lint job checks out the submodule**,
-  since the guideline checks are its tools.
+- **The lint job checks out the submodule and the whole history**:
+  the guideline checks are the submodule's tools,
+  and `check-versions.sh` reads each document's revision record
+  from the commit that made it, which a shallow clone does not have.
 
 ## 8. Document Governance
 

@@ -41,11 +41,13 @@ jobs:
     if: *one-run-per-release
     steps:
       # The guidelines are a submodule; the guideline checks below run its
-      # tools.
+      # tools. The whole history: check-versions finds each document's
+      # revision record in the commit that made it.
       - name: Checkout app code
         uses: actions/checkout@v5
         with:
           submodules: true
+          fetch-depth: 0
 
       # The app's lowest PHP: the syntax check then proves the code runs
       # there, and Psalm, which refuses a PHP older than its own floor for
