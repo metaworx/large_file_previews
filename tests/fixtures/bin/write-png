@@ -1,0 +1,3 @@
+#!/bin/sh
+# Writes a 2 x 2 PNG to the path given, and succeeds.
+echo 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAC0lEQVQImWNgQAYAAA4AAbGa6gYAAAAASUVORK5CYII=' | base64 -d > "$1"

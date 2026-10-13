@@ -1,0 +1,3 @@
+#!/bin/sh
+# Says on stderr what OOM score adjustment it runs with.
+cat /proc/self/oom_score_adj >&2

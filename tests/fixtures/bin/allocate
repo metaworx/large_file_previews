@@ -1,0 +1,3 @@
+#!/bin/sh
+# Asks for 600 MB at once, as a runaway renderer might.
+exec php -n -d memory_limit=-1 -r 'echo strlen(str_repeat("x", 600 * 1024 * 1024));'

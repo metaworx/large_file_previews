@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs past any timeout a test sets, and ignores SIGTERM: only SIGKILL stops it.
+trap '' TERM
+exec sleep 30

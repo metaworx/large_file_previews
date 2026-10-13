@@ -1,0 +1,3 @@
+#!/bin/sh
+# Runs past any timeout a test sets, and stops on SIGTERM.
+exec sleep 30

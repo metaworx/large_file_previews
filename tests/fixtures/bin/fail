@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fails as a renderer refusing a file does: a message, and a status that is not 0.
+echo 'Syntax Error: Couldn'"'"'t read xref table' >&2
+exit 3

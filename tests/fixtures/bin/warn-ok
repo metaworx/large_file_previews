@@ -1,0 +1,4 @@
+#!/bin/sh
+# Succeeds with warnings on stderr, as pdftoppm does with many real files.
+echo 'Syntax Warning: Invalid least number of objects reading page offset hints table' >&2
+exit 0
