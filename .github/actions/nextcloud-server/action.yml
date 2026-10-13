@@ -1,0 +1,26 @@
+name: Nextcloud server
+description: >-
+  A Nextcloud server checked out at the given branch and installed on
+  MariaDB, the database the job declares as a service. The app is not
+  installed here.
+
+inputs:
+  nextcloud-version:
+    description: The server branch, e.g. stable34
+    required: true
+  php-version:
+    description: The PHP version to run it on
+    default: '8.3'
+
+runs:
+  using: composite
+  steps:
+    # Pinned to a commit on its main branch: see test.yml's upstream job.
+    - name: Set up Nextcloud Server Instance
+      uses: nextcloud/setup-server-action@8c97e01874d7cb9e1afb0e18cd4685d31518c848 # main after v0.5.0: Node 24 pins; see test.yml's upstream job
+      with:
+        nextcloud-version: ${{ inputs.nextcloud-version }}
+        php-version: ${{ inputs.php-version }}
+        node-version: 'false'
+        install: true
+        database: mysql

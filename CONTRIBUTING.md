@@ -6,6 +6,16 @@ is in [`GUIDELINES/README.md`](GUIDELINES/README.md) for people
 and [`AGENTS.md`](AGENTS.md) for agents, generated from the same sources;
 it is not repeated here.
 
+## Where the code lives
+
+- **GitLab** is the code host and the issue tracker,
+  and the `origin` to push to:
+  `gitlab.com/metaworx/open-source/nextcloud/large_file_previews`.
+- **GitHub** holds a mirror, `github.com/metaworx/large_file_previews`,
+  which GitLab's push mirror keeps current with every commit and tag.
+  CI runs there; `GUIDELINES/project/CI.md` says what it runs and why.
+  Nothing is pushed to the mirror directly: it would be overwritten.
+
 ## Commits and the changelog
 
 - The rules are [`GUIDELINES/shared/COMMIT.md`](GUIDELINES/shared/COMMIT.md):

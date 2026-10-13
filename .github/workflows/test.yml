@@ -1,0 +1,151 @@
+name: Nextcloud App Testing Matrix
+# Every branch, every pull request, and tags shaped like a version: the
+# lists under `push` are alternatives, not conditions that must all hold.
+on:
+  push:
+    branches: [ '**' ]
+    tags: [ 'v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*' ]
+  pull_request:
+jobs:
+  # .github/actions/nextcloud-server pins nextcloud/setup-server-action to a
+  # commit on its main branch, because its newest release, v0.5.0, still pins
+  # actions that run on Node 20. This fails once a newer release is out, so
+  # the pin goes back to a release tag and whatever else the release changed
+  # gets a look. It fails visibly without failing the run.
+  upstream:
+    name: Upstream releases
+    runs-on: ubuntu-latest
+    # One run per release: a [RELEASE] commit arrives on master and on its
+    # tag at once, and the tag's run is the one kept.
+    if: &one-run-per-release github.event_name != 'push' || github.ref_type == 'tag' || !startsWith(github.event.head_commit.message, '[RELEASE] ')
+    continue-on-error: true
+    permissions: {}
+    env:
+      # The newest release reviewed. Set it to the new tag in the commit that
+      # moves the pin.
+      REVIEWED: v0.5.0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: nextcloud/setup-server-action
+        run: |
+          latest="$(gh api repos/nextcloud/setup-server-action/releases/latest --jq .tag_name)"
+          echo "newest release: ${latest}, reviewed: ${REVIEWED}"
+          if [ "$latest" != "$REVIEWED" ]; then
+            echo "::error title=nextcloud/setup-server-action ${latest}::A release newer than ${REVIEWED} is out. Review it, pin the setup steps to it, and set REVIEWED."
+            exit 1
+          fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    if: *one-run-per-release
+    steps:
+      # The guidelines are a submodule; the guideline checks below run its
+      # tools.
+      - name: Checkout app code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      # The app's lowest PHP: the syntax check then proves the code runs
+      # there, and Psalm, which refuses a PHP older than its own floor for
+      # that series (8.2.27, 8.3.16, …), gets the latest 8.2 rather than
+      # whatever patch release the runner ships.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: PHP syntax check
+        run: composer lint
+
+      # --no-scripts: the root's post-install hook would install every tool
+      # under vendor-bin/, and this job needs two of them.
+      - name: PHP tools
+        run: |
+          composer install --no-interaction --no-scripts
+          composer bin ecs install --no-interaction
+          composer bin psalm install --no-interaction
+
+      - name: PHP coding style
+        run: composer cs:check
+
+      # Level 4, no baseline (psalm.xml): a finding fails the job.
+      - name: Psalm
+        run: composer psalm -- --no-progress --output-format=github
+
+      # What the app store validates at upload, validated here first; the
+      # schema is fetched so the check follows the store.
+      - name: App manifest against the store's schema
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxml2-utils
+          curl -fsSL -o info.xsd https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd
+          xmllint --noout --schema info.xsd appinfo/info.xml
+
+      # The checks that hold today, by name; GUIDELINES/project/CI.md §4 says
+      # which are left out and why.
+      - name: Guideline checks
+        run: |
+          GUIDELINES/shared/tools/sync-docs.sh --check
+          GUIDELINES/shared/tools/detect-languages.sh --check
+          GUIDELINES/shared/tools/check-versions.sh
+
+  phpunit:
+    runs-on: ubuntu-latest
+    if: *one-run-per-release
+    strategy:
+      fail-fast: false
+      matrix:
+        nextcloud-version: [ 'stable33', 'stable34', 'stable35' ]
+        php-version: [ '8.2', '8.3', '8.4' ]
+        # Nextcloud 35 refuses to start on PHP 8.2 (lib/versioncheck.php).
+        exclude:
+          - nextcloud-version: 'stable35'
+            php-version: '8.2'
+    name: NC ${{ matrix.nextcloud-version }} / PHP ${{ matrix.php-version }}
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: nextcloud
+          MYSQL_USER: nextcloud
+          MYSQL_PASSWORD: nextcloud
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout app code
+        uses: actions/checkout@v5
+
+      # The renderer the integration tests run, and the limits around it:
+      # timeout is coreutils and prlimit and choom util-linux, both already
+      # on the runner.
+      - name: poppler-utils
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils
+
+      - name: Nextcloud server
+        uses: ./.github/actions/nextcloud-server
+        with:
+          nextcloud-version: ${{ matrix.nextcloud-version }}
+          php-version: ${{ matrix.php-version }}
+
+      - name: App into the server
+        uses: ./.github/actions/app-into-server
+        with:
+          dev-dependencies: 'true'
+
+      - name: Run PHPUnit tests
+        run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings
+        working-directory: nextcloud/apps/large_file_previews
