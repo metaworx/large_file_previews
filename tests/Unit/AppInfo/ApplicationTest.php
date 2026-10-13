@@ -25,20 +25,33 @@ class ApplicationTest
 
 	public function testAppIdMatchesTheManifest(): void
 	{
-		$manifest = simplexml_load_file( dirname( __DIR__, 3 ) . '/appinfo/info.xml' );
-
-		self::assertNotFalse( $manifest );
-		self::assertSame( Application::APP_ID, (string) $manifest->id );
+		self::assertSame( Application::APP_ID, (string) self::manifest()->id );
 	}
 
 	public function testNamespaceMatchesTheManifest(): void
 	{
-		$manifest = simplexml_load_file( dirname( __DIR__, 3 ) . '/appinfo/info.xml' );
-
-		self::assertNotFalse( $manifest );
 		self::assertSame(
-			'OCA\\' . (string) $manifest->namespace . '\\AppInfo\\Application',
+			'OCA\\' . (string) self::manifest()->namespace . '\\AppInfo\\Application',
 			Application::class,
 		);
+	}
+
+
+//  static methods
+
+	/**
+	 * Read as a string: a booted server forbids libxml to load files itself
+	 * (its guard against external entities), so simplexml_load_file() fails
+	 * there.
+	 */
+	private static function manifest(): \SimpleXMLElement
+	{
+		$xml = file_get_contents( dirname( __DIR__, 3 ) . '/appinfo/info.xml' );
+		self::assertIsString( $xml );
+
+		$manifest = simplexml_load_string( $xml );
+		self::assertNotFalse( $manifest );
+
+		return $manifest;
 	}
 }
