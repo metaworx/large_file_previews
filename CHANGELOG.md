@@ -25,6 +25,9 @@ the first stable release.
 - `README.md`, *Configuration*: which files are taken, per MIME type and
   extension, by size; and the timeout, memory cap and OOM score of each.
 
+- *Administration settings → Additional settings*: the status, which
+  files are taken, and the limits, validated as `occ` validates them.
+
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes.
 

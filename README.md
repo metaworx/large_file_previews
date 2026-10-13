@@ -7,7 +7,7 @@ so the file is never loaded into PHP, copied, or sent to another service.
 
 > **Status:**
 > in development, not yet released.
-> PDF and Illustrator previews are rendered; a settings page is to come.
+> PDF and Illustrator previews are rendered.
 
 ## What it does
 
@@ -62,6 +62,10 @@ Each field is resolved on its own, the most specific level that sets it winning:
 the extension, then the MIME type, then the app's default.
 Out of the box, PDF and Illustrator files are taken at any size,
 and every image type is off, from 50 MB up once switched on.
+
+Everything below is set in *Administration settings → Additional settings*,
+which also shows whether previews can be rendered and the last render that failed,
+or with `occ`; both check a value the same way.
 
 ```bash
 occ lfp:config:show

@@ -43,4 +43,7 @@ Only files on local, unencrypted storage are rendered. Everything else is left t
 		<command>OCA\LargeFilePreviews\Command\ConfigUnset</command>
 		<command>OCA\LargeFilePreviews\Command\Check</command>
 	</commands>
+	<settings>
+		<admin>OCA\LargeFilePreviews\Settings\Admin</admin>
+	</settings>
 </info>

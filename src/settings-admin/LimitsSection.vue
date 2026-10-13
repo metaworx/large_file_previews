@@ -1,0 +1,94 @@
+<script setup lang="ts">
+/**
+ * @copyright Copyright (c) 2026 metaworx
+ * @license   AGPL-3.0-or-later
+ *
+ * The limits each render runs under, each switchable, each with its value.
+ * A limit switched on whose program is missing stops rendering rather than
+ * let it run without; the status above says which.
+ */
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
+import NumberField from './NumberField.vue'
+import { t } from '../l10n'
+import type { Changes, SettingsState } from './types'
+
+const props = defineProps<{
+	state: SettingsState
+	saving: boolean
+}>()
+
+const emit = defineEmits<{
+	save: [changes: Changes]
+}>()
+
+interface Limit {
+	switch: string
+	name: string
+	help: string
+	values: { key: string, label: string }[]
+}
+
+const LIMITS: Limit[] = [
+	{
+		switch: 'timeout_enabled',
+		name: t('large_file_previews', 'Timeout'),
+		help: t('large_file_previews', 'Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period.'),
+		values: [
+			{ key: 'timeout_seconds', label: t('large_file_previews', 'Seconds') },
+			{ key: 'timeout_kill_after_seconds', label: t('large_file_previews', 'Grace period, seconds') },
+		],
+	},
+	{
+		switch: 'prlimit_enabled',
+		name: t('large_file_previews', 'Memory cap'),
+		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is well above the memory a render uses.'),
+		values: [
+			{ key: 'prlimit_as_mb', label: t('large_file_previews', 'MB') },
+		],
+	},
+	{
+		switch: 'choom_enabled',
+		name: t('large_file_previews', 'Out-of-memory score'),
+		help: t('large_file_previews', 'Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker.'),
+		values: [
+			{ key: 'choom_adjust', label: t('large_file_previews', 'Adjustment, 0 to 1000') },
+		],
+	},
+]
+
+function scalar(key: string) {
+	return props.state.scalars[key]
+}
+</script>
+
+<template>
+	<NcSettingsSection :name="t('large_file_previews', 'Limits')"
+		:description="t('large_file_previews', 'What each render runs under. The defaults suit most servers.')">
+		<div v-for="limit in LIMITS"
+			:key="limit.switch"
+			class="lfp-limit"
+			:data-limit="limit.switch">
+			<NcCheckboxRadioSwitch type="switch"
+				:model-value="scalar(limit.switch).value as boolean"
+				:disabled="saving"
+				@update:model-value="emit('save', { scalars: { [limit.switch]: $event as boolean } })">
+				{{ limit.name }}
+			</NcCheckboxRadioSwitch>
+			<p class="lfp-hint">
+				{{ limit.help }}
+			</p>
+			<div class="lfp-row">
+				<NumberField v-for="value in limit.values"
+					:id="'lfp-' + value.key"
+					:key="value.key"
+					:label="value.label"
+					:value="scalar(value.key).value as number"
+					:min="scalar(value.key).min"
+					:max="scalar(value.key).max"
+					:disabled="saving || !scalar(limit.switch).value"
+					@save="emit('save', { scalars: { [value.key]: $event } })" />
+			</div>
+		</div>
+	</NcSettingsSection>
+</template>

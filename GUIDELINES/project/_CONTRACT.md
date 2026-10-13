@@ -1,6 +1,6 @@
 > **Fragment** — inlined by `tools/sync-docs.sh`; not a standalone document.
 
-# {{project_name}} — Project Contract (v1.1.0)
+# {{project_name}} — Project Contract (v1.2.0)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `{{guidelines_root}}/README.md` for people,
@@ -24,11 +24,11 @@ by running a command-line renderer on the file's local path:
 |-----------------------|-------|
 | Project name          | {{project_name}}, Nextcloud app id `large_file_previews`, PHP namespace `OCA\LargeFilePreviews\` |
 | Language(s)           | declared as `project.languages` in `{{guidelines_root}}/config.ini`, kept honest by `{{shared_root}}/tools/detect-languages.sh --check` |
-| Source directories    | `lib/` (PSR-4 `OCA\LargeFilePreviews\`), `tests/` (PSR-4 `OCA\LargeFilePreviews\Tests\`), `appinfo/`; `src/` and `templates/` only if a settings page is ever added |
+| Source directories    | `lib/` (PSR-4 `OCA\LargeFilePreviews\`), `tests/` (PSR-4 `OCA\LargeFilePreviews\Tests\`), `appinfo/`, `templates/`; `src/`, the admin settings page in Vue 3 and TypeScript, with its Vitest specs beside each file, built by Vite into `js/` and `css/`, which are not tracked |
 | Shipped-code paths    | declared as `project.shipped` in `{{guidelines_root}}/config.ini` and listed below; kept honest by `{{shared_root}}/tools/changelog.sh check` (rule: `{{shared_root}}/COMMIT.md` §5) |
 | Version manifest      | `appinfo/info.xml`: the `manifest` of `CHANGELOG.md` in `{{guidelines_root}}/config.ini`, so `changelog.sh cut` sets its `<version>` and `check` holds it to the newest section |
-| Test gate command     | `{{shared_root}}/lang/php/tools/phpunit` (the shipped wrapper; `composer test` inside the container or CI), with `MWX_PHPUNIT_DDEV_DIR` set to the harness instance's directory (§3) and `MWX_PHPUNIT_MOUNT=/var/www/html/apps/large_file_previews`, whose values this machine keeps in `{{guidelines_root}}/config.local.ini` under `[phpunit]`; `--testsuite unit` or `integration` for one of them |
-| Lint command          | `composer cs:check` / `composer cs:fix` (ECS with `mwx/coding-standard`, over `lib/`, `tests/` and `appinfo/`); `composer psalm` (Psalm in `vendor-bin/psalm`, over `lib/` at level 4 with no baseline); the manifest `xmllint --noout --schema info.xsd appinfo/info.xml`, with `info.xsd` fetched from `https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd`. Rector is the upgrade tool, not lint: `composer rector:check` / `composer rector` with Nextcloud's rules for the oldest supported version, in the harness container |
+| Test gate command     | `{{shared_root}}/lang/php/tools/phpunit` (the shipped wrapper; `composer test` inside the container or CI), with `MWX_PHPUNIT_DDEV_DIR` set to the harness instance's directory (§3) and `MWX_PHPUNIT_MOUNT=/var/www/html/apps/large_file_previews`, whose values this machine keeps in `{{guidelines_root}}/config.local.ini` under `[phpunit]`; `--testsuite unit` or `integration` for one of them. The frontend: `npm test` (Vitest, mounting the real `@nextcloud/vue` components) and `npm run build` |
+| Lint command          | `composer cs:check` / `composer cs:fix` (ECS with `mwx/coding-standard`, over `lib/`, `tests/` and `appinfo/`); `composer psalm` (Psalm in `vendor-bin/psalm`, over `lib/` at level 4 with no baseline); the manifest `xmllint --noout --schema info.xsd appinfo/info.xml`, with `info.xsd` fetched from `https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd`. Rector is the upgrade tool, not lint: `composer rector:check` / `composer rector` with Nextcloud's rules for the oldest supported version, in the harness container. The frontend: `npm run lint` (ESLint), `npm run typecheck` (`vue-tsc`, which checks `.vue` files as well as `.ts`) and `npm run stylelint` |
 
 A commit touching any path listed below must carry a `CHANGELOG.md` bullet.
 The list is generated from `project.shipped`,
@@ -115,8 +115,11 @@ release:
 
 ### 3.4 Every user-facing text is translatable
 
-A text a person reads - a setup check's message, a settings page should one come - goes
-through `IL10N` in PHP and `t()`/`n()` in the frontend. Logs and command output stay English.
+A text a person reads - a setup check's message, the settings page, a refusal it shows -
+goes through `IL10N` in PHP and `t()`/`n()` in the frontend (`src/l10n.ts`),
+and ESLint's `vue/no-bare-strings-in-template` holds the templates to it.
+Logs and command output stay English.
+No translations ship yet: adding them is tooling, not a change to the code.
 
 ### 3.5 CHANGELOG.md is mandatory here
 

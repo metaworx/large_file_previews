@@ -36,6 +36,17 @@ composer install
 It installs the tools under `vendor-bin/` as well:
 ECS, Psalm, PHPUnit and Rector.
 
+```bash
+npm ci
+```
+
+```bash
+npm run build
+```
+
+The settings page lives in `src/`, Vue 3 and TypeScript;
+the build writes `js/` and `css/`, which are not tracked.
+
 ## Lint
 
 ```bash
@@ -58,11 +69,32 @@ The manifest is checked against the app store's schema:
 curl -fsSLo build/info.xsd https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd && xmllint --noout --schema build/info.xsd appinfo/info.xml
 ```
 
+The frontend's:
+
+```bash
+npm run lint
+```
+
+```bash
+npm run typecheck
+```
+
+```bash
+npm run stylelint
+```
+
 ## Tests
 
 ```bash
 composer test:unit
 ```
+
+```bash
+npm test
+```
+
+A spec mounts the real `@nextcloud/vue` components, never a stand-in;
+ESLint refuses a mock or a stub of one.
 
 The integration suite needs a booted Nextcloud with `poppler-utils`,
 and runs in a test instance through `GUIDELINES/shared/lang/php/tools/phpunit`

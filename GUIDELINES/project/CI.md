@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.0.1)
+# CI Conventions — Large File Previews (v1.1.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -42,8 +42,10 @@ and GitHub runs the matrix for free.
 | push to any branch, pull request | upstream releases (reports only), lint, PHPUnit |
 | tag `vX.Y.Z` or `vX.Y.Z-suffix` | the same |
 
-- **Lint** runs the PHP syntax check, ECS, Psalm,
+- **Lint** runs the frontend's ESLint, `vue-tsc`, Stylelint, Vitest and build,
+  then the PHP syntax check, ECS, Psalm,
   the manifest against the app store's schema, and the guideline checks of §4.
+  Vitest needs no server, so it runs here rather than in a job of its own.
 - **PHPUnit** runs both suites, on Nextcloud 33 and 34 with PHP 8.2 to 8.4,
   and on Nextcloud 35 with PHP 8.3 and 8.4;
   Nextcloud 35 refuses PHP 8.2.
@@ -108,6 +110,8 @@ A version tag runs the same jobs as a branch, and publishes nothing yet.
 - **MariaDB is a service of the job**,
   since a composite action cannot declare one;
   the server action is told `database: mysql`.
+- **Node 24 and `npm ci`** come from `.github/actions/node-deps`,
+  with npm's cache keyed on the lock file.
 - **The lint job checks out the submodule and the whole history**:
   the guideline checks are the submodule's tools,
   and `check-versions.sh` reads each document's revision record
