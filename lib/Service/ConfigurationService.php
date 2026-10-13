@@ -146,6 +146,19 @@ class ConfigurationService
 	}
 
 	/**
+	 * Drops the rules read so far, so the next question reads them again.
+	 *
+	 * A request reads them once. A process that outlives many changes - a
+	 * long preview run, a test suite - calls this to see a change made past
+	 * this class.
+	 */
+	public function forget(): void
+	{
+		$this->mimeRules      = null;
+		$this->extensionRules = null;
+	}
+
+	/**
 	 * Sets one scalar setting.
 	 *
 	 * A string is read as occ passes it: `true`/`false`, `yes`/`no`, `on`/`off`

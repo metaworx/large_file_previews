@@ -238,6 +238,21 @@ class ConfigurationServiceTest
 		$this->service()->unsetExtensionRule( 'tif', [ 'colour' ] );
 	}
 
+	/**
+	 * Read once; a change past the service is seen after forget() only.
+	 */
+	public function testRulesAreReadOnceUntilForgotten(): void
+	{
+		$service = $this->service();
+		self::assertSame( [], $service->extensionRules() );
+
+		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ 'tif' => [ 'enabled' => true ] ];
+		self::assertSame( [], $service->extensionRules() );
+
+		$service->forget();
+		self::assertEquals( [ 'tif' => new TypeRule( true ) ], $service->extensionRules() );
+	}
+
 	public function testTheLastFailureIsRecordedAndReadBack(): void
 	{
 		$service = $this->service();

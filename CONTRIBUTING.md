@@ -100,6 +100,13 @@ The integration suite needs a booted Nextcloud with `poppler-utils`,
 and runs in a test instance through `GUIDELINES/shared/lang/php/tools/phpunit`
 (`--testsuite integration`);
 `GUIDELINES/config.local.ini` names the instance under `[phpunit]`.
+Outside a server, its tests are skipped.
+
+A harness instance gets the package from a file of its own,
+`instances/<version>/.ddev/config.extra.yaml` in `nextcloud_testing`,
+holding `webimage_extra_packages: [poppler-utils]`,
+and takes it on `ddev restart`.
+`occ large-file-previews:check` then says whether everything is there.
 
 ## Rules the code keeps
 
