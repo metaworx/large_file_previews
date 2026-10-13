@@ -16,6 +16,9 @@ the first stable release.
 - `appinfo/info.xml`: the app, `large_file_previews`, for Nextcloud 33
   to 35 and PHP 8.2 and later.
 
+- `README.md`, *What it does*: previews of PDF and Illustrator files by
+  `pdftoppm`, from local, unencrypted storage; others go to Nextcloud's.
+
 - `README.md`, *Configuration*: which files are taken, per MIME type and
   extension, by size; and the timeout, memory cap and OOM score of each.
 

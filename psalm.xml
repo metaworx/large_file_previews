@@ -29,10 +29,11 @@
 	</extraFiles>
 
 	<!--
-		A server interface an OCP one extends, which the nextcloud/ocp package
-		does not ship: a stub for analysis, not a use of the server's code.
+		Server classes OCP ones extend, which the nextcloud/ocp package does
+		not ship: stubs for analysis, not uses of the server's code.
 	-->
 	<stubs>
 		<file name="tests/stubs/OC/Hooks/Emitter.php" />
+		<file name="tests/stubs/OC/Image.php" />
 	</stubs>
 </psalm>

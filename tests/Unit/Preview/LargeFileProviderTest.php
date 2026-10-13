@@ -1,0 +1,300 @@
+<?php
+
+declare( strict_types=1 );
+
+/**
+ * @copyright Copyright (c) 2026 metaworx
+ * @license   AGPL-3.0-or-later
+ */
+
+namespace OCA\LargeFilePreviews\Tests\Unit\Preview;
+
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Config\SupportedTypes;
+use OCA\LargeFilePreviews\Preview\ImageLoader;
+use OCA\LargeFilePreviews\Preview\LargeFileProvider;
+use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
+use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Outcome;
+use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\TypePolicy;
+use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
+use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCP\Files\File;
+use OCP\Files\Storage\IStorage;
+use OCP\IImage;
+use OCP\ITempManager;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use RuntimeException;
+
+class LargeFileProviderTest
+    extends
+    TestCase
+{
+	use EnglishL10n;
+	use MemoryAppConfig;
+
+
+//  private properties
+
+	private CommandRunner&MockObject $runner;
+
+	private ImageLoader&MockObject $images;
+
+	private LoggerInterface&MockObject $logger;
+
+	private string $folder;
+
+
+//  getters / setters / is* / has*
+
+	protected function setUp(): void
+	{
+		parent::setUp();
+
+		$this->runner = $this->createMock( CommandRunner::class );
+		$this->images = $this->createMock( ImageLoader::class );
+		$this->logger = $this->createMock( LoggerInterface::class );
+		$this->folder = sys_get_temp_dir() . '/lfp-provider-' . bin2hex( random_bytes( 4 ) );
+	}
+
+
+//  other non-static methods
+
+	protected function tearDown(): void
+	{
+		@unlink( $this->folder . '/preview.png' );
+		@rmdir( $this->folder );
+
+		parent::tearDown();
+	}
+
+	public function testTheRegexIsTheSupportedTypes(): void
+	{
+		self::assertSame( SupportedTypes::MIME_REGEX, $this->provider()->getMimeType() );
+	}
+
+	public function testALocalPdfIsTaken(): void
+	{
+		self::assertTrue( $this->provider()->isAvailable( $this->file( 'application/pdf', 'a.pdf' ) ) );
+	}
+
+	/**
+	 * Every image on the instance comes here; off says nothing in the log.
+	 */
+	public function testADisabledTypeIsDeclinedQuietly(): void
+	{
+		$this->logger->expects( self::never() )
+		             ->method( self::anything() )
+		;
+
+		self::assertFalse( $this->provider()->isAvailable( $this->file( 'image/png', 'a.png' ) ) );
+	}
+
+	public function testAnEnabledTypeWithoutARendererIsDeclined(): void
+	{
+		$this->appValues[ ConfigLexicon::MIMETYPES ] = [ 'image/tiff' => [ 'enabled' => true ] ];
+
+		self::assertFalse( $this->provider()->isAvailable( $this->file( 'image/tiff', 'a.tif' ) ) );
+	}
+
+	public function testOutsideTheSizeWindowIsDeclined(): void
+	{
+		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ 'pdf' => [ 'max_size_mb' => 1 ] ];
+
+		self::assertFalse( $this->provider()->isAvailable( $this->file( 'application/pdf', 'a.pdf', 2 * 1_048_576 ) ) );
+	}
+
+	public function testEncryptedOrRemoteIsDeclined(): void
+	{
+		self::assertFalse( $this->provider()->isAvailable( $this->file( 'application/pdf', 'a.pdf', encrypted: true ) ) );
+		self::assertFalse( $this->provider()->isAvailable( $this->file( 'application/pdf', 'a.pdf', local: false ) ) );
+	}
+
+	public function testAnExceptionMeansNo(): void
+	{
+		$file = $this->createMock( File::class );
+		$file->method( 'getMimetype' )
+		     ->willThrowException( new RuntimeException( 'cache gone' ) )
+		;
+
+		$this->logger->expects( self::once() )
+		             ->method( 'warning' )
+		;
+
+		self::assertFalse( $this->provider()->isAvailable( $file ) );
+	}
+
+	public function testARenderIsLoadedAndFittedIntoTheBox(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ), 4096 );
+
+		$image = $this->createMock( IImage::class );
+		$image->expects( self::once() )
+		      ->method( 'scaleDownToFit' )
+		      ->with( 4096, 2048 )
+		;
+		$this->images->method( 'load' )
+		             ->willReturn( $image )
+		;
+
+		self::assertSame( $image, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 2048 ) );
+		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	public function testAFailedRenderIsNullAndAWarning(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::FAILED, 'exit status 1', 1, null, "Error: Incorrect password\nmore" ) );
+
+		$this->logger->expects( self::once() )
+		             ->method( 'warning' )
+		             ->with(
+			             self::anything(),
+			             self::callback(
+				             static fn(
+					             array $context,
+				             ): bool => $context['reason'] === 'exit status 1' && $context['stderr'] === '; Error: Incorrect password',
+			             ),
+		             )
+		;
+
+		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 ) );
+		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	public function testOutputThatIsNoImageIsNull(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) );
+		$this->images->method( 'load' )
+		             ->willReturn( null )
+		;
+
+		$this->logger->expects( self::once() )
+		             ->method( 'warning' )
+		             ->with( self::anything(), self::callback( static fn( array $context ): bool => $context['outcome'] === 'invalid_output' ) )
+		;
+
+		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 ) );
+	}
+
+	public function testNoLocalPathIsNull(): void
+	{
+		$this->runner->expects( self::never() )
+		             ->method( 'run' )
+		;
+
+		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf', localPath: false ), 100, 100 ) );
+	}
+
+	public function testAThrowingRendererIsNullNotAnException(): void
+	{
+		$this->runner->method( 'run' )
+		             ->willThrowException( new RuntimeException( 'boom' ) )
+		;
+
+		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 ) );
+		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	/**
+	 * The runner answers with the outcome, having written the PNG where it
+	 * succeeds.
+	 */
+	private function renders(
+		RenderOutcome $outcome,
+		?int          $box = null,
+	): void
+	{
+		$this->runner->method( 'run' )
+		             ->willReturnCallback(
+			             function(
+				             string $program,
+				             array  $arguments,
+			             ) use (
+				             $outcome,
+				             $box,
+			             ): RenderOutcome
+			             {
+				             if ( $box !== null )
+				             {
+					             self::assertSame( (string) $box, $arguments[5] );
+				             }
+
+				             if ( $outcome->isSuccess() )
+				             {
+					             file_put_contents( $arguments[9] . '.png', 'png' );
+				             }
+
+				             return $outcome;
+			             },
+		             )
+		;
+	}
+
+	private function provider(): LargeFileProvider
+	{
+		$tempManager = $this->createMock( ITempManager::class );
+		$tempManager->method( 'getTemporaryFolder' )
+		            ->willReturnCallback(
+			            function(): string
+			            {
+				            mkdir( $this->folder );
+
+				            return $this->folder . '/';
+			            },
+		            )
+		;
+
+		return new LargeFileProvider(
+			new TypePolicy( new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() ) ),
+			new Renderers( new PopplerRenderer( $this->runner ) ),
+			$this->images,
+			$tempManager,
+			$this->logger,
+		);
+	}
+
+	private function file(
+		string       $mime,
+		string       $name,
+		int          $size = 1000,
+		bool         $local = true,
+		bool         $encrypted = false,
+		string|false $localPath = '/data/alice/files/doc.pdf',
+	): File&MockObject
+	{
+		$storage = $this->createMock( IStorage::class );
+		$storage->method( 'isLocal' )
+		        ->willReturn( $local )
+		;
+		$storage->method( 'getLocalFile' )
+		        ->willReturn( $localPath )
+		;
+
+		$file = $this->createMock( File::class );
+		$file->method( 'getMimetype' )
+		     ->willReturn( $mime )
+		;
+		$file->method( 'getName' )
+		     ->willReturn( $name )
+		;
+		$file->method( 'getSize' )
+		     ->willReturn( $size )
+		;
+		$file->method( 'isEncrypted' )
+		     ->willReturn( $encrypted )
+		;
+		$file->method( 'getStorage' )
+		     ->willReturn( $storage )
+		;
+		$file->method( 'getInternalPath' )
+		     ->willReturn( 'files/doc.pdf' )
+		;
+
+		return $file;
+	}
+}

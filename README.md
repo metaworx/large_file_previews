@@ -6,8 +6,8 @@ It runs a command-line renderer on the file's local path,
 so the file is never loaded into PHP, copied, or sent to another service.
 
 > **Status:**
-> in development.
-> Nothing is rendered yet; this README grows with the app.
+> in development, not yet released.
+> PDF and Illustrator previews are rendered; a settings page is to come.
 
 ## What it does
 
