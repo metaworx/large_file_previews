@@ -1,0 +1,28 @@
+/.env.local
+/.env.*.local
+/.env.secrets
+/.env.*.secrets
+/.local/
+
+*.phar
+.phpunit.result.cache
+
+/vendor
+/vendor-bin/*/vendor/
+# The guidelines root ignores its own runtime directories; these entries are
+# kept so a checkout without the submodule still ignores them.
+/GUIDELINES/messages/
+/GUIDELINES/temp/
+/GUIDELINES/config.local.ini
+/tests/.phpunit.cache
+/.phpunit.cache/
+
+# Nextcloud source trees beside the checkout, for the IDE and the test
+# bootstrap's fallback.
+/nextcloud-v*/
+
+/node_modules/
+/js/
+/css/
+
+/build/

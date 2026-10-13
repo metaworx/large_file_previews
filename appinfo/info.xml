@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>large_file_previews</id>
+	<name>Large File Previews</name>
+	<summary>Previews of PDF and Illustrator files too large for Nextcloud's own preview providers</summary>
+	<description>Renders previews of files too large for Nextcloud's own preview providers, by running a command-line renderer on the file's local path rather than loading the file into PHP or sending it to a service.
+
+What you get:
+
+- **PDF and Illustrator previews** through `pdftoppm` (poppler), of the first page, at the full preview size, for files of any size.
+- **Limits around every render**: a timeout, a memory cap and a raised out-of-memory score, each switchable and each with its value.
+- **Per type and per extension**: which files the app takes, and from which size up to which size; anything it declines goes to the next provider.
+
+Only files on local, unencrypted storage are rendered. Everything else is left to Nextcloud's other preview providers.
+</description>
+	<version>0.0.0</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author mail="apps@metaworx.ch"
+			homepage="https://github.com/metaworx/">metaworx resonare rüegg
+	</author>
+	<namespace>LargeFilePreviews</namespace>
+	<documentation>
+		<admin>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/blob/master/README.md</admin>
+	</documentation>
+	<category>files</category>
+	<category>multimedia</category>
+	<website>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews</website>
+	<bugs>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/work_items</bugs>
+	<repository type="git">https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews.git</repository>
+	<dependencies>
+		<php min-version="8.2"/>
+		<database>sqlite</database>
+		<database>mysql</database>
+		<database>pgsql</database>
+		<nextcloud min-version="33"
+				   max-version="35"/>
+	</dependencies>
+</info>

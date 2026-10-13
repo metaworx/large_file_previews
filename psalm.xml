@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+	Level 4, no baseline, and no suppressions: the app uses Nextcloud's public
+	API only, so every finding is fixed rather than hidden. A class from
+	outside it would be suppressed here by name, with its reason, and that
+	list is then the inventory to re-check for every Nextcloud release.
+
+	No unused-code check: Nextcloud reaches commands and settings through
+	appinfo/info.xml and controllers through their routes, none of which Psalm
+	can see, so it would report every one of them as unused.
+-->
+<psalm
+	errorLevel="4"
+	resolveFromConfigFile="true"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="https://getpsalm.org/schema/config"
+	xsi:schemaLocation="https://getpsalm.org/schema/config vendor-bin/psalm/vendor/vimeo/psalm/config.xsd"
+	findUnusedCode="false"
+	phpVersion="8.2"
+>
+	<projectFiles>
+		<directory name="lib" />
+		<ignoreFiles>
+			<directory name="vendor" />
+		</ignoreFiles>
+	</projectFiles>
+	<extraFiles>
+		<directory name="vendor" />
+	</extraFiles>
+</psalm>
