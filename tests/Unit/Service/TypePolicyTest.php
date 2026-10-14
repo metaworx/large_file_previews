@@ -13,9 +13,7 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\Source;
 use OCA\LargeFilePreviews\Config\Verdict;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\Files\FileInfo;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -25,7 +23,6 @@ class TypePolicyTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -141,7 +138,7 @@ class TypePolicyTest
 
 	private function policy(): TypePolicy
 	{
-		return new TypePolicy( new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ) );
+		return new TypePolicy( $this->settings() );
 	}
 
 	private function file(

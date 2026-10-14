@@ -26,32 +26,6 @@ use OCP\ITempManager;
 class PrerequisitesService
 {
 
-//  constants
-
-	/**
-	 * How each program says which version it is, and which limit needs it.
-	 */
-	private const PROGRAMS
-		 = [
-			'pdftoppm'  => [ 'version' => '-v', 'limit' => null, 'for' => 'rendering PDF and Illustrator files' ],
-			// Without them a scanned page is enlarged to the full box; no reason to stop rendering.
-			'pdfinfo'   => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
-			'pdfimages' => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
-			// Needed while an image type is switched on, as a limit while it is.
-			'vipsthumbnail' => [ 'version' => '--version', 'limit' => 'images', 'for' => 'rendering images' ],
-			// Without it an image smaller than the preview is enlarged.
-			'vipsheader'    => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering an image at its own size where that is smaller' ],
-			// Without it, which image types libvips reads is found out by
-			// rendering them, and a PDF previewed as WebP is a JPEG.
-			'vips'          => [ 'version' => '--version', 'limit' => false, 'for' => 'telling which image types libvips reads, and WebP previews of PDFs' ],
-			// Without it, a TIFF in one large strip that runs out of memory stays a failure.
-			'tiffcp'        => [ 'version' => '-h', 'limit' => false, 'for' => 'a second chance for a TIFF in one strip that runs out of memory' ],
-			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render' ],
-			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space cap of each render' ],
-			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render' ],
-		];
-
-
 //  constructor
 
 	public function __construct(
@@ -113,7 +87,7 @@ class PrerequisitesService
 
 		foreach ( $this->binaries->locateAll() as $program => $location )
 		{
-			$flag   = self::PROGRAMS[ $program ]['version'] ?? null;
+			$flag   = BinaryLocator::PROGRAMS[ $program ]['version'] ?? null;
 			$list[] = [
 				'name'    => $program,
 				'path'    => $location->path,
@@ -220,7 +194,7 @@ class PrerequisitesService
 		];
 		$items   = [];
 
-		foreach ( self::PROGRAMS as $program => $spec )
+		foreach ( BinaryLocator::PROGRAMS as $program => $spec )
 		{
 			$location = $this->binaries->locate( $program );
 			// null: always needed; false: never; a limit's name: while it is on.

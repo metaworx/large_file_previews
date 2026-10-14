@@ -23,6 +23,16 @@ enum PreviewFormat: string
 	case WEBP = 'webp';
 
 
+//  constants
+
+	/**
+	 * The quality a JPEG or WebP preview is written at, by either renderer,
+	 * before Nextcloud re-encodes it at its own (preview jpeg_quality,
+	 * webp_quality).
+	 */
+	public const QUALITY = 95;
+
+
 //  other non-static methods
 
 	public function extension(): string

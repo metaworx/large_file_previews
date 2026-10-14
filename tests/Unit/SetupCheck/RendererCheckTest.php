@@ -12,11 +12,9 @@ namespace OCA\LargeFilePreviews\Tests\Unit\SetupCheck;
 use DateTime;
 use DateTimeZone;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\SetupCheck\RendererCheck;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\SetupCheck\SetupResult;
@@ -26,7 +24,6 @@ class RendererCheckTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -124,7 +121,7 @@ class RendererCheckTest
 
 		return new RendererCheck(
 			$prerequisites,
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
+			$this->settings(),
 			$time,
 			$this->markingL10n(),
 		);

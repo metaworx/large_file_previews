@@ -22,12 +22,10 @@ use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\FailedFiles;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\Files\File;
 use OCP\Files\Storage\IStorage;
@@ -43,7 +41,6 @@ class LargeFileProviderTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -307,14 +304,42 @@ class LargeFileProviderTest
 		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf', localPath: false ), 100, 100 ) );
 	}
 
+	/**
+	 * Logged and recorded as any failure is, with the exception beside it.
+	 */
 	public function testAThrowingRendererIsNullNotAnException(): void
 	{
+		$boom = new RuntimeException( 'boom' );
 		$this->runner->method( 'run' )
-		             ->willThrowException( new RuntimeException( 'boom' ) )
+		             ->willThrowException( $boom )
+		;
+
+		$this->logger->expects( self::once() )
+		             ->method( 'warning' )
+		             ->with(
+			             self::anything(),
+			             self::callback(
+				             static fn(
+					             array $context,
+				             ): bool => $context['reason'] === 'unexpected error: boom' && ( $context['exception'] ?? null ) === $boom,
+			             ),
+		             )
 		;
 
 		self::assertNull( $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 ) );
 		self::assertDirectoryDoesNotExist( $this->folder );
+		self::assertSame( 'start_failed', $this->appValues[ ConfigLexicon::LAST_FAILURE ]['outcome'] ?? null );
+	}
+
+	/**
+	 * A file's name, or what a program printed, cannot forge a log line or
+	 * break it: control characters are spaces, bytes that are no UTF-8 are
+	 * replaced.
+	 */
+	public function testALogLineHoldsText(): void
+	{
+		self::assertSame( 'a b  [31mc?d', LargeFileProvider::loggable( "a\nb\r\x1b[31mc\xffd" ) );
+		self::assertSame( 'Größe.tif', LargeFileProvider::loggable( 'Größe.tif' ) );
 	}
 
 	/**
@@ -368,7 +393,7 @@ class LargeFileProviderTest
 		            )
 		;
 
-		$config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() );
+		$config = $this->settings();
 
 		$time = $this->createMock( ITimeFactory::class );
 		$time->method( 'getTime' )

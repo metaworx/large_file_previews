@@ -110,12 +110,6 @@ class VipsRenderer
 		];
 
 	/**
-	 * The quality a JPEG or WebP preview is written at, before Nextcloud
-	 * re-encodes it at its own (preview jpeg_quality, webp_quality).
-	 */
-	public const QUALITY = 95;
-
-	/**
 	 * What libvips, glib and libtiff print when the cap stops them,
 	 * measured with libvips 8.15 and libtiff 4.5.
 	 */
@@ -513,10 +507,10 @@ class VipsRenderer
 			PreviewFormat::PNG  => '',
 			PreviewFormat::JPEG => sprintf(
 				'[Q=%d,background=%d]',
-				self::QUALITY,
+				PreviewFormat::QUALITY,
 				$this->config->getScalar( ConfigLexicon::PREVIEW_BACKGROUND ) === 'black' ? 0 : 255,
 			),
-			PreviewFormat::WEBP => sprintf( '[Q=%d]', self::QUALITY ),
+			PreviewFormat::WEBP => sprintf( '[Q=%d]', PreviewFormat::QUALITY ),
 		};
 	}
 

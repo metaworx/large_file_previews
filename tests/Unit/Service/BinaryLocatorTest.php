@@ -131,7 +131,7 @@ class BinaryLocatorTest
 
 	public function testLocateAllCoversEveryProgram(): void
 	{
-		self::assertSame( BinaryLocator::PROGRAMS, array_keys( $this->locator( [], [] )->locateAll() ) );
+		self::assertSame( array_keys( BinaryLocator::PROGRAMS ), array_keys( $this->locator( [], [] )->locateAll() ) );
 	}
 
 	public function testProblemsNameUnknownProgramsAndNonPaths(): void

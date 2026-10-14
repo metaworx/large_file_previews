@@ -44,6 +44,9 @@ the first stable release.
   re-striped by `tiffcp` into an unlinked copy in `scratch_directory`,
   one at a time, up to `tiff_restrip_max_mb`; `prlimit_fsize_mb`.
 
+- `README.md`, *Paths, and what the app trusts*: a kept path checked
+  before it runs; names and messages logged as text.
+
 - *Administration settings → Additional settings*: status, files
   processed, preview format, limits, libvips, programs with versions;
   each setting with its `occ` command, copied with one click.

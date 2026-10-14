@@ -81,22 +81,22 @@ class ConfigSet
 		OutputInterface $output,
 	): int
 	{
-		$mime      = $input->getOption( 'mime' );
-		$extension = $input->getOption( 'ext' );
-		$key       = $input->getArgument( 'key' );
-		$value     = $input->getArgument( 'value' );
+		$missing = 'Give a setting and its value, or --mime or --ext with the fields to set.';
+		$target  = $this->target( $input, $output, $missing );
+
+		if ( $target === null )
+		{
+			return self::INVALID;
+		}
+
+		[ $kind, $name ] = $target;
+		$key             = (string) $input->getArgument( 'key' );
+		$value           = $input->getArgument( 'value' );
 
 		try
 		{
-			if ( is_string( $mime ) || is_string( $extension ) )
+			if ( $kind === self::TARGET_MIME || $kind === self::TARGET_EXTENSION )
 			{
-				if ( $key !== null || ( is_string( $mime ) && is_string( $extension ) ) )
-				{
-					$output->writeln( '<error>Give either a setting, or one of --mime and --ext.</error>' );
-
-					return self::INVALID;
-				}
-
 				$changes = $this->changes( $input );
 
 				if ( $changes->isEmpty() )
@@ -106,15 +106,15 @@ class ConfigSet
 					return self::INVALID;
 				}
 
-				$rule = is_string( $mime )
-					? $this->config->setMimeRule( $mime, $changes )
-					: $this->config->setExtensionRule( $extension, $changes );
+				$rule = $kind === self::TARGET_MIME
+					? $this->config->setMimeRule( $name, $changes )
+					: $this->config->setExtensionRule( $name, $changes );
 
 				$output->writeln(
 					sprintf(
 						'%s %s: %s',
-						is_string( $mime ) ? 'MIME type' : 'Extension',
-						is_string( $mime ) ? $mime : $extension,
+						$kind === self::TARGET_MIME ? 'MIME type' : 'Extension',
+						$name,
 						(string) json_encode( $rule->toArray(), JSON_UNESCAPED_SLASHES ),
 					),
 				);
@@ -122,54 +122,52 @@ class ConfigSet
 				return self::SUCCESS;
 			}
 
-			if ( ! is_string( $key ) || ! is_string( $value ) )
+			if ( ! is_string( $value ) )
 			{
-				$output->writeln( '<error>Give a setting and its value, or --mime or --ext with the fields to set.</error>' );
+				$output->writeln( '<error>' . $missing . '</error>' );
 
 				return self::INVALID;
 			}
 
-			// A path goes to system config, never to app config.
-			if ( $key === self::SCRATCH )
+			// A path, and the untrusted decoders, go to system config, never
+			// to app config.
+			switch ( $kind )
 			{
-				$this->scratch->set( $value );
-				$output->writeln( sprintf( '%s: %s (system config)', $key, $this->scratch->path() ) );
+				case self::TARGET_SCRATCH:
+					$this->scratch->set( $value );
+					$output->writeln( sprintf( '%s: %s (system config)', $key, $this->scratch->path() ) );
 
-				return self::SUCCESS;
+					return self::SUCCESS;
+
+				case self::TARGET_UNTRUSTED:
+					$allowed = ValueParser::bool( $value );
+
+					if ( $allowed === null )
+					{
+						$output->writeln( sprintf( '<error>%s takes true or false.</error>', $key ) );
+
+						return self::INVALID;
+					}
+
+					$this->config->setUntrustedAllowed( $allowed );
+					$output->writeln( sprintf( '%s: %s (system config)', $key, $allowed ? 'true' : 'false' ) );
+
+					return self::SUCCESS;
+
+				case self::TARGET_BINARY:
+					$this->binaries->setOverride( $name, $value );
+					$output->writeln( sprintf( '%s: %s (system config)', $key, $value ) );
+
+					return self::SUCCESS;
 			}
 
-			if ( $key === self::UNTRUSTED )
-			{
-				$allowed = ValueParser::bool( $value );
-
-				if ( $allowed === null )
-				{
-					$output->writeln( sprintf( '<error>%s takes true or false.</error>', $key ) );
-
-					return self::INVALID;
-				}
-
-				$this->config->setUntrustedAllowed( $allowed );
-				$output->writeln( sprintf( '%s: %s (system config)', $key, $allowed ? 'true' : 'false' ) );
-
-				return self::SUCCESS;
-			}
-
-			if ( str_starts_with( $key, self::BINARIES ) )
-			{
-				$this->binaries->setOverride( substr( $key, strlen( self::BINARIES ) ), $value );
-				$output->writeln( sprintf( '%s: %s (system config)', $key, $value ) );
-
-				return self::SUCCESS;
-			}
-
-			$this->config->setScalar( $key, $value );
-			$set = $this->config->getScalar( $key );
+			$this->config->setScalar( $name, $value );
+			$set = $this->config->getScalar( $name );
 
 			$output->writeln(
 				sprintf(
 					'%s: %s',
-					$key,
+					$name,
 					is_bool( $set ) ? ( $set ? 'true' : 'false' ) : (string) $set,
 				),
 			);

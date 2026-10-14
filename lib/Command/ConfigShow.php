@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Command;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -85,7 +86,12 @@ class ConfigShow
 				'programs'         => $programs,
 				'scratch'          => $scratch,
 				'untrustedAllowed' => $untrusted,
-				'resolved'         => $resolved,
+				'resolved'         => array_map(
+					static fn(
+						Resolution $resolution,
+					): array => $resolution->toArray(),
+					$resolved,
+				),
 				'problems'         => $problems,
 			],
 		) )
@@ -141,21 +147,9 @@ class ConfigShow
 		$table = new Table( $output );
 		$table->setHeaders( [ 'MIME type', 'Extension', 'Enabled', 'Min MB', 'Max MB' ] );
 
-		foreach ( $resolved as $row )
+		foreach ( $resolved as $resolution )
 		{
-			$table->addRow(
-				[
-					$row['mime'] ?? '-',
-					$row['extension'] ?? '',
-					sprintf( '%s (%s)', $row['enabled']['value'] ? 'yes' : 'no', $row['enabled']['source'] ),
-					sprintf( '%d (%s)', $row['min_size_mb']['value'], $row['min_size_mb']['source'] ),
-					sprintf(
-						'%s (%s)',
-						$row['max_size_mb']['value'] === -1 ? 'none' : (string) $row['max_size_mb']['value'],
-						$row['max_size_mb']['source'],
-					),
-				],
-			);
+			$table->addRow( [ $resolution->mime ?? '-', $resolution->extension ?? '', ...self::fields( $resolution ) ] );
 		}
 
 		$table->render();
@@ -237,7 +231,7 @@ class ConfigShow
 	 * One row for every MIME type the provider registers for, then one for
 	 * every configured extension, with the MIME type Nextcloud gives it.
 	 *
-	 * @return list<array<string, mixed>>
+	 * @return list<Resolution>
 	 */
 	private function resolved(): array
 	{
@@ -245,16 +239,12 @@ class ConfigShow
 
 		foreach ( SupportedTypes::all() as $mime )
 		{
-			$rows[] = $this->policy->resolve( $mime, null )
-			                       ->toArray()
-			;
+			$rows[] = $this->policy->resolve( $mime, null );
 		}
 
 		foreach ( array_keys( $this->config->extensionRules() ) as $extension )
 		{
-			$rows[] = $this->policy->resolve( $this->config->mimeOf( (string) $extension ), (string) $extension )
-			                       ->toArray()
-			;
+			$rows[] = $this->policy->resolve( $this->config->mimeOf( (string) $extension ), (string) $extension );
 		}
 
 		return $rows;

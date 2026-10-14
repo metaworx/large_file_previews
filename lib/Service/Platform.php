@@ -89,21 +89,6 @@ class Platform
 			],
 		];
 
-	/** Which source package each program is in. */
-	private const SOURCES
-		 = [
-			'pdftoppm'      => 'poppler',
-			'pdfinfo'       => 'poppler',
-			'pdfimages'     => 'poppler',
-			'vipsthumbnail' => 'vips',
-			'vipsheader'    => 'vips',
-			'vips'          => 'vips',
-			'tiffcp'        => 'tiff',
-			'timeout'       => 'core',
-			'prlimit'       => 'util',
-			'choom'         => 'util',
-		];
-
 	/**
 	 * What a family says where its package needs more than the command:
 	 * a code, which the settings page translates and text() spells out.
@@ -181,7 +166,7 @@ class Platform
 	public function install( string $program ): ?array
 	{
 		$family = $this->family();
-		$source = self::SOURCES[ $program ] ?? null;
+		$source = BinaryLocator::PROGRAMS[ $program ]['source'] ?? null;
 
 		if ( $family === null || $source === null )
 		{

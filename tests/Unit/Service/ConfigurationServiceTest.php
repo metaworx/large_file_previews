@@ -17,7 +17,6 @@ use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\TestCase;
 
@@ -25,7 +24,6 @@ class ConfigurationServiceTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -498,11 +496,6 @@ class ConfigurationServiceTest
 
 	private function service( bool $marking = false ): ConfigurationService
 	{
-		return new ConfigurationService(
-			$this->memoryAppConfig(),
-			$marking ? $this->markingL10n() : $this->englishL10n(),
-			$this->mimeDetector(),
-			$this->systemConfig(),
-		);
+		return $this->settings( $marking );
 	}
 }

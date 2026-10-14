@@ -48,7 +48,7 @@ class PlatformTest
 		// Every program the app runs has a package in every family, or a note.
 		foreach ( [ 'ubuntu', 'fedora', 'rocky', 'alpine', 'arch' ] as $name )
 		{
-			foreach ( BinaryLocator::PROGRAMS as $program )
+			foreach ( array_keys( BinaryLocator::PROGRAMS ) as $program )
 			{
 				$install = self::platform( $name )->install( $program );
 

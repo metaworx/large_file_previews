@@ -19,18 +19,14 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\Storage\IStorage;
-use OCP\IBinaryFinder;
-use OCP\IConfig;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -42,7 +38,6 @@ class ConfigCommandsTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -62,22 +57,14 @@ class ConfigCommandsTest
 		parent::setUp();
 
 		// System config, as the commands leave it, is $this->systemValues.
-		$system = $this->systemConfig();
-
-		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $system );
-
-		$this->binaries = new BinaryLocator(
-			$system,
-			$this->createMock( IBinaryFinder::class ),
-			$this->detectionCache(),
-			$this->createMock( LoggerInterface::class ),
-		);
+		$this->config   = $this->settings();
+		$this->binaries = $this->binaryLocator( [] );
 
 		$tempManager = $this->createMock( ITempManager::class );
 		$tempManager->method( 'getTempBaseDir' )
 		            ->willReturn( sys_get_temp_dir() )
 		;
-		$this->scratch = new ScratchDirectory( $system, $tempManager );
+		$this->scratch = new ScratchDirectory( $this->systemConfig(), $tempManager );
 	}
 
 
@@ -280,21 +267,11 @@ class ConfigCommandsTest
 	{
 		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ 'tif' => [ 'enabled' => true ], 'BAD' => [] ];
 
-		$config = $this->createMock( IConfig::class );
-		$config->method( 'getSystemValue' )
-		       ->willReturn( [] )
-		;
-
-		$finder = $this->createMock( IBinaryFinder::class );
-		$finder->method( 'findBinaryPath' )
-		       ->willReturn( false )
-		;
-
 		$tester = new CommandTester(
 			new ConfigShow(
 				$this->config,
 				new TypePolicy( $this->config ),
-				new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
+				$this->binaries,
 				$this->scratch,
 			),
 		);

@@ -12,11 +12,9 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -25,7 +23,6 @@ class PageProbeTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -167,7 +164,7 @@ class PageProbeTest
 
 	private function probe( CommandRunner $runner ): PageProbe
 	{
-		return new PageProbe( $runner, new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ) );
+		return new PageProbe( $runner, $this->settings() );
 	}
 
 

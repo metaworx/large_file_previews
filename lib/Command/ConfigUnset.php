@@ -81,70 +81,55 @@ class ConfigUnset
 		OutputInterface $output,
 	): int
 	{
-		$mime      = $input->getOption( 'mime' );
-		$extension = $input->getOption( 'ext' );
-		$key       = $input->getArgument( 'key' );
+		$target = $this->target( $input, $output, 'Give a setting, or --mime or --ext.' );
+
+		if ( $target === null )
+		{
+			return self::INVALID;
+		}
+
+		[ $kind, $name ] = $target;
+		$key             = (string) $input->getArgument( 'key' );
 		/** @var list<string> $fields */
 		$fields = array_values( array_filter( (array) $input->getOption( 'field' ), is_string( ... ) ) );
 
 		try
 		{
-			if ( is_string( $mime ) || is_string( $extension ) )
+			switch ( $kind )
 			{
-				if ( $key !== null || ( is_string( $mime ) && is_string( $extension ) ) )
-				{
-					$output->writeln( '<error>Give either a setting, or one of --mime and --ext.</error>' );
+				case self::TARGET_MIME:
+					$this->config->unsetMimeRule( $name, $fields );
+					$output->writeln( sprintf( 'MIME type %s: cleared', $name ) );
 
-					return self::INVALID;
-				}
+					return self::SUCCESS;
 
-				if ( is_string( $mime ) )
-				{
-					$this->config->unsetMimeRule( $mime, $fields );
-					$output->writeln( sprintf( 'MIME type %s: cleared', $mime ) );
-				}
-				else
-				{
-					$this->config->unsetExtensionRule( $extension, $fields );
-					$output->writeln( sprintf( 'Extension %s: cleared', $extension ) );
-				}
+				case self::TARGET_EXTENSION:
+					$this->config->unsetExtensionRule( $name, $fields );
+					$output->writeln( sprintf( 'Extension %s: cleared', $name ) );
 
-				return self::SUCCESS;
+					return self::SUCCESS;
+
+				case self::TARGET_SCRATCH:
+					$this->scratch->unset();
+					$output->writeln( sprintf( '%s: Nextcloud\'s temporary directory again, %s', $key, $this->scratch->path() ) );
+
+					return self::SUCCESS;
+
+				case self::TARGET_UNTRUSTED:
+					$this->config->unsetUntrustedAllowed();
+					$output->writeln( sprintf( '%s: blocked again', $key ) );
+
+					return self::SUCCESS;
+
+				case self::TARGET_BINARY:
+					$this->binaries->unsetOverride( $name );
+					$output->writeln( sprintf( '%s: found by Nextcloud again', $key ) );
+
+					return self::SUCCESS;
 			}
 
-			if ( ! is_string( $key ) )
-			{
-				$output->writeln( '<error>Give a setting, or --mime or --ext.</error>' );
-
-				return self::INVALID;
-			}
-
-			if ( $key === self::SCRATCH )
-			{
-				$this->scratch->unset();
-				$output->writeln( sprintf( '%s: Nextcloud\'s temporary directory again, %s', $key, $this->scratch->path() ) );
-
-				return self::SUCCESS;
-			}
-
-			if ( $key === self::UNTRUSTED )
-			{
-				$this->config->unsetUntrustedAllowed();
-				$output->writeln( sprintf( '%s: blocked again', $key ) );
-
-				return self::SUCCESS;
-			}
-
-			if ( str_starts_with( $key, self::BINARIES ) )
-			{
-				$this->binaries->unsetOverride( substr( $key, strlen( self::BINARIES ) ) );
-				$output->writeln( sprintf( '%s: found by Nextcloud again', $key ) );
-
-				return self::SUCCESS;
-			}
-
-			$this->config->unsetScalar( $key );
-			$output->writeln( sprintf( '%s: back to its default', $key ) );
+			$this->config->unsetScalar( $name );
+			$output->writeln( sprintf( '%s: back to its default', $name ) );
 
 			return self::SUCCESS;
 		}

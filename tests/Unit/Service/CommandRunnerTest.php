@@ -11,20 +11,14 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\Limits;
-use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
-use OCP\IBinaryFinder;
-use OCP\IConfig;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 
 /**
  * The runner against stub programs in tests/fixtures/bin, under the real
@@ -34,7 +28,6 @@ class CommandRunnerTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 	/** @var list<string> */
@@ -385,21 +378,6 @@ class CommandRunnerTest
 	{
 		$stubs = dirname( __DIR__, 2 ) . '/fixtures/bin';
 
-		$finder = $this->createMock( IBinaryFinder::class );
-		$finder->method( 'findBinaryPath' )
-		       ->willReturnCallback(
-			       static fn(
-				       string $program,
-			       ): string|false => $programs[ $program ]
-				       ?? ( is_file( $stubs . '/' . $program ) ? $stubs . '/' . $program : false ),
-		       )
-		;
-
-		$config = $this->createMock( IConfig::class );
-		$config->method( 'getSystemValue' )
-		       ->willReturn( [] )
-		;
-
 		$tempManager = $this->createMock( ITempManager::class );
 		$tempManager->method( 'getTemporaryFile' )
 		            ->willReturnCallback(
@@ -414,8 +392,13 @@ class CommandRunnerTest
 		;
 
 		return new CommandRunner(
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
-			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
+			$this->settings(),
+			$this->binaryLocator(
+				static fn(
+					string $program,
+				): string|false => $programs[ $program ]
+					?? ( is_file( $stubs . '/' . $program ) ? $stubs . '/' . $program : false ),
+			),
 			$tempManager,
 		);
 	}

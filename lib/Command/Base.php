@@ -50,6 +50,19 @@ abstract class Base
 	 */
 	protected const UNTRUSTED = 'vips_allow_untrusted';
 
+	/** What config:set or config:unset changes (target()). */
+	protected const TARGET_MIME = 'mime';
+
+	protected const TARGET_EXTENSION = 'ext';
+
+	protected const TARGET_SCRATCH = 'scratch';
+
+	protected const TARGET_UNTRUSTED = 'untrusted';
+
+	protected const TARGET_BINARY = 'binary';
+
+	protected const TARGET_SCALAR = 'scalar';
+
 	private const FORMATS
 		 = [
 			'plain',
@@ -96,6 +109,55 @@ abstract class Base
 		$output->writeln( sprintf( '<error>--output takes %s.</error>', implode( ', ', self::FORMATS ) ) );
 
 		return null;
+	}
+
+	/**
+	 * What a config:set or config:unset is for, and its name: a MIME type's
+	 * or an extension's rule, by `--mime` or `--ext`, the scratch directory,
+	 * the untrusted decoders or a program's path, all in system config, or a
+	 * setting; null after saying it is none of them.
+	 *
+	 * @param string $missing what to say where neither a key nor a rule is given
+	 * @return array{string, string}|null self::TARGET_* and the name
+	 */
+	protected function target(
+		InputInterface  $input,
+		OutputInterface $output,
+		string          $missing,
+	): ?array
+	{
+		$mime      = $input->getOption( 'mime' );
+		$extension = $input->getOption( 'ext' );
+		$key       = $input->getArgument( 'key' );
+
+		if ( is_string( $mime ) || is_string( $extension ) )
+		{
+			if ( $key !== null || ( is_string( $mime ) && is_string( $extension ) ) )
+			{
+				$output->writeln( '<error>Give either a setting, or one of --mime and --ext.</error>' );
+
+				return null;
+			}
+
+			return is_string( $mime )
+				? [ self::TARGET_MIME, $mime ]
+				: [ self::TARGET_EXTENSION, $extension ];
+		}
+
+		if ( ! is_string( $key ) )
+		{
+			$output->writeln( '<error>' . $missing . '</error>' );
+
+			return null;
+		}
+
+		return match ( true )
+		{
+			$key === self::SCRATCH                  => [ self::TARGET_SCRATCH, $key ],
+			$key === self::UNTRUSTED                => [ self::TARGET_UNTRUSTED, $key ],
+			str_starts_with( $key, self::BINARIES ) => [ self::TARGET_BINARY, substr( $key, strlen( self::BINARIES ) ) ],
+			default                                 => [ self::TARGET_SCALAR, $key ],
+		};
 	}
 
 	/**

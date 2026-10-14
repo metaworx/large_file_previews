@@ -229,12 +229,16 @@ Nextcloud copies what it reads there into `config.php` whenever it next writes i
 so remove a path from both:
 with `occ lfp:config:unset`, and then from the file.
 
-A file is read where it lies and handed to the renderer by its path,
-as an argument, never through a shell.
+A file is read where it lies:
+the app opens it and hands it to the renderer as a descriptor,
+never by its name, and never through a shell.
+A program's path kept in the memory cache is checked again before it runs.
+A file's name, or what a program prints, reaches the log as text:
+a control character becomes a space, and bytes that are no UTF-8 are replaced.
 libvips' untrusted decoders, not hardened against hostile files,
 stay blocked unless system config allows them.
 The only copy ever made is the re-striped TIFF, in the scratch directory,
-removed once rendered.
+an unlinked file, gone once rendered.
 
 ## Measured
 

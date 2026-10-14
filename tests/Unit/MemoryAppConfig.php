@@ -9,9 +9,14 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Tests\Unit;
 
+use Closure;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCP\IAppConfig;
+use OCP\IBinaryFinder;
 use OCP\IConfig;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 
 /**
  * An `IAppConfig` that keeps the app's values in `$this->appValues`, for the
@@ -21,11 +26,15 @@ use PHPUnit\Framework\MockObject\MockObject;
  * A key that is not set answers with the default the caller passes, as the
  * server does for a key the lexicon declares. System config, which the
  * service reads for Nextcloud's own preview limits, is `$this->systemValues`.
+ *
+ * A ConfigurationService and a BinaryLocator over both come ready made
+ * (settings(), binaryLocator()).
  */
 trait MemoryAppConfig
 {
-	// A ConfigurationService takes a MIME type detector beside the config,
-	// and what finds programs a cache.
+	// A ConfigurationService takes a translator and a MIME type detector
+	// beside the config, and what finds programs a cache.
+	use EnglishL10n;
 	use KnownMimeTypes;
 	use MemoryCache;
 	/** @var array<string, mixed> */
@@ -36,6 +45,43 @@ trait MemoryAppConfig
 
 
 //  other non-static methods
+
+	/**
+	 * The settings over `$this->appValues` and `$this->systemValues`, in
+	 * English, or with what is translated marked.
+	 */
+	protected function settings( bool $marking = false ): ConfigurationService
+	{
+		return new ConfigurationService(
+			$this->memoryAppConfig(),
+			$marking ? $this->markingL10n() : $this->englishL10n(),
+			$this->mimeDetector(),
+			$this->systemConfig(),
+		);
+	}
+
+	/**
+	 * Programs found as given, a map from name to path or what answers for
+	 * a name, overridden as `$this->systemValues` says, and kept in the
+	 * memory cache.
+	 *
+	 * @param array<string, string>|Closure(string): (string|false) $found
+	 */
+	protected function binaryLocator( array|Closure $found ): BinaryLocator
+	{
+		$finder = $this->createMock( IBinaryFinder::class );
+		$finder->method( 'findBinaryPath' )
+		       ->willReturnCallback(
+			       $found instanceof Closure
+				       ? $found
+				       : static fn(
+					       string $program,
+				       ): string|false => $found[ $program ] ?? false,
+		       )
+		;
+
+		return new BinaryLocator( $this->systemConfig(), $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) );
+	}
 
 	protected function systemConfig(): IConfig&MockObject
 	{

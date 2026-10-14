@@ -152,7 +152,7 @@ class PopplerRenderer
 					'-scale-to',
 					(string) $box,
 					...( $format === PreviewFormat::JPEG
-						? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d', VipsRenderer::QUALITY ) ]
+						? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d', PreviewFormat::QUALITY ) ]
 						: [ '-png' ] ),
 					'-singlefile',
 					RunOptions::path( RunOptions::INPUT ),

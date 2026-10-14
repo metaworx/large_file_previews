@@ -34,8 +34,6 @@ class VipsLoaders
 
 //  constants
 
-	public const PROGRAM = 'vips';
-
 	/** The first libvips that blocks untrusted decoders. */
 	public const BLOCKS_FROM = '8.13';
 
@@ -88,7 +86,7 @@ class VipsLoaders
 			return $this->loaders;
 		}
 
-		$location = $this->binaries->locate( self::PROGRAM );
+		$location = $this->binaries->locate( VipsRenderer::CONVERTER );
 
 		if ( ! $location->isFound() )
 		{
@@ -117,7 +115,7 @@ class VipsLoaders
 			}
 		}
 
-		$outcome = $this->runner->runBare( self::PROGRAM, [ '-l', 'foreign' ], self::LISTING_LIMIT );
+		$outcome = $this->runner->runBare( VipsRenderer::CONVERTER, [ '-l', 'foreign' ], self::LISTING_LIMIT );
 		$loaders = $outcome->isSuccess() ? self::parse( $outcome->stderr ) : [];
 
 		// Kept for a minute only when it did not answer: not asked for every

@@ -15,12 +15,10 @@ use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +27,6 @@ class PopplerRendererTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -333,11 +330,6 @@ class PopplerRendererTest
 	): PopplerRenderer
 	{
 		return new PopplerRenderer( $runner, $this->probe( $scanBox ), $this->vips( false ), $this->settings() );
-	}
-
-	private function settings(): ConfigurationService
-	{
-		return new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() );
 	}
 
 	/**

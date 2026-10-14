@@ -13,7 +13,6 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\DetectionCache;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\Platform;
@@ -21,21 +20,16 @@ use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
-use OCP\IBinaryFinder;
 use OCP\ICache;
 use OCP\ICacheFactory;
-use OCP\IConfig;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 
 class PrerequisitesServiceTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -177,7 +171,24 @@ class PrerequisitesServiceTest
 
 		$list = $this->service( [ 'pdftoppm' ], $runner )->programList();
 
-		self::assertSame( BinaryLocator::PROGRAMS, array_column( $list, 'name' ) );
+		// The one list of programs: the page's list and the check's are it.
+		self::assertSame( array_keys( BinaryLocator::PROGRAMS ), array_column( $list, 'name' ) );
+		self::assertSame(
+			array_keys( BinaryLocator::PROGRAMS ),
+			array_values(
+				array_map(
+					static fn(
+						Prerequisite $item,
+					): string => $item->name,
+					array_filter(
+						$this->service( [ 'pdftoppm' ], $runner )->check(),
+						static fn(
+							Prerequisite $item,
+						): bool => $item->group === Prerequisite::GROUP_PROGRAM,
+					),
+				),
+			),
+		);
 		self::assertSame(
 			[
 				'name'    => 'pdftoppm',
@@ -269,28 +280,18 @@ class PrerequisitesServiceTest
 		;
 		$versions = $cached ? $this->detectionCache() : new DetectionCache( $forgetting );
 
-		$finder = $this->createMock( IBinaryFinder::class );
-		$finder->method( 'findBinaryPath' )
-		       ->willReturnCallback(
-			       static fn(
-				       string $program,
-			       ): string|false => in_array( $program, $found, true ) ? '/usr/bin/' . $program : false,
-		       )
-		;
-
-		$config = $this->createMock( IConfig::class );
-		$config->method( 'getSystemValue' )
-		       ->willReturn( [] )
-		;
-
 		$tempManager = $this->createMock( ITempManager::class );
 		$tempManager->method( 'getTempBaseDir' )
 		            ->willReturn( $temp === '' ? sys_get_temp_dir() : $temp )
 		;
 
 		return new PrerequisitesService(
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
-			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
+			$this->settings(),
+			$this->binaryLocator(
+				static fn(
+					string $program,
+				): string|false => in_array( $program, $found, true ) ? '/usr/bin/' . $program : false,
+			),
 			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $versions ),
 			$tempManager,
 			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),

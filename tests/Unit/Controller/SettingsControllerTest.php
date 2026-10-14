@@ -18,23 +18,18 @@ use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Settings\Admin;
-use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
-use OCP\IBinaryFinder;
-use OCP\IConfig;
 use OCP\IRequest;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionMethod;
 
@@ -42,7 +37,6 @@ class SettingsControllerTest
     extends
     TestCase
 {
-	use EnglishL10n;
 	use MemoryAppConfig;
 
 
@@ -264,7 +258,7 @@ class SettingsControllerTest
 		array  $overrides = [],
 	): SettingsController
 	{
-		$config = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n(), $this->mimeDetector(), $this->systemConfig() );
+		$config = $this->settings( true );
 
 		$prerequisites = $this->createMock( PrerequisitesService::class );
 		$prerequisites->method( 'check' )
@@ -281,24 +275,12 @@ class SettingsControllerTest
 		$scratch = new ScratchDirectory( $this->systemConfig(), $tempManager );
 
 		// pdftoppm is there; nothing else is asked for.
-		$systemConfig = $this->createMock( IConfig::class );
-		$systemConfig->method( 'getSystemValue' )
-		             ->willReturnCallback(
-			             static fn(
-				             string $key,
-				             mixed  $default = null,
-			             ): mixed => $key === BinaryLocator::SYSTEM_KEY ? $overrides : $default,
-		             )
-		;
-		$finder = $this->createMock( IBinaryFinder::class );
-		$finder->method( 'findBinaryPath' )
-		       ->willReturnCallback(
-			       static fn(
-				       string $program,
-			       ): string|false => $program === 'pdftoppm' ? '/usr/bin/pdftoppm' : false,
-		       )
-		;
-		$binaries = new BinaryLocator( $systemConfig, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) );
+		if ( $overrides !== [] )
+		{
+			$this->systemValues[ BinaryLocator::SYSTEM_KEY ] = $overrides;
+		}
+
+		$binaries = $this->binaryLocator( [ 'pdftoppm' => '/usr/bin/pdftoppm' ] );
 
 		// libvips, where it were there, with TIFF and an untrusted JPEG 2000.
 		$loaders = $this->createMock( VipsLoaders::class );

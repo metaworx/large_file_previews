@@ -43,18 +43,32 @@ class BinaryLocator
 
 	public const SYSTEM_KEY = 'large_file_previews.binaries';
 
+	/**
+	 * Every program the app runs, the one list of them: how it says which
+	 * version it is, when it is needed - null always, false never, or while
+	 * a limit or the images are on - what for, and the source package
+	 * that brings it (Platform).
+	 *
+	 * @var array<string, array{version: string, limit: string|false|null, for: string, source: string}>
+	 */
 	public const PROGRAMS
 		 = [
-			'pdftoppm',
-			'pdfinfo',
-			'pdfimages',
-			'vipsthumbnail',
-			'vipsheader',
-			'vips',
-			'tiffcp',
-			'timeout',
-			'prlimit',
-			'choom',
+			'pdftoppm'      => [ 'version' => '-v', 'limit' => null, 'for' => 'rendering PDF and Illustrator files', 'source' => 'poppler' ],
+			// Without them a scanned page is enlarged to the full box; no reason to stop rendering.
+			'pdfinfo'       => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution', 'source' => 'poppler' ],
+			'pdfimages'     => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution', 'source' => 'poppler' ],
+			// Needed while an image type is switched on, as a limit while it is.
+			'vipsthumbnail' => [ 'version' => '--version', 'limit' => 'images', 'for' => 'rendering images', 'source' => 'vips' ],
+			// Without it an image smaller than the preview is enlarged.
+			'vipsheader'    => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering an image at its own size where that is smaller', 'source' => 'vips' ],
+			// Without it, which image types libvips reads is found out by
+			// rendering them, and a PDF previewed as WebP is a JPEG.
+			'vips'          => [ 'version' => '--version', 'limit' => false, 'for' => 'telling which image types libvips reads, and WebP previews of PDFs', 'source' => 'vips' ],
+			// Without it, a TIFF in one large strip that runs out of memory stays a failure.
+			'tiffcp'        => [ 'version' => '-h', 'limit' => false, 'for' => 'a second chance for a TIFF in one strip that runs out of memory', 'source' => 'tiff' ],
+			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render', 'source' => 'core' ],
+			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space and file-size caps of each render', 'source' => 'util' ],
+			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render', 'source' => 'util' ],
 		];
 
 	/** @var array<string, BinaryLocation> */
@@ -89,7 +103,7 @@ class BinaryLocator
 	{
 		$all = [];
 
-		foreach ( self::PROGRAMS as $program )
+		foreach ( array_keys( self::PROGRAMS ) as $program )
 		{
 			$all[ $program ] = $this->locate( $program );
 		}
@@ -115,7 +129,7 @@ class BinaryLocator
 
 		foreach ( $overrides as $program => $path )
 		{
-			if ( ! in_array( $program, self::PROGRAMS, true ) )
+			if ( ! array_key_exists( $program, self::PROGRAMS ) )
 			{
 				$problems[] = sprintf( '%s.%s: not a program this app runs; ignored', self::SYSTEM_KEY, $program );
 			}
@@ -280,12 +294,12 @@ class BinaryLocator
 	 */
 	private static function refuseUnknown( string $program ): void
 	{
-		if ( in_array( $program, self::PROGRAMS, true ) )
+		if ( array_key_exists( $program, self::PROGRAMS ) )
 		{
 			return;
 		}
 
-		$message = sprintf( '%s is not a program this app runs; the programs are %s.', $program, implode( ', ', self::PROGRAMS ) );
+		$message = sprintf( '%s is not a program this app runs; the programs are %s.', $program, implode( ', ', array_keys( self::PROGRAMS ) ) );
 
 		throw new ConfigurationException( $message, $message );
 	}

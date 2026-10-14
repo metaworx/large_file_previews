@@ -102,7 +102,7 @@ class LargeFileProvider
 				$this->logger->debug(
 					'Declined {name} ({mime}): {reason}',
 					[
-						'name'   => $file->getName(),
+						'name'   => self::loggable( (string) $file->getName() ),
 						'mime'   => $resolution->mime,
 						'reason' => $reason,
 					],
@@ -118,7 +118,7 @@ class LargeFileProvider
 			$this->logger->warning(
 				'Could not decide whether to render {name}: {message}',
 				[
-					'name'      => $file->getName(),
+					'name'      => self::loggable( (string) $file->getName() ),
 					'message'   => $e->getMessage(),
 					'exception' => $e,
 				],
@@ -188,29 +188,7 @@ class LargeFileProvider
 		}
 		catch ( Throwable $e )
 		{
-			$this->logger->warning(
-				'Could not render {name}: {message}',
-				[
-					'name'      => $file->getName(),
-					'message'   => $e->getMessage(),
-					'exception' => $e,
-				],
-			);
-
-			try
-			{
-				$this->config->recordFailure(
-					$this->time->getTime(),
-					$file->getMimetype(),
-					new RenderOutcome( Outcome::START_FAILED, 'unexpected error: ' . $e->getMessage() ),
-				);
-			}
-			catch ( Throwable )
-			{
-				// Already logged; the record is a convenience.
-			}
-
-			return null;
+			return $this->failed( $file, new RenderOutcome( Outcome::START_FAILED, 'unexpected error: ' . $e->getMessage() ), $e );
 		}
 		finally
 		{
@@ -224,20 +202,39 @@ class LargeFileProvider
 
 //  other non-static methods
 
+	/**
+	 * Logs a failed render, records it and remembers the file; never throws,
+	 * whatever the file, the outcome or the exception hold.
+	 */
 	private function failed(
 		File          $file,
 		RenderOutcome $outcome,
+		?Throwable    $exception = null,
 	): null
 	{
+		try
+		{
+			$name = (string) $file->getName();
+			$mime = $file->getMimetype();
+		}
+		catch ( Throwable )
+		{
+			$name = '(no name)';
+			$mime = '';
+		}
+
+		// A name, or what a program printed, could hold a line break or bytes
+		// that are no text, and forge or break a log line.
 		$this->logger->warning(
 			'Could not render {name} ({mime}): {reason}{stderr}',
 			[
-				'name'        => $file->getName(),
-				'mime'        => $file->getMimetype(),
-				'reason'      => $outcome->reason,
-				'stderr'      => $outcome->stderr === '' ? '' : '; ' . strtok( $outcome->stderr, "\n" ),
+				'name'        => self::loggable( $name ),
+				'mime'        => self::loggable( $mime ),
+				'reason'      => self::loggable( $outcome->reason ),
+				'stderr'      => $outcome->stderr === '' ? '' : '; ' . self::loggable( (string) strtok( $outcome->stderr, "\n" ) ),
 				'outcome'     => $outcome->outcome->value,
 				'exit_status' => $outcome->exitStatus,
+				...( $exception === null ? [] : [ 'exception' => $exception ] ),
 			],
 		);
 
@@ -245,7 +242,7 @@ class LargeFileProvider
 		// other providers for a while, rather than failing on every request.
 		try
 		{
-			$this->config->recordFailure( $this->time->getTime(), $file->getMimetype(), $outcome );
+			$this->config->recordFailure( $this->time->getTime(), $mime, $outcome );
 			$this->failures->remember( $file, $outcome );
 		}
 		catch ( Throwable $e )
@@ -264,6 +261,15 @@ class LargeFileProvider
 
 
 //  static methods
+
+	/**
+	 * Text as a log line may hold it: valid UTF-8, each control character
+	 * a space.
+	 */
+	public static function loggable( string $text ): string
+	{
+		return (string) preg_replace( '/\p{Cc}/u', ' ', mb_scrub( $text, 'UTF-8' ) );
+	}
 
 	/**
 	 * Removes the render's folder: the PNG, and whatever else the program
