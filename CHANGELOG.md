@@ -53,7 +53,7 @@ the first stable release.
 
 - *Administration settings → Additional settings*: version, status,
   files processed, previews, limits, failed files, libvips, programs,
-  each with its `occ` command as stored, its help behind an ⓘ.
+  each shown as stored, with its `occ` command and its help behind an ⓘ.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes, a MIME type's

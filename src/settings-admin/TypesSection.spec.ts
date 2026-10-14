@@ -36,6 +36,17 @@ describe('TypesSection', () => {
 		expect(command(state)).toBe('occ lfp:config:set --mime image/tiff --enabled=yes')
 	})
 
+	it('shows in a MIME type\'s fields what is set for it, and what it follows where nothing is', () => {
+		const state = testState()
+		state.mimetypes[1].rule = { enabled: true, min_size_mb: 50, max_size_mb: 900 }
+		state.mimetypes[1].stored = { enabled: true, max_size_mb: 900 }
+		const fields = row(section(state), '[data-mime="image/tiff"]').findAllComponents({ name: 'NumberField' })
+
+		expect(fields[0].props('value')).toBeNull()
+		expect(fields[0].props('placeholder')).toBe('50')
+		expect(fields[1].props('value')).toBe(900)
+	})
+
 	it('gives an extension the command for its rule', () => {
 		const state = testState()
 		state.extensions = [tif()]

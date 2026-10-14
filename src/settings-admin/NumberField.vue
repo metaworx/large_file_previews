@@ -6,11 +6,13 @@
  * A number with its own Save button, enabled once the number differs from
  * what is saved. Where `clearable`, an empty field saves as null: the value
  * is not set at this level. The field shows only what is set here, never a
- * value from another level.
+ * value from another level; what applies where it is empty may be its
+ * placeholder. Its help, where it has one, is an ⓘ after the button.
  */
 import { computed, ref, watch } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import HelpPopover from './HelpPopover.vue'
 import { t } from '../l10n'
 
 const props = withDefaults(defineProps<{
@@ -22,12 +24,18 @@ const props = withDefaults(defineProps<{
 	clearable?: boolean
 	narrow?: boolean
 	disabled?: boolean
+	/** What applies where the field is empty: the value of the level below. */
+	placeholder?: string | null
+	/** What the field means, behind an ⓘ after its Save button. */
+	help?: string | null
 }>(), {
 	min: null,
 	max: null,
 	clearable: false,
 	narrow: false,
 	disabled: false,
+	placeholder: null,
+	help: null,
 })
 
 const emit = defineEmits<{
@@ -65,6 +73,7 @@ function save(): void {
 			class="lfp-number__field"
 			type="number"
 			:label="label"
+			:placeholder="placeholder ?? undefined"
 			:min="min ?? undefined"
 			:max="max ?? undefined"
 			:disabled="disabled"
@@ -77,6 +86,7 @@ function save(): void {
 			@click="save">
 			{{ t('large_file_previews', 'Save') }}
 		</NcButton>
+		<HelpPopover v-if="help" :text="help" :label="label" />
 	</div>
 </template>
 

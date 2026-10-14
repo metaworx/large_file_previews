@@ -58,17 +58,14 @@ function foundBy(program: ProgramRow): string {
 		</div>
 		<div class="lfp-fields" data-setting="vips_concurrency">
 			<div>
-				<div class="lfp-named">
-					<NumberField id="lfp-vips-concurrency"
-						:label="t('large_file_previews', 'Threads per render')"
-						:value="state.scalars.vips_concurrency.value"
-						:min="state.scalars.vips_concurrency.min"
-						:max="state.scalars.vips_concurrency.max"
-						:disabled="saving"
-						@save="emit('save', scalarChange('vips_concurrency', $event))" />
-					<HelpPopover :text="t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.')"
-						:label="t('large_file_previews', 'Threads per render')" />
-				</div>
+				<NumberField id="lfp-vips-concurrency"
+					:label="t('large_file_previews', 'Threads per render')"
+					:value="state.scalars.vips_concurrency.value"
+					:min="state.scalars.vips_concurrency.min"
+					:max="state.scalars.vips_concurrency.max"
+					:help="t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.')"
+					:disabled="saving"
+					@save="emit('save', scalarChange('vips_concurrency', $event))" />
 				<OccCommand :command="scalarCommand('vips_concurrency', state.scalars.vips_concurrency.value)" />
 			</div>
 		</div>
@@ -121,17 +118,14 @@ function foundBy(program: ProgramRow): string {
 		<OccCommand :command="scratchCommand(state.scratch.path)" />
 		<div class="lfp-fields" data-setting="tiff_restrip_max_mb">
 			<div>
-				<div class="lfp-named">
-					<NumberField id="lfp-tiff-restrip-max"
-						:label="t('large_file_previews', 'Largest copy, MiB')"
-						:value="state.scalars.tiff_restrip_max_mb.value"
-						:min="state.scalars.tiff_restrip_max_mb.min"
-						:max="state.scalars.tiff_restrip_max_mb.max"
-						:disabled="saving"
-						@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
-					<HelpPopover :text="t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.')"
-						:label="t('large_file_previews', 'Largest copy, MiB')" />
-				</div>
+				<NumberField id="lfp-tiff-restrip-max"
+					:label="t('large_file_previews', 'Largest copy, MiB')"
+					:value="state.scalars.tiff_restrip_max_mb.value"
+					:min="state.scalars.tiff_restrip_max_mb.min"
+					:max="state.scalars.tiff_restrip_max_mb.max"
+					:help="t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.')"
+					:disabled="saving"
+					@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
 				<OccCommand :command="scalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb.value)" />
 			</div>
 		</div>

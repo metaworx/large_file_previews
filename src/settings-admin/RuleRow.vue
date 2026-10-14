@@ -11,6 +11,7 @@
  * A MIME type is enabled or disabled, and resets to what it ships with; an
  * extension is enabled, excluded, or as its MIME type, and is removed.
  */
+import { computed } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NumberField from './NumberField.vue'
@@ -65,6 +66,21 @@ function switchText(): string {
 	return props.rule.enabled ? t('large_file_previews', 'enabled') : t('large_file_previews', 'excluded')
 }
 
+/** What is set at this level: a MIME type's stored fields, an extension's rule. */
+const own = computed<Rule>(() => props.stored ?? props.rule)
+
+/**
+ * A MIME type's size in force, for a field left empty to show as what it
+ * follows; an extension's comes from its MIME type, which the row does not
+ * hold.
+ */
+function inherited(value: number | undefined): string | null {
+	if (props.stored === null || value === undefined) {
+		return null
+	}
+	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
+}
+
 function fieldId(field: string): string {
 	return 'lfp-' + field + '-' + (props.kind === 'ext' ? 'ext-' : '') + props.name
 }
@@ -82,7 +98,7 @@ function fieldId(field: string): string {
 			</template>
 			<span v-if="rendererProblem(renderer) !== null" class="lfp-note lfp-note--error">{{ rendererProblem(renderer)?.text }}</span>
 			<span v-else-if="noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
-			<OccCommand :command="ruleCommand(kind, name, stored ?? rule)" />
+			<OccCommand :command="ruleCommand(kind, name, own)" />
 		</td>
 		<td>
 			<NcCheckboxRadioSwitch type="switch"
@@ -95,7 +111,8 @@ function fieldId(field: string): string {
 		<td>
 			<NumberField :id="fieldId('min')"
 				:label="t('large_file_previews', 'Minimum')"
-				:value="rule.min_size_mb ?? null"
+				:value="own.min_size_mb ?? null"
+				:placeholder="inherited(rule.min_size_mb)"
 				:min="0"
 				clearable
 				narrow
@@ -105,7 +122,8 @@ function fieldId(field: string): string {
 		<td>
 			<NumberField :id="fieldId('max')"
 				:label="t('large_file_previews', 'Maximum')"
-				:value="rule.max_size_mb ?? null"
+				:value="own.max_size_mb ?? null"
+				:placeholder="inherited(rule.max_size_mb)"
 				:min="-1"
 				clearable
 				narrow
