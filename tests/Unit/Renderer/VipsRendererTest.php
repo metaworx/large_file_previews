@@ -338,6 +338,10 @@ class VipsRendererTest
 		// The path may look like a header; the last field on the line counts.
 		self::assertSame( 20, VipsRenderer::header( '/a/b: 9x9 x, 3 bands, c.tif: 10x20 float, 3 bands, scrgb, tiffload' )['height'] ?? null );
 		self::assertSame( 4, VipsRenderer::header( '/a.tif: 1x1 float, 3 bands, scrgb, tiffload' )['bytes'] ?? null );
+		self::assertSame(
+			[ 'width' => 6000, 'height' => 6000, 'bands' => 1, 'bytes' => 4, 'loader' => 'tiffload' ],
+			VipsRenderer::header( '/tmp/n.tif: 6000x6000 float, 1 band, b-w, tiffload' ),
+		);
 		self::assertNull( VipsRenderer::header( 'vipsheader: VipsForeignLoad: "/a.tif" is not a known file format' ) );
 		self::assertNull( VipsRenderer::header( '/a.tif: 0x0 uchar, 3 bands, srgb, tiffload' ) );
 	}

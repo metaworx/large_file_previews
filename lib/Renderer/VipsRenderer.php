@@ -435,7 +435,8 @@ class VipsRenderer
 	 */
 	public static function header( string $header ): ?array
 	{
-		if ( preg_match( '/^.*: (\d+)x(\d+) (\w+), (\d+) bands?, \w+, (\w+)\s*$/m', $header, $matches ) !== 1 )
+		// The interpretation may hold a hyphen: `b-w`.
+		if ( preg_match( '/^.*: (\d+)x(\d+) (\w+), (\d+) bands?, [^,\n]+, (\w+)\s*$/m', $header, $matches ) !== 1 )
 		{
 			return null;
 		}
