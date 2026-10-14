@@ -60,7 +60,7 @@ class CommandRunnerTest
 		$runner = $this->runner( [ 'timeout' => '/t', 'prlimit' => '/p', 'choom' => '/c' ] );
 
 		self::assertSame(
-			[ '/t', '--kill-after=5s', '30s', '/p', '--as=536870912', '--', '/c', '-n', '700', '--' ],
+			[ '/t', '--kill-after=5s', '30s', '/p', '--as=536870912', '--fsize=1073741824', '--', '/c', '-n', '700', '--' ],
 			$runner->prefix( new Limits( true, 30, 5, true, 512, true, 700 ) ),
 		);
 	}
@@ -70,7 +70,7 @@ class CommandRunnerTest
 		$runner = $this->runner( [ 'timeout' => '/t', 'prlimit' => '/p', 'choom' => '/c' ] );
 
 		self::assertSame( [], $runner->prefix( new Limits( false, 30, 5, false, 512, false, 700 ) ) );
-		self::assertSame( [ '/p', '--as=268435456', '--' ], $runner->prefix( new Limits( false, 30, 5, true, 256, false, 0 ) ) );
+		self::assertSame( [ '/p', '--as=268435456', '--fsize=67108864', '--' ], $runner->prefix( new Limits( false, 30, 5, true, 256, false, 0, 67_108_864 ) ) );
 		self::assertSame( [ '/t', '--kill-after=1s', '2s', '/c', '-n', '0', '--' ], $runner->prefix( new Limits( true, 2, 1, false, 256, true, 0 ) ) );
 	}
 
@@ -113,17 +113,29 @@ class CommandRunnerTest
 		$this->appValues = self::only( ConfigLexicon::PRLIMIT_ENABLED ) + [ ConfigLexicon::PRLIMIT_AS_MB => 512 ];
 
 		self::assertSame(
-			[ '/p', '--as=1073741824', '--', '/usr/bin/pdftoppm' ],
-			$this->runner( $programs )->command( 'pdftoppm', [], 1024 ),
+			[ '/p', '--as=1073741824', '--fsize=1073741824', '--', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( prlimitAsMb: 1024 ) ),
 		);
 		self::assertSame(
-			[ '/p', '--as=536870912', '--', '/usr/bin/pdftoppm' ],
+			[ '/p', '--as=536870912', '--fsize=1073741824', '--', '/usr/bin/pdftoppm' ],
 			$this->runner( $programs )->command( 'pdftoppm', [] ),
+		);
+
+		// The file-size cap is prlimit_fsize_mb, or a run's own: the copy's.
+		$this->appValues[ ConfigLexicon::PRLIMIT_FSIZE_MB ] = 64;
+
+		self::assertSame(
+			[ '/p', '--as=536870912', '--fsize=67108864', '--', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [] ),
+		);
+		self::assertSame(
+			[ '/p', '--as=536870912', '--fsize=12345', '--', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( fsizeBytes: 12345 ) ),
 		);
 
 		$this->appValues = self::only( '' );
 
-		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [], 1024 ) );
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( prlimitAsMb: 1024 ) ) );
 	}
 
 	/**

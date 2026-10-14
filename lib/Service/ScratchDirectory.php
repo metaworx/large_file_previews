@@ -39,6 +39,9 @@ class ScratchDirectory
 	 */
 	public const RESERVE_BYTES = 268_435_456;
 
+	/** The file one copy at a time locks; it holds nothing. */
+	public const LOCK_FILE = '.lfp-restrip.lock';
+
 	/** The file systems that keep their files in memory. */
 	private const IN_MEMORY = [ 'tmpfs', 'ramfs' ];
 
@@ -80,12 +83,19 @@ class ScratchDirectory
 	{
 		$path = $this->path();
 
-		if ( ! is_dir( $path ) || ! is_writable( $path ) )
+		// What cannot be told counts as a problem: a copy that may land in
+		// memory, or fill the disc, is not made.
+		if ( ! str_starts_with( $path, '/' ) || ! is_dir( $path ) || ! is_writable( $path ) )
 		{
-			return sprintf( 'the scratch directory %s is not a writable directory', $path );
+			return sprintf( 'the scratch directory %s is not an absolute, writable directory', $path );
 		}
 
 		$type = self::fileSystem( $path, (string) @file_get_contents( '/proc/mounts' ) );
+
+		if ( $type === null )
+		{
+			return sprintf( 'the file system of the scratch directory %s cannot be told: /proc/mounts is not readable', $path );
+		}
 
 		if ( in_array( $type, self::IN_MEMORY, true ) )
 		{
@@ -94,10 +104,50 @@ class ScratchDirectory
 
 		$free = @disk_free_space( $path );
 
-		if ( is_float( $free ) && $free < (float) ( $bytes + self::RESERVE_BYTES ) )
+		if ( ! is_float( $free ) )
+		{
+			return sprintf( 'the free space in the scratch directory %s cannot be told', $path );
+		}
+
+		if ( $free < (float) ( $bytes + self::RESERVE_BYTES ) )
 		{
 			return sprintf( 'the scratch directory %s has %d MB free, and the copy takes %d MB', $path, (int) ( $free / 1_048_576.0 ), (int) ceil( $bytes / 1_048_576 ) );
 		}
+
+		return null;
+	}
+
+	/**
+	 * Takes the scratch directory for one copy at a time, waiting up to the
+	 * seconds given: two copies at once could each pass the free-space
+	 * check and together fill the disc. Released by closing what it returns;
+	 * null where it could not be taken in time.
+	 *
+	 * @return resource|null
+	 */
+	public function lock( int $seconds ): mixed
+	{
+		$handle = @fopen( $this->path() . '/' . self::LOCK_FILE, 'c' );
+
+		if ( $handle === false )
+		{
+			return null;
+		}
+
+		$until = microtime( true ) + (float) max( 0, $seconds );
+
+		do
+		{
+			if ( flock( $handle, LOCK_EX | LOCK_NB ) )
+			{
+				return $handle;
+			}
+
+			usleep( 100_000 );
+		}
+		while ( microtime( true ) < $until );
+
+		fclose( $handle );
 
 		return null;
 	}

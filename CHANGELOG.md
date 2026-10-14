@@ -35,7 +35,8 @@ the first stable release.
   by default as Nextcloud's `preview_format` says; `preview_background`.
 
 - `README.md`, *Configuration*: a TIFF in one large strip out of memory,
-  re-striped by `tiffcp` into an unlinked copy in `scratch_directory`.
+  re-striped by `tiffcp` into an unlinked copy in `scratch_directory`,
+  one at a time, up to `tiff_restrip_max_mb`; `prlimit_fsize_mb`.
 
 - *Administration settings → Additional settings*: status, files
   processed, preview format, limits, libvips, programs with versions;

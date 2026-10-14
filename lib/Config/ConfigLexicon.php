@@ -53,6 +53,10 @@ class ConfigLexicon
 
 	public const VIPS_PRLIMIT_AS_MB = 'vips_prlimit_as_mb';
 
+	public const PRLIMIT_FSIZE_MB = 'prlimit_fsize_mb';
+
+	public const TIFF_RESTRIP_MAX_MB = 'tiff_restrip_max_mb';
+
 	public const CHOOM_ENABLED = 'choom_enabled';
 
 	public const CHOOM_ADJUST = 'choom_adjust';
@@ -140,7 +144,21 @@ class ConfigLexicon
 				'max'        => 65536,
 				'definition' => 'The address-space cap, in MB, of a render by libvips, which decodes whole strips and runs threads; prlimit_enabled switches it too.',
 			],
-			self::CHOOM_ENABLED             => [
+			// A preview, its stderr and libvips' spill stay far below this;
+			// a hostile file printing warnings without end does not.
+			self::PRLIMIT_FSIZE_MB           => [
+				'default'    => 1024,
+				'min'        => 64,
+				'max'        => 65536,
+				'definition' => 'The largest file, in MB, a render may write: its preview, its messages, any spill; prlimit_enabled switches it too. The one-strip copy has tiff_restrip_max_mb instead.',
+			],
+			self::TIFF_RESTRIP_MAX_MB        => [
+				'default'    => 4096,
+				'min'        => 256,
+				'max'        => 1048576,
+				'definition' => 'The largest uncompressed copy, in MB, the one-strip fallback makes of a TIFF; a TIFF that would need more gets no second chance.',
+			],
+			self::CHOOM_ENABLED            => [
 				'default'    => true,
 				'definition' => 'Whether each render runs under choom, so the kernel kills it before a web server worker when memory runs out.',
 			],

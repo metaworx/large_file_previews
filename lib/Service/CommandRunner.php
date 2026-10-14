@@ -77,7 +77,7 @@ class CommandRunner
 		RunOptions $options = new RunOptions(),
 	): RenderOutcome
 	{
-		$command = $this->command( $program, $arguments, $options->prlimitAsMb );
+		$command = $this->command( $program, $arguments, $options );
 
 		if ( $command instanceof RenderOutcome )
 		{
@@ -105,9 +105,9 @@ class CommandRunner
 	 * @return list<string>|RenderOutcome
 	 */
 	public function command(
-		string $program,
-		array  $arguments,
-		?int   $prlimitAsMb = null,
+		string     $program,
+		array      $arguments,
+		RunOptions $options = new RunOptions(),
 	): array|RenderOutcome
 	{
 		$location = $this->binaries->locate( $program );
@@ -120,12 +120,7 @@ class CommandRunner
 			);
 		}
 
-		$limits = $this->config->limits();
-		$prefix = $this->prefix(
-			$prlimitAsMb === null
-				? $limits
-				: $limits->withPrlimitAsMb( $prlimitAsMb ),
-		);
+		$prefix = $this->prefix( $this->config->limits()->withRun( $options->prlimitAsMb, $options->fsizeBytes ) );
 
 		if ( $prefix instanceof RenderOutcome )
 		{
@@ -154,6 +149,7 @@ class CommandRunner
 			'prlimit' => $limits->prlimitEnabled
 				? [
 					sprintf( '--as=%d', $limits->prlimitAsMb * 1_048_576 ),
+					sprintf( '--fsize=%d', $limits->prlimitFsizeBytes ),
 					'--',
 				]
 				: null,

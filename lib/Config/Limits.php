@@ -25,6 +25,9 @@ final readonly class Limits
 		public int  $prlimitAsMb,
 		public bool $choomEnabled,
 		public int  $choomAdjust,
+		// The largest file a run may write, in bytes: its output, stderr and
+		// any spill; switched with the address-space cap (prlimit_enabled).
+		public int  $prlimitFsizeBytes = 1_073_741_824,
 	)
 	{
 	}
@@ -33,18 +36,23 @@ final readonly class Limits
 //  other non-static methods
 
 	/**
-	 * The same limits with another address-space cap: a renderer's own.
+	 * The same limits with a run's own address-space cap, and its own
+	 * file-size cap: a renderer's, or the one-strip copy's.
 	 */
-	public function withPrlimitAsMb( int $prlimitAsMb ): self
+	public function withRun(
+		?int $prlimitAsMb,
+		?int $prlimitFsizeBytes = null,
+	): self
 	{
 		return new self(
 			$this->timeoutEnabled,
 			$this->timeoutSeconds,
 			$this->timeoutKillAfterSeconds,
 			$this->prlimitEnabled,
-			$prlimitAsMb,
+			$prlimitAsMb ?? $this->prlimitAsMb,
 			$this->choomEnabled,
 			$this->choomAdjust,
+			$prlimitFsizeBytes ?? $this->prlimitFsizeBytes,
 		);
 	}
 }

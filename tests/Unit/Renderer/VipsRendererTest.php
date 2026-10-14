@@ -41,7 +41,7 @@ class VipsRendererTest
 	/** The image the renderer opens: the runner is a mock, so it holds anything. */
 	private string $input;
 
-	/** @var list<array{program: string, arguments: list<string>, keepStdout: bool, environment: array<string, string>, cap: ?int, descriptors: list<int>}> */
+	/** @var list<array{program: string, arguments: list<string>, keepStdout: bool, environment: array<string, string>, cap: ?int, descriptors: list<int>, fsize: ?int}> */
 	private array $runs = [];
 
 
@@ -115,6 +115,7 @@ class VipsRendererTest
 					'environment' => $environment,
 					'cap'         => 2048,
 					'descriptors' => [ RunOptions::INPUT ],
+					'fsize'       => null,
 				],
 				[
 					'program'     => 'vipsthumbnail',
@@ -123,6 +124,7 @@ class VipsRendererTest
 					'environment' => $environment,
 					'cap'         => 2048,
 					'descriptors' => [ RunOptions::INPUT ],
+					'fsize'       => null,
 				],
 			],
 			$this->runs,
@@ -379,6 +381,8 @@ class VipsRendererTest
 		self::assertSame( [ '-c', 'none', '-r', '64', '/dev/fd/4,0', '/dev/fd/3' ], $this->runs[2]['arguments'] );
 		self::assertSame( [ RunOptions::INPUT, RunOptions::COPY ], $this->runs[2]['descriptors'] );
 		self::assertSame( 1024, $this->runs[2]['cap'] );
+		// The copy's own file-size cap: its pixels and a margin.
+		self::assertSame( 15000 * 15000 * 3 + 16_777_216, $this->runs[2]['fsize'] );
 		self::assertSame( '/dev/fd/3', $this->runs[3]['arguments'][0] );
 		self::assertSame( [ RunOptions::COPY ], $this->runs[3]['descriptors'] );
 		self::assertSame( '4096', $this->runs[3]['arguments'][2] );
@@ -405,6 +409,22 @@ class VipsRendererTest
 		$this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( null ), tiffcp: false )->render( $this->input, 4096, $this->output );
 
 		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
+
+		// Larger than tiff_restrip_max_mb: 15000 x 15000 x 3 is 644 MB.
+		$this->appValues = [ ConfigLexicon::TIFF_RESTRIP_MAX_MB => 512 ];
+		$this->runs      = [];
+		$outcome         = $this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( null ) )->render( $this->input, 4096, $this->output );
+
+		self::assertStringEndsWith( '; no one-strip fallback: the copy would take 644 MB, more than tiff_restrip_max_mb', $outcome->reason );
+		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
+
+		// Another copy being made, for longer than the wait.
+		$this->appValues = [];
+		$this->runs      = [];
+		$busy            = $this->scratch( null, locked: false );
+		$outcome         = $this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $busy )->render( $this->input, 4096, $this->output );
+
+		self::assertStringEndsWith( '; no one-strip fallback: another one-strip copy is being made', $outcome->reason );
 
 		$this->runs = [];
 		$this->renderer( $this->outOfMemoryOnce( '/dev/fd/4: 8000x6000 uchar, 3 bands, srgb, heifload' ), scratch: $this->scratch( null ) )
@@ -458,9 +478,13 @@ class VipsRendererTest
 	}
 
 	/**
-	 * A scratch directory beside the output, with the problem given.
+	 * A scratch directory beside the output, with the problem given, and a
+	 * lock taken or not.
 	 */
-	private function scratch( ?string $problem ): ScratchDirectory
+	private function scratch(
+		?string $problem,
+		bool    $locked = true,
+	): ScratchDirectory
 	{
 		$scratch = $this->createMock( ScratchDirectory::class );
 		$scratch->method( 'path' )
@@ -468,6 +492,9 @@ class VipsRendererTest
 		;
 		$scratch->method( 'problem' )
 		        ->willReturn( $problem )
+		;
+		$scratch->method( 'lock' )
+		        ->willReturnCallback( static fn() => $locked ? fopen( 'php://memory', 'rb' ) : null )
 		;
 
 		return $scratch;
@@ -525,6 +552,7 @@ class VipsRendererTest
 			'environment' => $options->environment,
 			'cap'         => $options->prlimitAsMb,
 			'descriptors' => array_keys( $options->descriptors ),
+			'fsize'       => $options->fsizeBytes,
 		];
 	}
 

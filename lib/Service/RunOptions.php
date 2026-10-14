@@ -47,12 +47,17 @@ final readonly class RunOptions
 	 * @param array<int, resource>  $descriptors open files the program gets
 	 *                                           besides stdin, stdout and
 	 *                                           stderr, by descriptor number
+	 * @param int|null              $fsizeBytes  the largest file the program
+	 *                                           may write, in place of
+	 *                                           prlimit_fsize_mb: the one-strip
+	 *                                           copy's own
 	 */
 	public function __construct(
 		public bool  $keepStdout = false,
 		public array $environment = [],
 		public ?int  $prlimitAsMb = null,
 		public array $descriptors = [],
+		public ?int  $fsizeBytes = null,
 	)
 	{
 	}

@@ -81,6 +81,12 @@ class VipsRenderer
 	public const RESTRIPPER = 'tiffcp';
 
 	/**
+	 * What the copy may take beyond its pixels: its directory and the
+	 * offsets of its strips, a few bytes for each 64 rows.
+	 */
+	private const COPY_MARGIN_BYTES = 16_777_216;
+
+	/**
 	 * Bytes a sample of each libvips band format takes; an unknown one is
 	 * counted large.
 	 */
@@ -284,6 +290,11 @@ class VipsRenderer
 	 * no copy can be left behind. tiffcp holds the compressed strip, not the
 	 * decoded one: measured with libtiff 4.5, a 348 MB one-strip LZW TIFF
 	 * passed under 384 MB of address space, so it runs under libvips' cap.
+	 *
+	 * The disc is guarded three ways: a copy larger than tiff_restrip_max_mb
+	 * is not made; one copy is made at a time, under a lock in the scratch
+	 * directory, so the free-space check holds; and tiffcp may not write
+	 * past the copy's size (`prlimit --fsize`), whatever the header said.
 	 * Where the copy cannot be made, the render stays out of memory, with
 	 * the reason.
 	 *
@@ -303,35 +314,63 @@ class VipsRenderer
 	): RenderOutcome
 	{
 		$bytes   = $header['width'] * $header['height'] * $header['bands'] * $header['bytes'];
-		$problem = match ( true )
-		{
-			! $this->binaries->locate( self::RESTRIPPER )->isFound() => 'tiffcp is not there',
-			default                                                  => $this->scratch->problem( $bytes ),
-		};
+		$maximum = (int) $this->config->getScalar( ConfigLexicon::TIFF_RESTRIP_MAX_MB ) * 1_048_576;
+		$without = static fn( string $why ): RenderOutcome => $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $why );
 
-		if ( $problem !== null )
+		if ( ! $this->binaries->locate( self::RESTRIPPER )->isFound() )
 		{
-			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $problem );
+			return $without( 'tiffcp is not there' );
 		}
 
-		$path = $this->scratch->path() . '/lfp-restrip-' . bin2hex( random_bytes( 8 ) ) . '.tif';
-		$copy = @fopen( $path, 'x+b' );
-
-		if ( $copy === false )
+		if ( $bytes > $maximum )
 		{
-			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $path . ' could not be made' );
+			return $without( sprintf( 'the copy would take %d MB, more than tiff_restrip_max_mb', (int) ceil( $bytes / 1_048_576 ) ) );
 		}
 
-		// Unlinked at once: the descriptor is all that is left of it.
-		@unlink( $path );
+		// One copy at a time, so that two cannot each pass the free-space
+		// check and together fill the disc.
+		$lock = $this->scratch->lock( (int) $this->config->getScalar( ConfigLexicon::TIMEOUT_SECONDS ) );
+
+		if ( $lock === null )
+		{
+			return $without( 'another one-strip copy is being made' );
+		}
+
+		$copy = null;
 
 		try
 		{
-			// `,0` is the first image only.
+			$problem = $this->scratch->problem( $bytes );
+
+			if ( $problem !== null )
+			{
+				return $without( $problem );
+			}
+
+			$path = $this->scratch->path() . '/lfp-restrip-' . bin2hex( random_bytes( 8 ) ) . '.tif';
+			$copy = @fopen( $path, 'x+b' );
+
+			if ( $copy === false )
+			{
+				$copy = null;
+
+				return $without( $path . ' could not be made' );
+			}
+
+			// Unlinked at once: the descriptor is all that is left of it.
+			@unlink( $path );
+
+			// `,0` is the first image only. The copy may not grow past its
+			// size and the TIFF's own structures, whatever the header said.
 			$copied = $this->runner->run(
 				self::RESTRIPPER,
 				[ '-c', 'none', '-r', '64', RunOptions::path( RunOptions::INPUT ) . ',0', RunOptions::path( RunOptions::COPY ) ],
-				new RunOptions( false, $environment, $cap, [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ] ),
+				new RunOptions(
+					environment: $environment,
+					prlimitAsMb: $cap,
+					descriptors: [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ],
+					fsizeBytes: $bytes + self::COPY_MARGIN_BYTES,
+				),
 			);
 
 			if ( ! $copied->isSuccess() || ( fstat( $copy )['size'] ?? 0 ) === 0 )
@@ -347,7 +386,12 @@ class VipsRenderer
 		}
 		finally
 		{
-			fclose( $copy );
+			if ( $copy !== null )
+			{
+				fclose( $copy );
+			}
+
+			fclose( $lock );
 		}
 	}
 

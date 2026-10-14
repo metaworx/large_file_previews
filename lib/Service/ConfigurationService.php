@@ -100,6 +100,7 @@ class ConfigurationService
 			$this->getInt( ConfigLexicon::PRLIMIT_AS_MB ),
 			$this->getBool( ConfigLexicon::CHOOM_ENABLED ),
 			$this->getInt( ConfigLexicon::CHOOM_ADJUST ),
+			$this->getInt( ConfigLexicon::PRLIMIT_FSIZE_MB ) * 1_048_576,
 		);
 	}
 

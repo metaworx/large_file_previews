@@ -64,11 +64,52 @@ class ScratchDirectoryTest
 	{
 		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => __FILE__ ];
 
-		self::assertStringContainsString( 'is not a writable directory', (string) $this->scratch( '/' )->problem( 1 ) );
+		self::assertStringContainsString( 'is not an absolute, writable directory', (string) $this->scratch( '/' )->problem( 1 ) );
+
+		// Relative, as only a hand-written config file could make it.
+		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => 'tmp' ];
+
+		self::assertStringContainsString( 'is not an absolute, writable directory', (string) $this->scratch( '/' )->problem( 1 ) );
 
 		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => sys_get_temp_dir() ];
 
 		self::assertMatchesRegularExpression( '/has \d+ MB free, and the copy takes \d+ MB|is on (tmpfs|ramfs)/', (string) $this->scratch( '/' )->problem( PHP_INT_MAX >> 1 ) );
+	}
+
+	/**
+	 * One copy at a time: a second lock waits, and gives up after the time
+	 * given; closing the first lets the next in.
+	 */
+	public function testOneCopyAtATime(): void
+	{
+		$folder = sys_get_temp_dir() . '/lfp-scratch-' . bin2hex( random_bytes( 4 ) );
+		mkdir( $folder );
+		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => $folder ];
+
+		try
+		{
+			$first = $this->scratch( '/' )->lock( 0 );
+
+			self::assertIsResource( $first );
+
+			// flock() is per open file: a second opening of the lock file waits.
+			$start = microtime( true );
+
+			self::assertNull( $this->scratch( '/' )->lock( 1 ) );
+			self::assertGreaterThanOrEqual( 0.9, microtime( true ) - $start );
+
+			fclose( $first );
+
+			$second = $this->scratch( '/' )->lock( 0 );
+
+			self::assertIsResource( $second );
+			fclose( $second );
+		}
+		finally
+		{
+			@unlink( $folder . '/' . ScratchDirectory::LOCK_FILE );
+			@rmdir( $folder );
+		}
 	}
 
 	private function scratch( string $temporary ): ScratchDirectory
