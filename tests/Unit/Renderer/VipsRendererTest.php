@@ -245,6 +245,7 @@ class VipsRendererTest
 			[ Outcome::FAILED, 'vips_tracked: out of memory --- size == 1MB' ],
 			[ Outcome::FAILED, 'glib: Error creating thread: Resource temporarily unavailable' ],
 			[ Outcome::KILLED, '../../../glib/gprintf.c:350: failed to allocate memory' ],
+			[ Outcome::FAILED, "error in tile 0 x 0\nTIFFFillStrip: No space for data buffer at scanline 4294967295\ntiff2vips: read error" ],
 		];
 
 		foreach ( $messages as [ $result, $stderr ] )
@@ -262,6 +263,26 @@ class VipsRendererTest
 			self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome, $stderr );
 			self::assertSame( 'out of memory under the address-space cap (vips_prlimit_as_mb)', $outcome->reason );
 		}
+	}
+
+	/**
+	 * libheif crashes under the cap with no word: a crash says the cap may
+	 * be why, and stays a crash.
+	 */
+	public function testACrashPointsToTheCap(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'run' )
+		       ->willReturnOnConsecutiveCalls(
+			       new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, '/data/a.heic: 8000x6000 uchar, 3 bands, srgb, heifload' ),
+			       new RenderOutcome( Outcome::KILLED, 'killed by signal 11', null, 11 ),
+		       )
+		;
+
+		$outcome = $this->renderer( $runner )->render( '/data/a.heic', 1024, $this->output );
+
+		self::assertSame( Outcome::KILLED, $outcome->outcome );
+		self::assertSame( 'killed by signal 11; under the address-space cap, a crash is often memory running out (vips_prlimit_as_mb)', $outcome->reason );
 	}
 
 	public function testSuccessWithoutAFileIsNoOutput(): void

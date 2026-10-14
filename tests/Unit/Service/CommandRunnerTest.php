@@ -258,6 +258,27 @@ class CommandRunnerTest
 		self::assertSame( Outcome::PROGRAM_MISSING, $this->runner( [] )->runBare( 'pdftoppm', [ '-v' ] )->outcome );
 	}
 
+	/**
+	 * A long output keeps its start and its end, where a program that warns
+	 * at length says why it failed.
+	 */
+	public function testALongOutputKeepsItsStartAndEnd(): void
+	{
+		$file              = (string) tempnam( sys_get_temp_dir(), 'lfp-' );
+		$this->temporary[] = $file;
+
+		file_put_contents( $file, "short\n" );
+		self::assertSame( 'short', CommandRunner::readEdges( $file, 64 ) );
+
+		file_put_contents( $file, 'first line' . str_repeat( "\nerror in tile", 100 ) . "\nTIFFFillStrip: No space for data buffer" );
+		$text = CommandRunner::readEdges( $file, 100 );
+
+		self::assertStringStartsWith( 'first line', $text );
+		self::assertStringContainsString( "\n…\n", $text );
+		self::assertStringEndsWith( 'No space for data buffer', $text );
+		self::assertLessThanOrEqual( 110, strlen( $text ) );
+	}
+
 	public function testJudgeReadsSignalsAndStatuses(): void
 	{
 		self::assertSame( Outcome::KILLED, CommandRunner::judge( null, 9, '' )->outcome );

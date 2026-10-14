@@ -27,8 +27,8 @@ use OCP\ITempManager;
  * The program is started with proc_open() and an argument array: no shell
  * takes part, so nothing in a path needs quoting. stdout goes nowhere, since
  * the programs write files, and stderr to a temporary file, kept to its
- * first few KB: neither pipe can fill and stall the run. A limit switched on
- * whose program is missing fails the run before it starts.
+ * first and last few KB: neither pipe can fill and stall the run. A limit
+ * switched on whose program is missing fails the run before it starts.
  */
 class CommandRunner
 {
@@ -278,7 +278,7 @@ class CommandRunner
 			}
 
 			[ $exitStatus, $signal ] = self::wait( $process );
-			$stderr                  = self::readStart( $stderrFile, $limit );
+			$stderr                  = self::readEdges( $stderrFile, $limit );
 		}
 		finally
 		{
@@ -385,15 +385,29 @@ class CommandRunner
 		return [ $status['exitcode'] >= 0 ? $status['exitcode'] : null, null ];
 	}
 
-	private static function readStart(
+	/**
+	 * The output, or where it is longer than the limit its start and its
+	 * end: a program that warns at length says why it failed last.
+	 */
+	public static function readEdges(
 		string $file,
 		int    $limit,
 	): string
 	{
-		$text = @file_get_contents( $file, false, null, 0, max( 1, $limit ) );
+		$limit = max( 2, $limit );
+		$size  = (int) @filesize( $file );
 
-		return is_string( $text )
-			? trim( $text )
-			: '';
+		if ( $size <= $limit )
+		{
+			$text = @file_get_contents( $file );
+
+			return is_string( $text ) ? trim( $text ) : '';
+		}
+
+		$half  = intdiv( $limit, 2 );
+		$start = @file_get_contents( $file, false, null, 0, $half );
+		$end   = @file_get_contents( $file, false, null, $size - $half, $half );
+
+		return trim( ( is_string( $start ) ? $start : '' ) . "\n…\n" . ( is_string( $end ) ? $end : '' ) );
 	}
 }

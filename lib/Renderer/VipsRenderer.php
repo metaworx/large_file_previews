@@ -44,11 +44,13 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * holding `%` is not run either; the provider's never does.
  *
  * Each run has libvips' own address-space cap (vips_prlimit_as_mb), two
- * malloc arenas, which a HEIC needed to pass under 512 MB, untrusted
- * decoders blocked while vips_block_untrusted is on, and its spill to disc
- * in the render folder, which the provider removes. Under the cap libvips
- * says "out of memory", fails to start a thread or aborts; any of these is
- * a render out of memory.
+ * malloc arenas, with which a HEIC and a WebP passed at 640 MB rather than
+ * 768, untrusted decoders blocked while vips_block_untrusted is on, and its
+ * spill to disc in the render folder, which the provider removes. Under the
+ * cap libvips or libtiff says it is out of memory, or fails to start a
+ * thread and aborts; any of these is a render out of memory. libheif may
+ * crash there instead, with no word: a render killed by SIGSEGV or SIGABRT
+ * says the cap may be why.
  *
  * A TIFF is read a strip at a time, so one in a single large strip can need
  * far more memory than its preview: 6000 x 6000 floats in one LZW strip,
@@ -99,15 +101,19 @@ class VipsRenderer
 	public const QUALITY = 95;
 
 	/**
-	 * What libvips and glib print when the cap stops them, measured with
-	 * libvips 8.15.
+	 * What libvips, glib and libtiff print when the cap stops them,
+	 * measured with libvips 8.15 and libtiff 4.5.
 	 */
 	private const OUT_OF_MEMORY
 		 = [
 			'out of memory',
 			'failed to allocate memory',
 			'Error creating thread',
+			'No space for data buffer',
 		];
+
+	/** SIGABRT and SIGSEGV: how libvips and libheif end under the cap. */
+	private const CRASH_SIGNALS = [ 6, 11 ];
 
 
 //  constructor
@@ -463,6 +469,12 @@ class VipsRenderer
 		if ( ! $outcome->isSuccess() && self::outOfMemory( $outcome->stderr ) )
 		{
 			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (vips_prlimit_as_mb)' );
+		}
+
+		// A crash is not named out of memory: a hostile file can cause one.
+		if ( $outcome->outcome === Outcome::KILLED && in_array( $outcome->signal, self::CRASH_SIGNALS, true ) )
+		{
+			return $outcome->as( Outcome::KILLED, $outcome->reason . '; under the address-space cap, a crash is often memory running out (vips_prlimit_as_mb)' );
 		}
 
 		if ( $outcome->isSuccess() && ! is_file( $output ) )
