@@ -18,6 +18,7 @@ use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
 use OCP\Files\IMimeTypeDetector;
 use OCP\IAppConfig;
+use OCP\IConfig;
 use OCP\IL10N;
 
 /**
@@ -57,12 +58,26 @@ class ConfigurationService
 		private readonly IAppConfig        $appConfig,
 		private readonly IL10N             $l10n,
 		private readonly IMimeTypeDetector $mimeTypes,
+		private readonly IConfig           $system,
 	)
 	{
 	}
 
 
 //  other non-static methods
+
+	/**
+	 * What each MIME type has until it is set, its images from where
+	 * Nextcloud's image providers stop (`preview_max_filesize_image`).
+	 *
+	 * @return array<string, array{enabled: bool, min_size_mb?: int}>
+	 */
+	public function defaultMimeTypes(): array
+	{
+		$limit = $this->system->getSystemValueInt( ConfigLexicon::IMAGE_LIMIT_SYSTEM_KEY, ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB );
+
+		return ConfigLexicon::defaultMimeTypes( $limit > 0 ? $limit : ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB );
+	}
 
 	public function minSizeMb(): int
 	{
@@ -434,7 +449,7 @@ class ConfigurationService
 		$this->problems = [];
 		$mimeRules      = [];
 
-		foreach ( ConfigLexicon::defaultMimeTypes() as $mime => $default )
+		foreach ( $this->defaultMimeTypes() as $mime => $default )
 		{
 			$rule = TypeRule::fromArray( $default );
 

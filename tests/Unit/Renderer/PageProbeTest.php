@@ -155,7 +155,7 @@ class PageProbeTest
 
 	private function probe( CommandRunner $runner ): PageProbe
 	{
-		return new PageProbe( $runner, new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ) );
+		return new PageProbe( $runner, new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ) );
 	}
 
 

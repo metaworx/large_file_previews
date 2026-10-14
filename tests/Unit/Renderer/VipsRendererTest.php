@@ -284,7 +284,7 @@ class VipsRendererTest
 
 		return new VipsRenderer(
 			$runner,
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
+			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			$listed,
 		);
 	}

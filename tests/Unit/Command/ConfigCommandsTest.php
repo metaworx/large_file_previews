@@ -51,9 +51,6 @@ class ConfigCommandsTest
 
 	private BinaryLocator $binaries;
 
-	/** @var array<string, mixed> system config, as the commands leave it */
-	private array $systemValues = [];
-
 
 //  getters / setters / is* / has*
 
@@ -61,48 +58,10 @@ class ConfigCommandsTest
 	{
 		parent::setUp();
 
-		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() );
+		// System config, as the commands leave it, is $this->systemValues.
+		$system = $this->systemConfig();
 
-		$values = &$this->systemValues;
-		$system = $this->createMock( IConfig::class );
-		$system->method( 'getSystemValue' )
-		       ->willReturnCallback(
-			       static function(
-				       string $key,
-				       mixed  $default = '',
-			       ) use (
-				       &$values,
-			       ): mixed
-			       {
-				       return $values[ $key ] ?? $default;
-			       },
-		       )
-		;
-		$system->method( 'setSystemValue' )
-		       ->willReturnCallback(
-			       static function(
-				       string $key,
-				       mixed  $value,
-			       ) use (
-				       &$values,
-			       ): void
-			       {
-				       $values[ $key ] = $value;
-			       },
-		       )
-		;
-		$system->method( 'deleteSystemValue' )
-		       ->willReturnCallback(
-			       static function(
-				       string $key,
-			       ) use (
-				       &$values,
-			       ): void
-			       {
-				       unset( $values[ $key ] );
-			       },
-		       )
-		;
+		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $system );
 
 		$this->binaries = new BinaryLocator(
 			$system,

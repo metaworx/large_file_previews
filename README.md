@@ -71,7 +71,9 @@ Anything it declines goes to Nextcloud's next preview provider.
 Each field is resolved on its own, the most specific level that sets it winning:
 the extension, then the MIME type, then the app's default.
 Out of the box, PDF and Illustrator files are taken at any size,
-and every image type is off, from 50 MB up once switched on.
+and every image type is off;
+switched on, an image is taken from `preview_max_filesize_image` up,
+50 MB unless set, where Nextcloud's own image providers stop.
 
 Everything below is set in *Administration settings → Additional settings*,
 which also shows whether previews can be rendered and the last render that failed,

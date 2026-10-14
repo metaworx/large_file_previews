@@ -48,6 +48,27 @@ class ConfigurationServiceTest
 	}
 
 	/**
+	 * Images start where Nextcloud's image providers stop; where they have
+	 * no limit, at Nextcloud's default. A type stored keeps what it says.
+	 */
+	public function testImagesStartAtPreviewMaxFilesizeImage(): void
+	{
+		$this->systemValues = [ 'preview_max_filesize_image' => 120 ];
+
+		self::assertEquals( new TypeRule( false, 120 ), $this->service()->mimeRules()['image/tiff'] );
+		self::assertSame( 120, $this->service()->defaultMimeTypes()['image/heic']['min_size_mb'] ?? null );
+		self::assertArrayNotHasKey( 'min_size_mb', $this->service()->defaultMimeTypes()['application/pdf'] );
+
+		$this->systemValues = [ 'preview_max_filesize_image' => -1 ];
+
+		self::assertEquals( new TypeRule( false, 50 ), $this->service()->mimeRules()['image/tiff'] );
+
+		$this->appValues = [ ConfigLexicon::MIMETYPES => [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 10 ] ] ];
+
+		self::assertEquals( new TypeRule( true, 10 ), $this->service()->mimeRules()['image/tiff'] );
+	}
+
+	/**
 	 * `occ config:app:set` writes past the service; what it wrote is held
 	 * to the range when read.
 	 */
@@ -355,6 +376,7 @@ class ConfigurationServiceTest
 			$this->memoryAppConfig(),
 			$marking ? $this->markingL10n() : $this->englishL10n(),
 			$this->mimeDetector(),
+			$this->systemConfig(),
 		);
 	}
 }

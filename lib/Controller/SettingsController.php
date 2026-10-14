@@ -240,7 +240,7 @@ class SettingsController
 			];
 		}
 
-		$defaults  = ConfigLexicon::defaultMimeTypes();
+		$defaults  = $this->config->defaultMimeTypes();
 		$mimeTypes = [];
 		$active    = [];
 

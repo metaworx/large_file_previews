@@ -124,7 +124,7 @@ class RendererCheckTest
 
 		return new RendererCheck(
 			$prerequisites,
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
+			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			$time,
 			$this->markingL10n(),
 		);

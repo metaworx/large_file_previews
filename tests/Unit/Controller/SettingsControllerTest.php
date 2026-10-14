@@ -206,7 +206,7 @@ class SettingsControllerTest
 
 	private function controller( string $body ): SettingsController
 	{
-		$config = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n(), $this->mimeDetector() );
+		$config = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n(), $this->mimeDetector(), $this->systemConfig() );
 
 		$prerequisites = $this->createMock( PrerequisitesService::class );
 		$prerequisites->method( 'check' )

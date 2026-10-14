@@ -141,7 +141,7 @@ class TypePolicyTest
 
 	private function policy(): TypePolicy
 	{
-		return new TypePolicy( new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ) );
+		return new TypePolicy( new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ) );
 	}
 
 	private function file(

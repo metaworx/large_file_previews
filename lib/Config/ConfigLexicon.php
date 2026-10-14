@@ -68,11 +68,14 @@ class ConfigLexicon
 	public const LAST_FAILURE = 'last_failure';
 
 	/**
-	 * Images start at 50 MB, Nextcloud's own default for
-	 * `preview_max_filesize_image`: its image providers refuse what is
-	 * larger, so the app takes exactly what they leave.
+	 * Images start at `preview_max_filesize_image`, 50 MB unless the server
+	 * says otherwise: Nextcloud's image providers refuse what is larger, so
+	 * the app takes exactly what they leave. Where that has no limit, the
+	 * app's start stays at Nextcloud's default.
 	 */
 	public const IMAGE_DEFAULT_MIN_SIZE_MB = 50;
+
+	public const IMAGE_LIMIT_SYSTEM_KEY = 'preview_max_filesize_image';
 
 	/**
 	 * The settings that are one value each: default, and for a number its
@@ -225,11 +228,12 @@ class ConfigLexicon
 
 	/**
 	 * What each MIME type has until it is set: PDF and Illustrator on,
-	 * every image type off and from 50 MB.
+	 * every image type off and from the size given, 50 MB by default
+	 * (ConfigurationService::defaultMimeTypes() gives the server's).
 	 *
 	 * @return array<string, array{enabled: bool, min_size_mb?: int}>
 	 */
-	public static function defaultMimeTypes(): array
+	public static function defaultMimeTypes( int $imageMinSizeMb = self::IMAGE_DEFAULT_MIN_SIZE_MB ): array
 	{
 		$types = [];
 
@@ -242,7 +246,7 @@ class ConfigLexicon
 		{
 			$types[ $mime ] = [
 				'enabled'     => false,
-				'min_size_mb' => self::IMAGE_DEFAULT_MIN_SIZE_MB,
+				'min_size_mb' => $imageMinSizeMb,
 			];
 		}
 

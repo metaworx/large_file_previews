@@ -176,7 +176,7 @@ class PrerequisitesServiceTest
 		;
 
 		return new PrerequisitesService(
-			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
+			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
 			$runner ?? $this->createMock( CommandRunner::class ),
 			$tempManager,
