@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Command;
 
 use OCA\LargeFilePreviews\Command\Check;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +30,22 @@ class CheckTest
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [] ) );
 		self::assertStringContainsString( 'Ready.', $tester->getDisplay() );
-		self::assertSame( 'large-file-previews:check', ( new Check( $this->createMock( PrerequisitesService::class ) ) )->getName() );
+		self::assertSame(
+			'large-file-previews:check',
+			( new Check( $this->createMock( PrerequisitesService::class ), $this->createMock( BinaryLocator::class ) ) )->getName(),
+		);
+	}
+
+	public function testRefreshFindsTheProgramsAgain(): void
+	{
+		$binaries = $this->createMock( BinaryLocator::class );
+		$binaries->expects( self::once() )
+		         ->method( 'refresh' )
+		;
+
+		$tester = $this->tester( [], false, $binaries );
+		$tester->execute( [ '--refresh' => true ] );
+		$tester->execute( [] );
 	}
 
 	public function testSomethingMissingExitsOneInEveryFormat(): void
@@ -50,8 +66,9 @@ class CheckTest
 	 * @param list<Prerequisite> $items
 	 */
 	private function tester(
-		array $items,
-		bool  $blocking,
+		array          $items,
+		bool           $blocking,
+		?BinaryLocator $binaries = null,
 	): CommandTester
 	{
 		$prerequisites = $this->createMock( PrerequisitesService::class );
@@ -63,6 +80,6 @@ class CheckTest
 		              ->willReturn( $blocking )
 		;
 
-		return new CommandTester( new Check( $prerequisites ) );
+		return new CommandTester( new Check( $prerequisites, $binaries ?? $this->createMock( BinaryLocator::class ) ) );
 	}
 }

@@ -21,7 +21,8 @@ the first stable release.
   storage only; others go to Nextcloud's.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
-  render, and `occ lfp:check`, listing what the app needs.
+  render, and `occ lfp:check`, listing what the app needs; programs and
+  versions found once and kept, `--refresh` to find them again.
 
 - `README.md`, *Configuration*: which files are taken, per MIME type and
   extension, by size; how a scan is told; and the timeout, memory cap

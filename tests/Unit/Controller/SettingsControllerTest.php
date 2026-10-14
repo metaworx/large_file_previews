@@ -220,7 +220,7 @@ class SettingsControllerTest
 			       ): string|false => $program === 'pdftoppm' ? '/usr/bin/pdftoppm' : false,
 		       )
 		;
-		$binaries = new BinaryLocator( $systemConfig, $finder, $this->createMock( LoggerInterface::class ) );
+		$binaries = new BinaryLocator( $systemConfig, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) );
 
 		return new class (
 			$body,

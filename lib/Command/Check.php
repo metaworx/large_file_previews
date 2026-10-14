@@ -9,10 +9,12 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Command;
 
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -33,6 +35,7 @@ class Check
 
 	public function __construct(
 		private readonly PrerequisitesService $prerequisites,
+		private readonly BinaryLocator        $binaries,
 	)
 	{
 		parent::__construct();
@@ -46,6 +49,7 @@ class Check
 	{
 		$this->name( 'check' )
 		     ->setDescription( 'List what the app needs from the server - PHP functions, extensions, programs - and whether it is there' )
+		     ->addOption( 'refresh', null, InputOption::VALUE_NONE, 'Find the programs and their versions again, rather than from the cache' )
 		     ->addOutputOption()
 		;
 	}
@@ -61,6 +65,11 @@ class Check
 		if ( $format === null )
 		{
 			return self::INVALID;
+		}
+
+		if ( $input->getOption( 'refresh' ) === true )
+		{
+			$this->binaries->refresh();
 		}
 
 		$items    = $this->prerequisites->check( true );

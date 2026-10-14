@@ -11,6 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
+use OCA\LargeFilePreviews\Tests\Unit\MemoryCache;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
 use PHPUnit\Framework\TestCase;
@@ -20,8 +21,49 @@ class BinaryLocatorTest
     extends
     TestCase
 {
+	use MemoryCache;
+
 
 //  other non-static methods
+
+	/**
+	 * Found once, then from the cache; refresh() asks again.
+	 */
+	public function testWhatTheFinderAnswersIsKeptUntilRefreshed(): void
+	{
+		$config = $this->createMock( IConfig::class );
+		$config->method( 'getSystemValue' )
+		       ->willReturn( [] )
+		;
+		$finder = $this->createMock( IBinaryFinder::class );
+		$finder->expects( self::exactly( 2 ) )
+		       ->method( 'findBinaryPath' )
+		       ->willReturn( '/usr/bin/pdftoppm' )
+		;
+
+		$cache = $this->detectionCache();
+		$first = new BinaryLocator( $config, $finder, $cache, $this->createMock( LoggerInterface::class ) );
+		self::assertSame( '/usr/bin/pdftoppm', $first->locate( 'pdftoppm' )->path );
+
+		// Another request: from the cache, not the finder.
+		$second = new BinaryLocator( $config, $finder, $cache, $this->createMock( LoggerInterface::class ) );
+		self::assertSame( '/usr/bin/pdftoppm', $second->locate( 'pdftoppm' )->path );
+		self::assertSame( [ 'path.pdftoppm' => '/usr/bin/pdftoppm' ], $this->cacheValues );
+
+		$second->refresh();
+		self::assertSame( '/usr/bin/pdftoppm', $second->locate( 'pdftoppm' )->path );
+	}
+
+	/**
+	 * "Missing" is kept too, so a missing program is not looked for on
+	 * every image on the instance.
+	 */
+	public function testAMissingProgramIsKeptAsMissing(): void
+	{
+		$this->locator( [], [] )->locate( 'choom' );
+
+		self::assertSame( '', $this->cacheValues['path.choom'] ?? null );
+	}
 
 	public function testTheFinderAnswersWithoutAnOverride(): void
 	{
@@ -121,6 +163,6 @@ class BinaryLocatorTest
 		       )
 		;
 
-		return new BinaryLocator( $config, $finder, $this->createMock( LoggerInterface::class ) );
+		return new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) );
 	}
 }

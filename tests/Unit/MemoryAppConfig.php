@@ -22,8 +22,10 @@ use PHPUnit\Framework\MockObject\MockObject;
  */
 trait MemoryAppConfig
 {
-	// A ConfigurationService takes a MIME type detector beside the config.
+	// A ConfigurationService takes a MIME type detector beside the config,
+	// and what finds programs a cache.
 	use KnownMimeTypes;
+	use MemoryCache;
 	/** @var array<string, mixed> */
 	protected array $appValues = [];
 

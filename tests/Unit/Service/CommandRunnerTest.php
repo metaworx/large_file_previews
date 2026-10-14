@@ -276,7 +276,7 @@ class CommandRunnerTest
 
 		return new CommandRunner(
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
-			new BinaryLocator( $config, $finder, $this->createMock( LoggerInterface::class ) ),
+			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
 			$tempManager,
 		);
 	}

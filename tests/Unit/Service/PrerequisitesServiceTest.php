@@ -95,6 +95,25 @@ class PrerequisitesServiceTest
 		self::assertFalse( self::item( $items, 'choom' )->isBlocking() );
 	}
 
+	/**
+	 * A version is asked for once and kept by path: the page asks often,
+	 * and a program started for every page load is one too many.
+	 */
+	public function testVersionsAreKeptByPath(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->expects( self::exactly( 6 ) )
+		       ->method( 'runBare' )
+		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'v1' ) )
+		;
+
+		$programs = [ 'pdftoppm', 'pdfinfo', 'pdfimages', 'timeout', 'prlimit', 'choom' ];
+		$this->service( $programs, $runner )->check( true );
+		$this->service( $programs, $runner )->check( true );
+
+		self::assertSame( 'v1', $this->cacheValues['version./usr/bin/pdftoppm'] ?? null );
+	}
+
 	public function testVersionsAreTheFirstLineEachProgramPrints(): void
 	{
 		$runner = $this->createMock( CommandRunner::class );
@@ -158,9 +177,10 @@ class PrerequisitesServiceTest
 
 		return new PrerequisitesService(
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
-			new BinaryLocator( $config, $finder, $this->createMock( LoggerInterface::class ) ),
+			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
 			$runner ?? $this->createMock( CommandRunner::class ),
 			$tempManager,
+			$this->detectionCache(),
 		);
 	}
 

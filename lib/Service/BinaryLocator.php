@@ -29,6 +29,9 @@ use Psr\Log\LoggerInterface;
  * missing or not executable leaves its program missing, so a limit that
  * needs it fails closed, rather than the finder's copy running in its place:
  * the administrator asked for that binary.
+ *
+ * What the finder answers is kept in DetectionCache, for a day or until
+ * refresh(); an override is read from system config every time.
  */
 class BinaryLocator
 {
@@ -56,6 +59,7 @@ class BinaryLocator
 	public function __construct(
 		private readonly IConfig         $config,
 		private readonly IBinaryFinder   $finder,
+		private readonly DetectionCache  $cache,
 		private readonly LoggerInterface $logger,
 	)
 	{
@@ -151,12 +155,29 @@ class BinaryLocator
 			return new BinaryLocation( $program, $override, BinaryLocation::SOURCE_OVERRIDE );
 		}
 
-		$path = $this->finder->findBinaryPath( $program );
+		// What the finder found is kept; an empty string remembers "missing".
+		$path = $this->cache->get( 'path.' . $program );
+
+		if ( $path === null )
+		{
+			$found = $this->finder->findBinaryPath( $program );
+			$path  = is_string( $found ) ? $found : '';
+			$this->cache->set( 'path.' . $program, $path );
+		}
 
 		return new BinaryLocation(
 			$program,
-			is_string( $path ) && $path !== '' ? $path : null,
+			$path !== '' ? $path : null,
 			BinaryLocation::SOURCE_FINDER,
 		);
+	}
+
+	/**
+	 * Forgets every path found, in this request and in the cache.
+	 */
+	public function refresh(): void
+	{
+		$this->located = [];
+		$this->cache->clear();
 	}
 }

@@ -205,7 +205,7 @@ class ConfigCommandsTest
 			new ConfigShow(
 				$this->config,
 				new TypePolicy( $this->config ),
-				new BinaryLocator( $config, $finder, $this->createMock( LoggerInterface::class ) ),
+				new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
 				$detector,
 			),
 		);

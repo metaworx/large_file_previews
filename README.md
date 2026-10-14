@@ -54,6 +54,10 @@ occ lfp:check
 lists everything the app needs - the PHP functions that start a program,
 the extensions, and each program with its path and version -
 and exits 1 while something needed is missing.
+Where each program is, and its version,
+is found once and kept in Nextcloud's memory cache;
+it is found again on install, after each upgrade,
+and with `occ lfp:check --refresh`, for instance after installing a program.
 
 ## Configuration
 

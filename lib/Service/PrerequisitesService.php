@@ -47,6 +47,7 @@ class PrerequisitesService
 		private readonly BinaryLocator        $binaries,
 		private readonly CommandRunner        $runner,
 		private readonly ITempManager         $tempManager,
+		private readonly DetectionCache       $cache,
 	)
 	{
 	}
@@ -181,7 +182,7 @@ class PrerequisitesService
 
 			if ( $versions )
 			{
-				$version = $this->version( $program, $spec['version'] );
+				$version = $this->version( $program, (string) $location->path, $spec['version'] );
 				$detail .= $version === null ? '' : ', ' . $version;
 			}
 
@@ -202,11 +203,21 @@ class PrerequisitesService
 	 */
 	private function version(
 		string $program,
+		string $path,
 		string $flag,
 	): ?string
 	{
+		// Kept by path: another binary in its place is another version.
+		$cached = $this->cache->get( 'version.' . $path );
+
+		if ( $cached !== null )
+		{
+			return $cached === '' ? null : $cached;
+		}
+
 		$outcome = $this->runner->runBare( $program, [ $flag ] );
 		$line    = trim( (string) strtok( $outcome->stderr, "\n" ) );
+		$this->cache->set( 'version.' . $path, $line );
 
 		return $line === '' ? null : $line;
 	}
