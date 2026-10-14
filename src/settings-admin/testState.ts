@@ -9,11 +9,11 @@ import type { ActiveRow, MimeRow, Renderer, Scalar, SettingsState } from './type
 const POPPLER: Renderer = { program: 'pdftoppm', available: true, unsupported: null }
 const VIPS: Renderer = { program: 'vipsthumbnail', available: false, unsupported: null }
 
-function scalar(value: number | boolean, min: number | null = null, max: number | null = null): Scalar {
+function scalar<T extends number | boolean>(value: T, min: number | null = null, max: number | null = null): Scalar<T> {
 	return { value, default: value, min, max, choices: null, stored: false }
 }
 
-function word(value: string, choices: string[]): Scalar {
+function word(value: string, choices: string[]): Scalar<string> {
 	return { value, default: value, min: null, max: null, choices, stored: false }
 }
 
@@ -54,9 +54,12 @@ export function testState(): SettingsState {
 			timeout_enabled: scalar(true),
 			timeout_seconds: scalar(30, 1, 600),
 			timeout_kill_after_seconds: scalar(5, 1, 60),
+			failure_retry_minutes: scalar(60, 0, 10080),
 			prlimit_enabled: scalar(true),
 			prlimit_as_mb: scalar(512, 256, 65536),
 			vips_prlimit_as_mb: scalar(1024, 256, 65536),
+			prlimit_fsize_mb: scalar(1024, 64, 65536),
+			tiff_restrip_max_mb: scalar(4096, 256, 1048576),
 			choom_enabled: scalar(true),
 			choom_adjust: scalar(1000, 0, 1000),
 			scan_native_enabled: scalar(true),

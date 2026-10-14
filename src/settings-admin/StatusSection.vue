@@ -11,7 +11,7 @@ import { computed } from 'vue'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import InstallHint from './InstallHint.vue'
 import { t } from '../l10n'
-import type { SettingsState } from './types'
+import type { PrerequisiteItem, SettingsState } from './types'
 
 const props = defineProps<{
 	state: SettingsState
@@ -38,7 +38,7 @@ const platformText = computed(() => {
 	}
 })
 
-function statusText(status: string): string {
+function statusText(status: PrerequisiteItem['status']): string {
 	switch (status) {
 	case 'ok':
 		return t('large_file_previews', 'available')

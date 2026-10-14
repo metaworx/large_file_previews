@@ -29,7 +29,7 @@ describe('TypesSection', () => {
 
 		expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Which files'])
 		expect(wrapper.findAll('h4').map((heading) => heading.text()))
-			.toEqual(['Active rendering', 'Defaults', 'PDF scanned pages', 'MIME types', 'Extensions'])
+			.toEqual(['What is processed', 'Defaults', 'PDF scanned pages', 'MIME types', 'Extensions'])
 	})
 
 	it('shows what is active, with each size\'s source, at the top', () => {

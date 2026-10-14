@@ -33,6 +33,30 @@ describe('LimitsSection', () => {
 		expect(wrapper.emitted('save')).toEqual([[{ scalars: { choom_adjust: 500 } }]])
 	})
 
+	it('names the caps as what they cap, the file-size cap among them', async () => {
+		const wrapper = section()
+		const caps = wrapper.find('[data-limit="prlimit_enabled"]')
+
+		expect(caps.text()).toContain('Address-space and file-size caps')
+		expect(caps.text()).toContain('occ lfp:config:set prlimit_fsize_mb 1024')
+
+		await caps.findAllComponents(NumberField)[2].vm.$emit('save', 2048)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { prlimit_fsize_mb: 2048 } }]])
+	})
+
+	it('sets how long a file that failed is left alone', async () => {
+		const wrapper = section()
+		const retry = wrapper.find('[data-setting="failure_retry_minutes"]')
+
+		expect(retry.findComponent(NumberField).props('value')).toBe(60)
+		expect(retry.text()).toContain('occ lfp:config:set failure_retry_minutes 60')
+
+		await retry.findComponent(NumberField).vm.$emit('save', 0)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { failure_retry_minutes: 0 } }]])
+	})
+
 	it('leaves the values of a limit switched off alone', () => {
 		const state = testState()
 		state.scalars.timeout_enabled.value = false

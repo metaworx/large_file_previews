@@ -3,9 +3,9 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * What most servers leave as it is: libvips' threads, and, read only,
- * whether its untrusted decoders are allowed, where each program is, its
- * version, and the scratch directory. These are set in system config with
+ * What most servers leave as it is: libvips' threads and the largest
+ * re-striped copy, and, read only, whether libvips' untrusted decoders are
+ * allowed, where each program is, its version, and the scratch directory. These are set in system config with
  * occ, never here: a path is code the web server runs, and an untrusted
  * decoder is code a user's file reaches.
  */
@@ -16,6 +16,7 @@ import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import { binaryCommand, scalarCommand, scratchCommand, untrustedCommand } from './occ'
 import { t } from '../l10n'
+import { scalarChange } from './types'
 import type { Changes, ProgramRow, SettingsState } from './types'
 
 defineProps<{
@@ -56,11 +57,11 @@ function foundBy(program: ProgramRow): string {
 		<div data-setting="vips_concurrency">
 			<NumberField id="lfp-vips-concurrency"
 				:label="t('large_file_previews', 'Threads per render')"
-				:value="state.scalars.vips_concurrency.value as number"
+				:value="state.scalars.vips_concurrency.value"
 				:min="state.scalars.vips_concurrency.min"
 				:max="state.scalars.vips_concurrency.max"
 				:disabled="saving"
-				@save="emit('save', { scalars: { vips_concurrency: $event } })" />
+				@save="emit('save', scalarChange('vips_concurrency', $event))" />
 			<p class="lfp-hint">
 				{{ t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.') }}
 			</p>
@@ -102,7 +103,7 @@ function foundBy(program: ProgramRow): string {
 
 		<h4>{{ t('large_file_previews', 'Scratch directory') }}</h4>
 		<p class="lfp-hint">
-			{{ t('large_file_previews', 'Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again. It must be on disk, not tmpfs, with room for the image.') }}
+			{{ t('large_file_previews', 'Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MB more; the copy is gone once rendered.') }}
 		</p>
 		<p data-setting="scratch_directory">
 			{{ state.scratch.path }}
@@ -111,5 +112,18 @@ function foundBy(program: ProgramRow): string {
 			</span>
 		</p>
 		<OccCommand :command="scratchCommand(state.scratch.path)" />
+		<div data-setting="tiff_restrip_max_mb">
+			<NumberField id="lfp-tiff-restrip-max"
+				:label="t('large_file_previews', 'Largest copy, MB')"
+				:value="state.scalars.tiff_restrip_max_mb.value"
+				:min="state.scalars.tiff_restrip_max_mb.min"
+				:max="state.scalars.tiff_restrip_max_mb.max"
+				:disabled="saving"
+				@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
+			<p class="lfp-hint">
+				{{ t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.') }}
+			</p>
+			<OccCommand :command="scalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb.value)" />
+		</div>
 	</div>
 </template>

@@ -8,8 +8,9 @@
  * apply, each with the level it comes from. Computed by the server, by the
  * resolver the preview provider uses, and sent again with every save.
  */
+import { rendererProblem } from './renderer'
 import { t } from '../l10n'
-import type { ActiveRow } from './types'
+import type { ActiveRow, Sourced } from './types'
 
 defineProps<{
 	rows: ActiveRow[]
@@ -19,7 +20,7 @@ function sizeText(value: number): string {
 	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
 }
 
-function sourceText(source: string): string {
+function sourceText(source: Sourced<number>['source']): string {
 	switch (source) {
 	case 'ext':
 		return t('large_file_previews', 'extension')
@@ -30,7 +31,7 @@ function sourceText(source: string): string {
 	}
 }
 
-function processingText(processing: string): string {
+function processingText(processing: ActiveRow['processing']): string {
 	switch (processing) {
 	case 'enabled':
 		return t('large_file_previews', 'enabled')
@@ -63,11 +64,7 @@ function processingText(processing: string): string {
 				<td>{{ processingText(row.processing) }}</td>
 				<td>
 					{{ row.renderer.program ?? '' }}
-					<span v-if="row.renderer.program === null" class="lfp-badge">{{ t('large_file_previews', 'not handled') }}</span>
-					<span v-else-if="row.renderer.unsupported?.problem === 'untrusted'" class="lfp-badge">{{ t('large_file_previews', 'decoder blocked') }}</span>
-					<span v-else-if="row.renderer.unsupported?.problem === 'unblockable'" class="lfp-badge">{{ t('large_file_previews', 'libvips too old') }}</span>
-					<span v-else-if="row.renderer.unsupported?.problem === 'missing'" class="lfp-badge">{{ t('large_file_previews', 'no decoder') }}</span>
-					<span v-else-if="!row.renderer.available" class="lfp-badge">{{ t('large_file_previews', 'not available') }}</span>
+					<span v-if="rendererProblem(row.renderer) !== null" class="lfp-badge">{{ rendererProblem(row.renderer)?.badge }}</span>
 				</td>
 				<td>{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span></td>
 				<td>{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span></td>

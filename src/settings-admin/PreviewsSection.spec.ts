@@ -21,6 +21,15 @@ describe('PreviewsSection', () => {
 		expect(radios[0].props('modelValue')).toBe('nextcloud')
 	})
 
+	it('offers the choices the server sends, one it has no words for as it is', () => {
+		const state = testState()
+		state.scalars.preview_format.choices = ['nextcloud', 'avif']
+		const radios = section(state).find('[data-setting="preview_format"]').findAllComponents(NcCheckboxRadioSwitch)
+
+		expect(radios).toHaveLength(2)
+		expect(radios[1].text()).toBe('avif')
+	})
+
 	it('saves the format chosen', async () => {
 		const wrapper = section()
 

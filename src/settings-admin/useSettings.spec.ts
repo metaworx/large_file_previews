@@ -20,7 +20,8 @@ function response(body: unknown, status = 200): Response {
 }
 
 beforeEach(() => {
-	(window as unknown as { OC: unknown }).OC = { requestToken: 'token' }
+	// Where @nextcloud/auth reads it, as Nextcloud's page sets it.
+	document.head.dataset.requesttoken = 'token'
 	toastSaved.mockReset()
 	toastError.mockReset()
 	fetchMock.mockReset()
@@ -39,6 +40,7 @@ describe('useSettings', () => {
 		await load()
 
 		expect(fetchMock.mock.calls[0][0]).toBe('/ocs/v2.php/apps/large_file_previews/settings')
+		expect(fetchMock.mock.calls[0][1].headers.requesttoken).toBe('token')
 		expect(state.value?.scalars.timeout_seconds.value).toBe(30)
 		expect(failed.value).toBe(false)
 	})
@@ -91,6 +93,21 @@ describe('useSettings', () => {
 		expect(await save({ scalars: { timeout_seconds: 900 } })).toBe(false)
 
 		expect(state.value?.scalars.timeout_seconds.value).toBe(45)
+	})
+
+	it('finds the programs again, and says the server\'s reason where it cannot', async () => {
+		fetchMock.mockResolvedValueOnce(response(testState()))
+		const { refresh } = useSettings()
+
+		expect(await refresh()).toBe(true)
+		expect(fetchMock.mock.calls[0][0]).toBe('/ocs/v2.php/apps/large_file_previews/settings/refresh')
+		expect(fetchMock.mock.calls[0][1].method).toBe('POST')
+		expect(toastSaved).toHaveBeenCalledWith('Programs found again.')
+
+		fetchMock.mockResolvedValueOnce(response({ error: 'No permission.' }, 403))
+
+		expect(await refresh()).toBe(false)
+		expect(toastError).toHaveBeenCalledWith('No permission.')
 	})
 
 	it('says so when the server cannot be reached', async () => {

@@ -53,11 +53,19 @@ describe('AdvancedSection', () => {
 		expect(commands).toEqual(['apt install libvips-tools', 'occ lfp:config:set binaries.vipsthumbnail /path/to/vipsthumbnail'])
 	})
 
-	it('shows the scratch directory, read only', () => {
+	it('shows the scratch directory, read only, and the largest copy it takes', async () => {
 		const wrapper = section()
 
 		expect(wrapper.find('[data-setting="scratch_directory"]').text()).toContain('/var/tmp/nextcloud (Nextcloud\'s temporary directory)')
-		expect(wrapper.findAll('input:not([type="checkbox"])').map((input) => input.attributes('id'))).toEqual(['lfp-vips-concurrency'])
+		expect(wrapper.findAll('input:not([type="checkbox"])').map((input) => input.attributes('id'))).toEqual(['lfp-vips-concurrency', 'lfp-tiff-restrip-max'])
+
+		const copy = wrapper.find('[data-setting="tiff_restrip_max_mb"]')
+
+		expect(copy.text()).toContain('occ lfp:config:set tiff_restrip_max_mb 4096')
+
+		await copy.findComponent({ name: 'NumberField' }).vm.$emit('save', 8192)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { tiff_restrip_max_mb: 8192 } }]])
 	})
 
 	it('asks for the programs to be found again', async () => {

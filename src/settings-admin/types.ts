@@ -5,15 +5,44 @@
  * What GET /settings answers, as SettingsController::state() builds it.
  */
 
-export interface Scalar {
-	value: number | boolean | string
-	default: number | boolean | string
+/** Each setting and its type, as ConfigLexicon::SCALARS declares them. */
+export interface ScalarValues {
+	min_size_mb: number
+	max_size_mb: number
+	timeout_enabled: boolean
+	timeout_seconds: number
+	timeout_kill_after_seconds: number
+	failure_retry_minutes: number
+	prlimit_enabled: boolean
+	prlimit_as_mb: number
+	vips_prlimit_as_mb: number
+	prlimit_fsize_mb: number
+	tiff_restrip_max_mb: number
+	choom_enabled: boolean
+	choom_adjust: number
+	scan_native_enabled: boolean
+	scan_coverage_percent: number
+	vips_concurrency: number
+	preview_format: string
+	preview_background: string
+}
+
+export type ScalarKey = keyof ScalarValues
+
+/** The settings whose value is of the type given: the switches, the numbers. */
+export type ScalarKeyOf<T> = { [K in ScalarKey]: ScalarValues[K] extends T ? K : never }[ScalarKey]
+
+export interface Scalar<T extends number | boolean | string = number | boolean | string> {
+	value: T
+	default: T
 	min: number | null
 	max: number | null
 	/** The words a word may be; null for a number or a switch. */
 	choices: string[] | null
 	stored: boolean
 }
+
+export type Scalars = { [K in ScalarKey]: Scalar<ScalarValues[K]> }
 
 /** A rule's fields; an absent one is left to the level below. */
 export interface Rule {
@@ -116,7 +145,7 @@ export interface ProgramRow {
 }
 
 export interface SettingsState {
-	scalars: Record<string, Scalar>
+	scalars: Scalars
 	active: ActiveRow[]
 	mimetypes: MimeRow[]
 	extensions: ExtensionRow[]
@@ -140,7 +169,12 @@ export interface SettingsState {
 
 /** What PUT /settings takes; every part optional, null clears. */
 export interface Changes {
-	scalars?: Record<string, number | boolean | string | null>
+	scalars?: { [K in ScalarKey]?: ScalarValues[K] | null }
 	mimetypes?: Record<string, RuleChange | null>
 	extensions?: Record<string, RuleChange | null>
+}
+
+/** One setting changed, or returned to its default with null. */
+export function scalarChange<K extends ScalarKey>(key: K, value: ScalarValues[K] | null): Changes {
+	return { scalars: { [key]: value } as Changes['scalars'] }
 }
