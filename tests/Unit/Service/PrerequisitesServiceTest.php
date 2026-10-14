@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\DetectionCache;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\Platform;
 use OCA\LargeFilePreviews\Service\Prerequisite;
@@ -23,6 +24,8 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\IBinaryFinder;
+use OCP\ICache;
+use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
@@ -115,6 +118,24 @@ class PrerequisitesServiceTest
 		$this->service( $programs, $runner )->check( true );
 
 		self::assertSame( 'v1', $this->cacheValues['version./usr/bin/pdftoppm'] ?? null );
+	}
+
+	/**
+	 * Without a memory cache, the page's check() and programList() still
+	 * ask each program once in the request.
+	 */
+	public function testEachProgramIsAskedOnceARequestWithoutACache(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->expects( self::exactly( 4 ) )
+		       ->method( 'runBare' )
+		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'v1' ) )
+		;
+
+		$service = $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ], $runner, cached: false );
+		$service->check( true );
+		$service->programList();
+		$service->check( true );
 	}
 
 	public function testVersionsAreTheFirstLineEachProgramPrints(): void
@@ -238,8 +259,16 @@ class PrerequisitesServiceTest
 		array          $found,
 		?CommandRunner $runner = null,
 		string         $temp = '',
+		bool           $cached = true,
 	): PrerequisitesService
 	{
+		// Without a memory cache Nextcloud hands out one that keeps nothing.
+		$forgetting = $this->createMock( ICacheFactory::class );
+		$forgetting->method( 'createLocal' )
+		           ->willReturn( $this->createMock( ICache::class ) )
+		;
+		$versions = $cached ? $this->detectionCache() : new DetectionCache( $forgetting );
+
 		$finder = $this->createMock( IBinaryFinder::class );
 		$finder->method( 'findBinaryPath' )
 		       ->willReturnCallback(
@@ -262,7 +291,7 @@ class PrerequisitesServiceTest
 		return new PrerequisitesService(
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
-			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $this->detectionCache() ),
+			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $versions ),
 			$tempManager,
 			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),
 		);

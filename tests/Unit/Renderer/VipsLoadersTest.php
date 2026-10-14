@@ -88,7 +88,9 @@ class VipsLoadersTest
 	}
 
 	/**
-	 * Nothing to tell from: no `vips`, or no answer, which is asked again.
+	 * Nothing to tell from: no `vips`, or no answer. No answer is not asked
+	 * again in the request, nor for a minute after, so that a folder of
+	 * images does not start `vips` for each; then it is.
 	 */
 	public function testNothingKnownWithoutAnAnswer(): void
 	{
@@ -102,10 +104,18 @@ class VipsLoadersTest
 
 		// Found again, as after a refresh.
 		$this->cacheValues = [];
+		$loaders           = $this->loaders( $runner, '/usr/bin/vips' );
+
+		self::assertNull( $loaders->loaders() );
+		self::assertNull( $loaders->loaders() );
+		self::assertSame( '', $this->cacheValues['vips-loaders./usr/bin/vips'] ?? null );
+		// Another request within the minute.
+		self::assertNull( $this->loaders( $runner, '/usr/bin/vips' )->loaders() );
+
+		// The minute over.
+		unset( $this->cacheValues['vips-loaders./usr/bin/vips'] );
 
 		self::assertNull( $this->loaders( $runner, '/usr/bin/vips' )->loaders() );
-		self::assertNull( $this->loaders( $runner, '/usr/bin/vips' )->loaders() );
-		self::assertArrayNotHasKey( 'vips-loaders./usr/bin/vips', $this->cacheValues );
 	}
 
 	/**

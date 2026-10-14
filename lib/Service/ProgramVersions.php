@@ -13,11 +13,16 @@ namespace OCA\LargeFilePreviews\Service;
  * Which version each program is: the first line it prints when asked.
  *
  * Kept in DetectionCache by the program's path, since another binary in its
- * place is another version, and found again with the paths. The page, the
- * command and the renderers ask here, so they cannot disagree.
+ * place is another version, and found again with the paths; and for the
+ * request, so that a request asks each program once where there is no
+ * memory cache. The page, the command and the renderers ask here, so they
+ * cannot disagree.
  */
 class ProgramVersions
 {
+	/** @var array<string, string|null> by path */
+	private array $versions = [];
+
 
 //  constructor
 
@@ -41,17 +46,20 @@ class ProgramVersions
 		string $flag,
 	): ?string
 	{
-		$cached = $this->cache->get( 'version.' . $path );
-
-		if ( $cached !== null )
+		if ( array_key_exists( $path, $this->versions ) )
 		{
-			return $cached === '' ? null : $cached;
+			return $this->versions[ $path ];
 		}
 
-		$outcome = $this->runner->runBare( $program, [ $flag ] );
-		$line    = trim( (string) strtok( $outcome->stderr, "\n" ) );
-		$this->cache->set( 'version.' . $path, $line );
+		$line = $this->cache->get( 'version.' . $path );
 
-		return $line === '' ? null : $line;
+		if ( $line === null )
+		{
+			$outcome = $this->runner->runBare( $program, [ $flag ] );
+			$line    = trim( (string) strtok( $outcome->stderr, "\n" ) );
+			$this->cache->set( 'version.' . $path, $line );
+		}
+
+		return $this->versions[ $path ] = $line === '' ? null : $line;
 	}
 }

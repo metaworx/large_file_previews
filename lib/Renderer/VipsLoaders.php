@@ -21,7 +21,9 @@ use OCA\LargeFilePreviews\Service\ProgramVersions;
  *     VipsForeignLoadJp2kFile (jp2kload), load JPEG2000 image (.j2k, ...), priority=0, untrusted, is_a, ...
  *
  * Asked once and kept in DetectionCache, by the path of `vips`: another
- * binary there may have other loaders. Refreshed with the paths.
+ * binary there may have other loaders. Refreshed with the paths. A listing
+ * that could not be read is kept as unknown, for this request and for
+ * UNKNOWN_TTL seconds.
  *
  * And whether it can block those at all: VIPS_BLOCK_UNTRUSTED and the
  * untrusted flag are libvips 8.13's. Before it nothing is blocked, and
@@ -42,8 +44,21 @@ class VipsLoaders
 	 */
 	private const LISTING_LIMIT = 262_144;
 
+	/**
+	 * How long a listing that could not be read is not asked for again:
+	 * long enough that a folder of images does not start `vips` for each,
+	 * short enough that a repaired libvips is soon seen.
+	 */
+	public const UNKNOWN_TTL = 60;
+
 	/** @var array<string, bool>|null */
 	private ?array $loaders = null;
+
+
+//  private properties
+
+	/** Whether `vips` was asked in this request, and could not tell. */
+	private bool $unknown = false;
 
 
 //  constructor
@@ -68,7 +83,7 @@ class VipsLoaders
 	 */
 	public function loaders(): ?array
 	{
-		if ( $this->loaders !== null )
+		if ( $this->loaders !== null || $this->unknown )
 		{
 			return $this->loaders;
 		}
@@ -82,6 +97,14 @@ class VipsLoaders
 
 		$key    = 'vips-loaders.' . (string) $location->path;
 		$cached = $this->cache->get( $key );
+
+		// An empty string: asked a moment ago, and it could not tell.
+		if ( $cached === '' )
+		{
+			$this->unknown = true;
+
+			return null;
+		}
 
 		if ( $cached !== null )
 		{
@@ -97,9 +120,13 @@ class VipsLoaders
 		$outcome = $this->runner->runBare( self::PROGRAM, [ '-l', 'foreign' ], self::LISTING_LIMIT );
 		$loaders = $outcome->isSuccess() ? self::parse( $outcome->stderr ) : [];
 
-		// Not kept when it did not answer: the next request asks again.
+		// Kept for a minute only when it did not answer: not asked for every
+		// image of a folder, and asked again soon.
 		if ( $loaders === [] )
 		{
+			$this->unknown = true;
+			$this->cache->set( $key, '', self::UNKNOWN_TTL );
+
 			return null;
 		}
 

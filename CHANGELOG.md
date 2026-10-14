@@ -25,7 +25,7 @@ the first stable release.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
   render, and `occ lfp:check`, listing what the app needs, and the
-  package for it per distribution; `--refresh` to find programs again.
+  package for it per distribution; what it finds kept, until `--refresh`.
 
 - `README.md`, *When previews fail*: a file that failed is left to the
   next provider for `failure_retry_minutes`.
