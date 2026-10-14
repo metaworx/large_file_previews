@@ -34,10 +34,12 @@ use Throwable;
  * null instead, and the next provider gets its turn.
  *
  * `isAvailable()` runs for every preview of every type in the regex, every
- * image included: it does no I/O, only the type, the name, the size the file
- * cache holds, the configuration, and, for a file it would take, whether
- * that file failed lately (FailedFiles). `getThumbnail()` is asked for the
- * largest preview only; Nextcloud makes every smaller size from it.
+ * image included, so it reads the file only as the file cache has it: its
+ * type, name and size, and whether its storage is local. A type switched on
+ * asks the configuration, whether the file failed lately (FailedFiles), and
+ * for an image whether libvips can decode it, which the memory cache keeps
+ * and only a miss asks `vips` for (VipsLoaders). `getThumbnail()` is asked
+ * for the largest preview only; Nextcloud makes every smaller size from it.
  */
 class LargeFileProvider
     implements
@@ -272,7 +274,7 @@ class LargeFileProvider
 	}
 
 	/**
-	 * Removes the render's folder: the PNG, and whatever else the program
+	 * Removes the render's folder: the preview, and whatever else the program
 	 * left there.
 	 */
 	private static function remove( string $folder ): void

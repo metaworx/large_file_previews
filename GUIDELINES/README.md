@@ -1,18 +1,18 @@
 <!-- GENERATED FILE - DO NOT EDIT.
      Source: project/_README.md + project/_CONTRACT.md + shared/_README.md
      Regenerate: GUIDELINES/shared/tools/sync-docs.sh
-     Contract version: v1.0.0 -->
+     Contract version: v1.0.1 -->
 
 
-# Large File Previews (v1.0.0)
+# Large File Previews (v1.0.1)
 
 Large File Previews is a Nextcloud app for instances that hold files too large for
-Nextcloud's own preview providers - multi-gigabyte PDFs, and later very large images. It
-renders the first page or a reduced image straight from the file's local path with a
-command-line renderer (`pdftoppm` first), so no file is copied into memory or sent over a
-socket, and every renderer runs under a time limit, a memory cap and a low out-of-memory
-priority. It is for administrators who run Nextcloud on local storage and want sharp
-previews of archives such as scanned catalogues.
+Nextcloud's own preview providers - multi-gigabyte PDFs and very large images. It
+renders the first page or a reduced image straight from the file where it lies with a
+command-line renderer (`pdftoppm` for PDFs, libvips for images), so no file is loaded into
+memory or sent over a socket, and every renderer runs under a time limit, an address-space
+and file-size cap and a raised out-of-memory score. It is for administrators who run
+Nextcloud on local storage and want sharp previews of archives such as scanned catalogues.
 
 ## Working on it
 
@@ -25,7 +25,7 @@ composer install
 The app is tested inside a `nextcloud_testing` instance, which mounts this checkout as
 `apps/large_file_previews`; put that instance's directory in
 `GUIDELINES/config.local.ini` under `[phpunit]` (see the contract below). The instance
-needs `poppler-utils` installed.
+needs `poppler-utils`, `libvips-tools` and `libtiff-tools` installed.
 
 ## The rules that apply here
 
@@ -48,7 +48,7 @@ Editing a generated file is wasted work — change the fragment and re-run
 ---
 
 
-# Large File Previews — Project Contract (v1.2.1)
+# Large File Previews — Project Contract (v1.2.2)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `GUIDELINES/README.md` for people,
@@ -56,8 +56,8 @@ so that the two cannot drift apart.
 
 A Nextcloud app, app id `large_file_previews`,
 that renders previews of files too large for Nextcloud's own providers
-by running a command-line renderer on the file's local path:
-`pdftoppm` (poppler) for PDF and Illustrator files first, libvips for large images later.
+by handing the file, where it lies, to a command-line renderer:
+`pdftoppm` (poppler) for PDF and Illustrator files, libvips for large images.
 
 ## 1. Project Facts
 
@@ -76,7 +76,7 @@ by running a command-line renderer on the file's local path:
 | Shipped-code paths    | declared as `project.shipped` in `GUIDELINES/config.ini` and listed below; kept honest by `GUIDELINES/shared/tools/changelog.sh check` (rule: `GUIDELINES/shared/COMMIT.md` §5) |
 | Version manifest      | `appinfo/info.xml`: the `manifest` of `CHANGELOG.md` in `GUIDELINES/config.ini`, so `changelog.sh cut` sets its `<version>` and `check` holds it to the newest section |
 | Test gate command     | `GUIDELINES/shared/lang/php/tools/phpunit` (the shipped wrapper; `composer test` inside the container or CI), with `MWX_PHPUNIT_DDEV_DIR` set to the harness instance's directory (§3) and `MWX_PHPUNIT_MOUNT=/var/www/html/apps/large_file_previews`, whose values this machine keeps in `GUIDELINES/config.local.ini` under `[phpunit]`; `--testsuite unit` or `integration` for one of them. The frontend: `npm test` (Vitest, mounting the real `@nextcloud/vue` components) and `npm run build` |
-| Lint command          | `composer cs:check` / `composer cs:fix` (ECS with `mwx/coding-standard`, over `lib/`, `tests/` and `appinfo/`); `composer psalm` (Psalm in `vendor-bin/psalm`, over `lib/` at level 4 with no baseline); the manifest `xmllint --noout --schema info.xsd appinfo/info.xml`, with `info.xsd` fetched from `https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd`. Rector is the upgrade tool, not lint: `composer rector:check` / `composer rector` with Nextcloud's rules for the oldest supported version, in the harness container. The frontend: `npm run lint` (ESLint), `npm run typecheck` (`vue-tsc`, which checks `.vue` files as well as `.ts`) and `npm run stylelint` |
+| Lint command          | `composer cs:check` / `composer cs:fix` (ECS with `mwx/coding-standard`, over `lib/`, `tests/`, `appinfo/` and `templates/`); `composer psalm` (Psalm in `vendor-bin/psalm`, over `lib/` at level 4 with no baseline); the manifest `xmllint --noout --schema info.xsd appinfo/info.xml`, with `info.xsd` fetched from `https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd`. Rector is the upgrade tool, not lint: `composer rector:check` / `composer rector` with Nextcloud's rules for the oldest supported version, in the harness container. The frontend: `npm run lint` (ESLint), `npm run typecheck` (`vue-tsc`, which checks `.vue` files as well as `.ts`) and `npm run stylelint` |
 
 A commit touching any path listed below must carry a `CHANGELOG.md` bullet.
 The list is generated from `project.shipped`,
@@ -153,18 +153,24 @@ release:
   Whoever can write `config.php` can run code already.
   An override that is not an executable file leaves its program missing;
   it does not fall back to the finder's.
-- The limits that wrap it - `timeout`, `prlimit --as`, `choom -n` -
+- The limits that wrap it - `timeout`, `prlimit --as --fsize`, `choom -n` -
   are each switchable and each has a configurable value with a default
   (the app's `ConfigLexicon`).
-  A limit switched on whose program is missing declines the file: it fails closed.
+  A limit switched on whose program is missing fails the render:
+  it fails closed.
+- A user's file reaches a program as an open descriptor, `/dev/fd/<n>`,
+  never by its name,
+  so no name can be read as an option or forge what the program prints.
 - Success is judged by the exit status and the output file, not by stderr being empty.
 - Only a local, unencrypted file is rendered; anything else is declined,
   so the file is never copied to a temporary file first.
+  The one copy the app makes is the re-striped TIFF of the one-strip fallback,
+  an unlinked file in the scratch directory.
 
 ### 3.4 Every user-facing text is translatable
 
 A text a person reads - a setup check's message, the settings page, a refusal it shows -
-goes through `IL10N` in PHP and `t()`/`n()` in the frontend (`src/l10n.ts`),
+goes through `IL10N` in PHP and `t()` in the frontend (`src/l10n.ts`),
 and ESLint's `vue/no-bare-strings-in-template` holds the templates to it.
 Logs and command output stay English.
 No translations ship yet: adding them is tooling, not a change to the code.

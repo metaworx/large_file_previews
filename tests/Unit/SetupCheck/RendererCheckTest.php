@@ -55,7 +55,7 @@ class RendererCheckTest
 
 		self::assertSame( SetupResult::ERROR, $result->getSeverity() );
 		self::assertSame(
-			'«Large previews cannot be rendered: «the PHP function proc_open is disabled», «the PHP extension gd is missing», «the program pdftoppm is missing». See occ large-file-previews:check.»',
+			'«Some large previews cannot be rendered: «the PHP function proc_open is disabled», «the PHP extension gd is missing», «the program pdftoppm is missing». Install what is missing, or switch off what needs it; see occ large-file-previews:check.»',
 			$result->getDescription(),
 		);
 	}

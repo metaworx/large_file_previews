@@ -3,13 +3,14 @@
 	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>large_file_previews</id>
 	<name>Large File Previews</name>
-	<summary>Previews of PDF and Illustrator files too large for Nextcloud's own preview providers</summary>
-	<description>Renders previews of files too large for Nextcloud's own preview providers, by running a command-line renderer on the file's local path rather than loading the file into PHP or sending it to a service.
+	<summary>Previews of PDFs, Illustrator files and images too large for Nextcloud's own preview providers</summary>
+	<description>Renders previews of files too large for Nextcloud's own preview providers, by handing the file where it lies to a command-line renderer rather than loading it into PHP or sending it to a service.
 
 What you get:
 
-- **PDF and Illustrator previews** through `pdftoppm` (poppler), of the first page, at the full preview size, for files of any size.
-- **Limits around every render**: a timeout, a memory cap and a raised out-of-memory score, each switchable and each with its value.
+- **PDF and Illustrator previews** through `pdftoppm` (poppler), of the first page, at the full preview size, or a scanned page at its own resolution where that is smaller, for files of any size.
+- **Image previews** through `vipsthumbnail` (libvips): TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF and AVIF, each type off until it is switched on, read in strips or from a pyramid's nearest level; a TIFF in one large strip that runs out of memory gets a second chance through `tiffcp`.
+- **Limits around every render**: a timeout, address-space and file-size caps and a raised out-of-memory score, each with its value, the two caps switched together.
 - **Per type and per extension**: which files the app takes, and from which size up to which size; anything it declines goes to the next provider.
 
 Only files on local, unencrypted storage are rendered. Everything else is left to Nextcloud's other preview providers.

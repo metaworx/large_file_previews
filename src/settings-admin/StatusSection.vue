@@ -59,7 +59,7 @@ function statusText(status: PrerequisiteItem['status']): string {
 			{{ t('large_file_previews', 'Everything the app needs is available.') }}
 		</NcNoteCard>
 		<NcNoteCard v-else type="error">
-			{{ t('large_file_previews', 'Large previews are not rendered: something the app needs is missing. See the list below, or run occ large-file-previews:check.') }}
+			{{ t('large_file_previews', 'Some large previews are not rendered: something the app needs is missing. Install it, or switch off what needs it; see the list below, or run occ large-file-previews:check.') }}
 		</NcNoteCard>
 
 		<NcNoteCard v-if="state.lastFailure !== null" type="warning">

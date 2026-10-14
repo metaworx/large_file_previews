@@ -22,12 +22,16 @@ trait MemoryCache
 	/** @var array<string, mixed> */
 	protected array $cacheValues = [];
 
+	/** @var array<string, int> each key's TTL, as it was last set */
+	protected array $cacheTtls = [];
+
 
 //  other non-static methods
 
 	protected function detectionCache(): DetectionCache
 	{
 		$values = &$this->cacheValues;
+		$ttls   = &$this->cacheTtls;
 		$cache  = $this->createMock( ICache::class );
 
 		$cache->method( 'get' )
@@ -47,11 +51,14 @@ trait MemoryCache
 			      static function(
 				      string $key,
 				      mixed  $value,
+				      int    $ttl = 0,
 			      ) use (
 				      &$values,
+				      &$ttls,
 			      ): bool
 			      {
 				      $values[ $key ] = $value;
+				      $ttls[ $key ]   = $ttl;
 
 				      return true;
 			      },

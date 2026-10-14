@@ -132,6 +132,29 @@ class PrerequisitesServiceTest
 		$service->check( true );
 	}
 
+	/**
+	 * A version not said, as where its run failed, is kept a minute only:
+	 * libvips' renders hang on it.
+	 */
+	public function testAVersionNotSaidIsAskedAgainSoon(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'runBare' )
+		       ->willReturnCallback(
+			       static fn(
+				       string $program,
+			       ): RenderOutcome => $program === 'pdftoppm'
+				       ? new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'v1' )
+				       : new RenderOutcome( Outcome::LIMIT_MISSING, 'timeout is switched on but not found' ),
+		       )
+		;
+
+		$this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ], $runner )->check( true );
+
+		self::assertSame( DetectionCache::TTL, $this->cacheTtls['version./usr/bin/pdftoppm'] ?? null );
+		self::assertSame( ProgramVersions::UNKNOWN_TTL, $this->cacheTtls['version./usr/bin/choom'] ?? null );
+	}
+
 	public function testVersionsAreTheFirstLineEachProgramPrints(): void
 	{
 		$runner = $this->createMock( CommandRunner::class );

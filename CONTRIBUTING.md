@@ -97,14 +97,15 @@ A spec mounts the real `@nextcloud/vue` components, never a stand-in;
 ESLint refuses a mock or a stub of one.
 
 The integration suite needs a booted Nextcloud with `poppler-utils`,
+`libvips-tools` and `libtiff-tools`,
 and runs in a test instance through `GUIDELINES/shared/lang/php/tools/phpunit`
 (`--testsuite integration`);
 `GUIDELINES/config.local.ini` names the instance under `[phpunit]`.
 Outside a server, its tests are skipped.
 
-A harness instance gets the package from a file of its own,
+A harness instance gets the packages from a file of its own,
 `instances/<version>/.ddev/config.extra.yaml` in `nextcloud_testing`,
-holding `webimage_extra_packages: [poppler-utils]`,
+holding `webimage_extra_packages: [poppler-utils, libvips-tools, libtiff-tools]`,
 and takes it on `ddev restart`.
 `occ large-file-previews:check` then says whether everything is there.
 
@@ -122,5 +123,5 @@ and takes it on `ddev restart`.
 - **The preview provider never throws.**
   Every failure returns `null`, so the next provider is tried.
 - **Every text a person reads is translatable**:
-  `IL10N` in PHP, `t()`/`n()` in the frontend.
+  `IL10N` in PHP, `t()` in the frontend.
   Logs and command output stay English.

@@ -360,7 +360,8 @@ class ConfigurationService
 
 	/**
 	 * Applies changes to settings and rules all together, or none of them:
-	 * each is validated against the others before anything is written.
+	 * each is validated, a rule's fields together, before anything is
+	 * written. The writes are app config's own, one after the other.
 	 *
 	 * A null setting returns to its default, a null rule is removed, a MIME
 	 * type's to its shipped default.
@@ -653,8 +654,10 @@ class ConfigurationService
 	/**
 	 * What a render's outcome depends on besides the file: every setting,
 	 * and what system config says of untrusted decoders, the scratch
-	 * directory and the programs' paths. A failure is remembered under it
-	 * (FailedFiles), so that a change to any of them tries the file again.
+	 * directory, the programs' paths and Nextcloud's preview_format. A
+	 * failure is remembered under it (FailedFiles), so that a change to any
+	 * of them tries the file again; the rules decide which files are taken,
+	 * not how one renders, and are left out.
 	 */
 	public function fingerprint(): string
 	{
@@ -665,7 +668,7 @@ class ConfigurationService
 			$values[ $key ] = $this->getScalar( $key );
 		}
 
-		foreach ( [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, ScratchDirectory::SYSTEM_KEY, BinaryLocator::SYSTEM_KEY ] as $key )
+		foreach ( [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, ScratchDirectory::SYSTEM_KEY, BinaryLocator::SYSTEM_KEY, 'preview_format' ] as $key )
 		{
 			$values[ $key ] = $this->system->getSystemValue( $key, null );
 		}

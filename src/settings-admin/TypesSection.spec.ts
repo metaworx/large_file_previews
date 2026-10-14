@@ -131,7 +131,7 @@ describe('TypesSection', () => {
 		})
 		const wrapper = section(state)
 
-		expect(row(wrapper, '[data-mime="image/tiff"]').text()).toContain('older than 8.13 and cannot block untrusted decoders')
+		expect(row(wrapper, '[data-mime="image/tiff"]').text()).toContain('older than 8.13, or did not report its version, and cannot block untrusted decoders')
 		expect(wrapper.findAll('.lfp-active tbody tr')[1].find('.lfp-badge').text()).toBe('libvips too old')
 	})
 

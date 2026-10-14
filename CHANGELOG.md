@@ -19,13 +19,16 @@ the first stable release.
 - `img/app.svg` and `img/app-dark.svg`: the app's icon, a picture with
   an arrow enlarging it.
 
-- `README.md`, *What it does*: previews of PDFs by `pdftoppm` and of
-  images by `vipsthumbnail`, from local, unencrypted storage only, the
-  file handed on as a descriptor, never by its name.
+- `README.md`, *What it does*: previews of PDF and Illustrator files by
+  `pdftoppm` and of images by `vipsthumbnail`; *What it does not do*:
+  storage that is not local, or encrypted.
+
+- `README.md`, *Requirements*: PHP's `gd` and process functions,
+  `/dev/fd`, libvips 8.13, and which programs are optional.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
   render, and `occ lfp:check`, listing what the app needs, and the
-  package for it per distribution; what it finds kept, until `--refresh`.
+  package for it per distribution; what it finds kept for a day.
 
 - `README.md`, *When previews fail*: a file that failed is left to the
   next provider for `failure_retry_minutes`.
@@ -44,8 +47,9 @@ the first stable release.
   re-striped by `tiffcp` into an unlinked copy in `scratch_directory`,
   one at a time, up to `tiff_restrip_max_mb`; `prlimit_fsize_mb`.
 
-- `README.md`, *Paths, and what the app trusts*: a kept path checked
-  before it runs; names and messages logged as text.
+- `README.md`, *Paths, and what the app trusts*: files handed on as
+  descriptors, a kept path checked before it runs, names and messages
+  logged as text.
 
 - *Administration settings → Additional settings*: status, files
   processed, preview format, limits, failed files, libvips, programs with

@@ -2,8 +2,9 @@
 
 A Nextcloud app that renders previews of files
 too large for Nextcloud's own preview providers.
-It runs a command-line renderer on the file's local path,
-so the file is never loaded into PHP, copied, or sent to another service.
+It hands the file, where it lies on local storage, to a command-line renderer,
+so the file is never loaded into PHP or sent to another service,
+and copied only to give a TIFF in one large strip a second chance.
 
 > **Status:**
 > in development, not yet released.
@@ -19,9 +20,12 @@ so the file is never loaded into PHP, copied, or sent to another service.
   A page that is one scan is rendered at the scan's own resolution where that is smaller,
   not enlarged: a 300 dpi A4 scan gives a preview 3508 pixels tall, not 4096.
 - **Large images** through `vipsthumbnail` from libvips:
-  TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF and JPEG 2000,
-  and AVIF, JPEG XL, BMP and PNM where the server's libvips reads them,
-  each type switched off until it is switched on.
+  TIFF, JPEG, PNG, WebP, GIF, HEIC and HEIF,
+  and AVIF where the server's libvips reads it,
+  each type switched off until it is switched on;
+  JPEG 2000, JPEG XL, BMP and PNM too,
+  but libvips counts their decoders as untrusted,
+  so only once system config allows those (see *Configuration*).
   The image is read in strips or from a pyramid's nearest level rather than whole,
   and never enlarged: one smaller than the preview keeps its own size.
   Nextcloud 34 has no image type for `.avif`, `.jxl`, `.ppm`, `.pgm` or `.pbm`:
@@ -39,13 +43,19 @@ so the file is never loaded into PHP, copied, or sent to another service.
 
 ## Requirements
 
-- Nextcloud 33 to 35, PHP 8.2 or later.
-- `pdftoppm`; `pdfinfo` and `pdfimages` to tell a scanned page.
-- For images, while an image type is switched on: `vipsthumbnail`;
-  `vipsheader` and `vips`,
-  to keep an image at its own size and tell its decoders;
-  optionally `tiffcp`, for a TIFF in one large strip.
-- For the limits around each render, each optional:
+- Nextcloud 33 to 35, PHP 8.2 or later,
+  with the `gd` extension, and `proc_open`, `proc_get_status` and `proc_close`
+  not in `disable_functions`;
+  `/dev/fd`, which `/proc` brings, to hand a file on;
+  a writable temporary directory.
+  `sysvsem` is optional: Nextcloud's own limit on concurrent previews needs it.
+- `pdftoppm`; optionally `pdfinfo` and `pdfimages`, to tell a scanned page.
+- For images, while an image type is switched on:
+  `vipsthumbnail`, from libvips 8.13 on;
+  optionally `vipsheader`, to keep an image at its own size,
+  and `vips`, to tell the types libvips reads and write a PDF's preview as WebP;
+  optionally `tiffcp`, with `vipsheader`, for a TIFF in one large strip.
+- For the limits around each render, each needed while it is switched on:
   `timeout`, `prlimit` and `choom`.
 
 | Programs | Debian, Ubuntu | Fedora | RHEL and rebuilds | Alpine | Arch |
@@ -72,7 +82,7 @@ A file that failed is not tried again on every page that shows it:
 it is left to the next provider for `failure_retry_minutes`,
 60 by default, where 0 tries it every time,
 and kept in Nextcloud's memory cache by the file's id and version.
-A change to the file, or to a setting, tries it again at once,
+A change to the file, or to a setting a render uses, tries it again at once,
 and so does `occ lfp:check --refresh`.
 A failure that is the server's, a program missing for instance, is not kept.
 
@@ -84,9 +94,11 @@ lists everything the app needs - the PHP functions that start a program,
 the extensions, and each program with its path and version -
 and exits 1 while something needed is missing.
 Where each program is, its version, and which decoders libvips has
-are found once and kept in Nextcloud's memory cache;
+are found once and kept in Nextcloud's memory cache for a day;
 they are found again on install, after each upgrade,
-and with `occ lfp:check --refresh`, for instance after installing a program.
+with `occ lfp:check --refresh`, for instance after installing a program,
+and with *Find programs again* on the settings page.
+Without a memory cache nothing is kept, and each request finds them again.
 A libvips that cannot list its decoders is asked again a minute later,
 not for every image.
 
@@ -96,11 +108,13 @@ Which files the app takes is set per MIME type and per extension:
 whether it takes them, and from which size up to which size.
 Anything it declines goes to Nextcloud's next preview provider.
 Each field is resolved on its own, the most specific level that sets it winning:
-the extension, then the MIME type, then the app's default.
+the extension, then the MIME type, then the app's default,
+`min_size_mb` (0) and `max_size_mb` (-1, no limit), in MiB as every size here.
+The settings page calls a file the app takes *processed*.
 Out of the box, PDF and Illustrator files are taken at any size,
 and every image type is off;
 switched on, an image is taken from `preview_max_filesize_image` up,
-50 MB unless set, where Nextcloud's own image providers stop.
+50 MiB unless set, where Nextcloud's own image providers stop.
 A MIME type keeps only the fields set for it,
 so the rest follow its shipped default, the image minimum included,
 and a field cleared returns to it.
@@ -135,42 +149,57 @@ occ lfp:config:set timeout_seconds 60
 
 `config:show` lists everything, stored and resolved,
 and what is set but not used;
-`config:get` says what one MIME type, extension, size or file resolves to,
-and why;
+`config:get` says what one MIME type, extension or file resolves to,
+at a size where one is given, and why;
 `config:unset` returns a setting or a rule to its default.
 Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
 
-Each render runs under three limits, each switchable:
-a timeout (`timeout_seconds`, 30 by default,
-shared by every program one render runs),
-a cap on its address space (`prlimit_as_mb`, 512;
-`vips_prlimit_as_mb`, 1024, for libvips,
-which reads whole strips and runs threads),
-and an out-of-memory score that has the kernel kill it before a web server worker
-(`choom_adjust`, 1000).
-A limit switched on whose program is missing declines the file rather than run without it.
+Each render runs under three limits, each switchable, all on by default.
+Sizes are in MiB, as the caps count them.
+
+| Limit | Switch | Values, default and range |
+|---|---|---|
+| A timeout, shared by every program one render runs | `timeout_enabled` | `timeout_seconds` 30, 1 to 600; `timeout_kill_after_seconds` 5, 1 to 60, before SIGKILL |
+| Caps on its address space and on the largest file it writes | `prlimit_enabled` | `prlimit_as_mb` 512 and `vips_prlimit_as_mb` 1024, for libvips, which reads whole strips and runs threads, each 256 to 65536; `prlimit_fsize_mb` 1024, 64 to 65536 |
+| An out-of-memory score that has the kernel kill it before a web server worker | `choom_enabled` | `choom_adjust` 1000, 0 to 1000 |
+
+A limit switched on whose program is missing fails the render rather than run without it:
+a warning in the log, the last failure, and an error in the setup check,
+and the preview is left to the next provider.
 A render that runs into the address-space cap is a failure,
 recorded as out of memory, and the preview is left to the next provider.
 
 A TIFF is read a strip at a time,
 so one stored in a single large strip can need far more memory than its preview:
-a 151 MB TIFF in one LZW strip failed under 256 MB.
-One that runs out of memory gets a second chance where `tiffcp` is installed:
+a 151 MB TIFF in one LZW strip failed under 256 MiB.
+One that runs out of memory gets a second chance
+where `tiffcp` and `vipsheader` are installed:
 its first image is copied, uncompressed, in strips of 64 rows,
-and libvips renders the copy, which is removed afterwards.
-On a 15000 x 15000 TIFF in one LZW strip that failed under 512 MB,
-the copy took 2.5 s and rendered in 1 s within 98 MB.
-The copy goes to the scratch directory,
-Nextcloud's temporary directory unless set,
-and needs the image's uncompressed size there, and 256 MB more, on disk:
-a directory on tmpfs or ramfs is refused, since the copy would sit in memory.
+and libvips renders the copy.
+On a 15000 x 15000 TIFF in one LZW strip that failed under 512 MiB,
+the copy took 2.5 s and rendered in 1 s within 98 MiB.
+The copy is a file in the scratch directory, unlinked as soon as it is opened,
+so it is gone once rendered, whatever ends the render.
+One copy is made at a time,
+none larger than `tiff_restrip_max_mb` (4096, 256 to 1048576),
+and, while `prlimit_enabled` is on,
+`tiffcp` may write no more than the copy's size and a small margin.
+The scratch directory is Nextcloud's temporary directory unless set,
+and must be an absolute, writable directory on disk
+with the copy's size and 256 MiB more free;
+where it is on tmpfs or ramfs, in memory, or has too little room,
+the second chance is not tried, and the failure says why.
+Setting it, and `occ lfp:config:show` and the settings page,
+check only that it is an absolute, writable directory;
+where it is, and its free space, are checked when a copy is needed.
 
 ```bash
 occ lfp:config:set scratch_directory /var/cache/large_file_previews
 ```
 
 libvips' untrusted decoders are blocked:
-JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.
+whatever `vips -l` marks untrusted,
+with libvips 8.15 JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.
 They are allowed in system config only, never from the settings page,
 since an administrator can write app config without shell access:
 
@@ -180,11 +209,13 @@ occ lfp:config:set vips_allow_untrusted true
 
 libvips blocks them from 8.13 on;
 an older one cannot, and picks its decoder by the content,
-so while they are blocked it renders no image at all.
+so while they are blocked it renders no image at all,
+nor does a libvips whose `vipsthumbnail --version` says nothing.
 A type whose decoder is blocked, or missing from the server's libvips,
 is left to the next provider, and the settings page says why;
 `occ lfp:check --refresh` asks libvips again.
-`vips_concurrency` is the threads one render may use, 1 by default.
+`vips_concurrency` is the threads `vipsthumbnail` may use for one render,
+1 by default, 1 to 64.
 
 Nextcloud stores a preview in the type it is given, which `preview_format` sets:
 `png`, `jpeg`, `webp`, or `nextcloud`, the default,
@@ -197,7 +228,7 @@ The quality is Nextcloud's:
 it re-encodes every preview at its app config `preview` `jpeg_quality` or `webp_quality`.
 
 A page counts as scanned where one image covers it, each way,
-to at least `scan_coverage_percent` (90 by default);
+to at least `scan_coverage_percent` (90 by default, 50 to 100);
 `scan_native_enabled` switches the scan sizing off,
 and every page then fills the preview size.
 
@@ -251,39 +282,39 @@ poppler 24.02, a PDF of 1.7 GB and 1817 A4 pages:
 
 | What | Result |
 |---|---|
-| `pdftoppm`, page 1 at 4096 pixels | 0.47 s, 61 MB resident at most |
+| `pdftoppm`, page 1 at 4096 pixels | 0.47 s, 61 MiB resident at most |
 | Nextcloud's preview of it, through this app | 2.1 s, `occ` start-up included |
-| Smallest address-space cap the render passes | 96 MB; at 64 MB it runs out of memory |
+| Smallest address-space cap the render passes | 96 MiB; at 64 MiB it runs out of memory |
 | The same file through Imaginary | killed at 2.5 GB and again at 6 GB of memory: it takes the whole file into memory |
 | The same file through Collabora | at most about 1123 pixels |
 
-The 512 MB default is five times what that file needs:
+The 512 MiB default is five times what that file needs:
 room for heavier pages, and still an early stop for a runaway.
 A server can set its own.
 
 ### Images
 
 libvips 8.15.1, one thread, untrusted decoders blocked,
-a preview of 4096 pixels:
+a preview of 4096 pixels; sizes and caps in MiB:
 
 | File | Time | Resident at most | Address-space cap it passes |
 |---|---|---|---|
-| TIFF, 798 MB, 22040 x 12059, uncompressed | 2.95 s | 147 MB | 512; 256 with two arenas |
-| TIFF, 644 MB, 15000 x 15000, in strips | 3.7 s | 101 MB | 512 |
-| TIFF, 873 MB, 15000 x 15000, a tiled pyramid | 0.05 s | 24 MB | 512 |
-| TIFF, 349 MB, 15000 x 15000, one LZW strip | 3.9 s | 452 MB | 768 |
-| WebP, 44 MB, 10000 x 10000 | 7.0 s | 202 MB | 768; 640 with two arenas |
-| HEIC, 40 MB, 8000 x 6000 | 9.0 s | 338 MB | 768; 640 with two arenas |
+| TIFF, 761, 22040 x 12059, uncompressed | 2.95 s | 147 | 512; 256 with two arenas |
+| TIFF, 644, 15000 x 15000, in strips | 3.7 s | 101 | 512 |
+| TIFF, about 873, 15000 x 15000, a tiled pyramid | 0.05 s | 24 | 512 |
+| TIFF, 348, 15000 x 15000, one LZW strip | 3.9 s | 452 | 768 |
+| WebP, about 44, 10000 x 10000 | 7.0 s | 202 | 768; 640 with two arenas |
+| HEIC, about 40, 8000 x 6000 | 9.0 s | 338 | 768; 640 with two arenas |
 
-The cap, in MB, counts more than the memory a render uses:
+The cap counts more than the memory a render uses:
 mapped libraries, thread stacks,
-and glibc's malloc arenas, 64 MB reserved for each thread.
-So libvips runs with two arenas, and its cap is 1024 MB.
+and glibc's malloc arenas, 64 MiB reserved for each thread.
+So libvips runs with two arenas, and its cap is 1024 MiB.
 Under the cap a render fails at once,
-or crashes, as libheif does under 640 MB.
-The one-strip TIFF in the table, under a cap of 512 MB,
+or crashes, as libheif does under 640 MiB.
+The one-strip TIFF in the table, under a cap of 512 MiB,
 fails in 0.11 s, is re-striped by `tiffcp` in 2.5 s,
-and its copy renders in 1.0 s within 98 MB.
+and its copy renders in 1.0 s within 98 MiB.
 
 ## License
 

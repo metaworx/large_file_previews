@@ -86,8 +86,9 @@ class ConfigLexicon
 	public const IMAGE_LIMIT_SYSTEM_KEY = 'preview_max_filesize_image';
 
 	/**
-	 * Whether libvips may use its untrusted decoders: JPEG 2000, JPEG XL,
-	 * PNM, and ImageMagick, which BMP needs. In system config, false unless
+	 * Whether libvips may use the decoders `vips -l` marks untrusted, with
+	 * libvips 8.15 JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP
+	 * needs. In system config, false unless
 	 * set, since an administrator can write app config without shell access
 	 * (ConfigurationService::untrustedAllowed()).
 	 */
@@ -134,7 +135,7 @@ class ConfigLexicon
 				'default'    => 30,
 				'min'        => 1,
 				'max'        => 600,
-				'definition' => 'Seconds a render may take before timeout(1) stops it.',
+				'definition' => 'Seconds a render may take, every program it runs together, before timeout(1) stops it.',
 			],
 			self::TIMEOUT_KILL_AFTER_SECONDS => [
 				'default'    => 5,
@@ -179,7 +180,7 @@ class ConfigLexicon
 				'default'    => 1024,
 				'min'        => 64,
 				'max'        => 65536,
-				'definition' => 'The largest file, in MB, a render may write: its preview, its messages, any spill; prlimit_enabled switches it too. The one-strip copy has tiff_restrip_max_mb instead.',
+				'definition' => 'The largest file, in MB, a render may write: its preview, its messages, any spill; prlimit_enabled switches it too. tiffcp, making the one-strip copy, may write the copy\'s size and a margin instead, and no copy is larger than tiff_restrip_max_mb.',
 			],
 			self::TIFF_RESTRIP_MAX_MB        => [
 				'default'    => 4096,
@@ -213,7 +214,7 @@ class ConfigLexicon
 				'default'    => 1,
 				'min'        => 1,
 				'max'        => 64,
-				'definition' => 'Threads libvips may use for one render (--vips-concurrency).',
+				'definition' => 'Threads vipsthumbnail may use for one render (--vips-concurrency); the header, a conversion and tiffcp run with their own defaults.',
 			],
 			// Nextcloud stores a preview in the type of the image it is
 			// given, re-encoded at its own quality (preview jpeg_quality and
@@ -276,7 +277,7 @@ class ConfigLexicon
 			self::LAST_FAILURE,
 			ValueType::ARRAY,
 			[],
-			'The last failed render: time, MIME type, reason and exit status. Written by the app only, and only on failure.',
+			'The last failed render: time, MIME type, outcome, reason and exit status. Written by the app only, and only on failure.',
 			true,
 		);
 

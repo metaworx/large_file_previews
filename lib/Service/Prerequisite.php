@@ -30,8 +30,10 @@ final readonly class Prerequisite
 	public const DISABLED = 'disabled';
 
 	/**
-	 * Missing, and not needed: an optional extension, or a limit switched
-	 * off.
+	 * Missing, and not needed: an optional extension, a program the app does
+	 * without (BinaryLocator::PROGRAMS), a limit's program while the limit
+	 * is off, or
+	 * vipsthumbnail while no image type is on.
 	 */
 	public const OPTIONAL = 'optional';
 

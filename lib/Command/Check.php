@@ -120,7 +120,7 @@ class Check
 		);
 		$output->writeln(
 			$blocking
-				? '<error>Not ready: large previews are not rendered until what is missing is there, or its limit is switched off.</error>'
+				? '<error>Not ready: some large previews are not rendered until what is missing is there, or what needs it is switched off.</error>'
 				: '<info>Ready.</info>',
 		);
 

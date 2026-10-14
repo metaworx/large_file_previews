@@ -80,7 +80,7 @@ class RendererCheck
 		{
 			return SetupResult::error(
 				$this->l10n->t(
-					'Large previews cannot be rendered: %s. See occ large-file-previews:check.',
+					'Some large previews cannot be rendered: %s. Install what is missing, or switch off what needs it; see occ large-file-previews:check.',
 					[
 						implode(
 							', ',
@@ -122,9 +122,12 @@ class RendererCheck
 	{
 		return match ( $item->group )
 		{
-			Prerequisite::GROUP_PERMISSION => $item->status === Prerequisite::DISABLED
-				? $this->l10n->t( 'the PHP function %s is disabled', [ $item->name ] )
-				: $this->l10n->t( '%s is not writable', [ $item->name ] ),
+			Prerequisite::GROUP_PERMISSION => match ( true )
+			{
+				$item->status === Prerequisite::DISABLED => $this->l10n->t( 'the PHP function %s is disabled', [ $item->name ] ),
+				$item->name === '/dev/fd'                => $this->l10n->t( '/dev/fd is missing; is /proc mounted?' ),
+				default                                  => $this->l10n->t( '%s is not writable', [ $item->name ] ),
+			},
 			Prerequisite::GROUP_EXTENSION  => $this->l10n->t( 'the PHP extension %s is missing', [ $item->name ] ),
 			default                        => $this->l10n->t( 'the program %s is missing', [ $item->name ] ),
 		};

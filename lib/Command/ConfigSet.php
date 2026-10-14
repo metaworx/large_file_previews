@@ -51,7 +51,7 @@ class ConfigSet
 		$this->name( 'config:set' )
 		     ->setDescription( 'Set a setting, or fields of a MIME type\'s or an extension\'s rule' )
 		     ->addArgument( 'key', InputArgument::OPTIONAL, 'A setting, e.g. timeout_seconds' )
-		     ->addArgument( 'value', InputArgument::OPTIONAL, 'Its value: a number, or true/false' )
+		     ->addArgument( 'value', InputArgument::OPTIONAL, 'Its value: a number, true/false, one of its words, or a path' )
 		     ->addOption( 'mime', null, InputOption::VALUE_REQUIRED, 'Set the rule of this MIME type' )
 		     ->addOption( 'ext', null, InputOption::VALUE_REQUIRED, 'Set the rule of this extension' )
 		     ->addOption( 'enabled', null, InputOption::VALUE_REQUIRED, 'Whether the app takes the type: yes or no' )

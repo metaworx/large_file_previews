@@ -29,7 +29,7 @@ export function rendererProblem(renderer: Renderer): RendererProblem | null {
 		}
 	case 'unblockable':
 		return {
-			text: t('large_file_previews', 'libvips here is older than 8.13 and cannot block untrusted decoders, so no image is rendered with it'),
+			text: t('large_file_previews', 'libvips here is older than 8.13, or did not report its version, and cannot block untrusted decoders, so no image is rendered with it'),
 			badge: t('large_file_previews', 'libvips too old'),
 		}
 	case 'missing':

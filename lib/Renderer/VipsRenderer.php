@@ -49,7 +49,7 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * does.
  *
  * Each run has libvips' own address-space cap (vips_prlimit_as_mb), two
- * malloc arenas, with which a HEIC and a WebP passed at 640 MB rather than
+ * malloc arenas, with which a HEIC and a WebP passed at 640 MiB rather than
  * 768, untrusted decoders blocked unless vips_allow_untrusted is set, and its
  * spill to disc in the render folder, which the provider removes. Under the
  * cap libvips or libtiff says it is out of memory, or fails to start a
@@ -59,9 +59,10 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  *
  * A TIFF is read a strip at a time, so one in a single large strip can need
  * far more memory than its preview: 6000 x 6000 floats in one LZW strip,
- * 151 MB, failed under 256 MB, 15000 x 15000 bytes, 365 MB, under 512. One
- * that runs out of memory is re-striped by tiffcp and tried again
- * (restripped()); tiffcp needs about the compressed strip.
+ * 151 MB, failed under 256 MiB, 15000 x 15000 bytes, 348 MiB, under 512.
+ * One that runs out of memory, and whose header was read, is re-striped by
+ * tiffcp and tried again (restripped()); tiffcp needs about the compressed
+ * strip.
  *
  * Every run is judged by RunJudge, and the header, the thumbnail and a
  * re-striped copy share one timeout_seconds (Deadline).
@@ -301,8 +302,8 @@ class VipsRenderer
 	 * opened, and handed to tiffcp and then to vipsthumbnail as descriptor 3:
 	 * its space goes with the last descriptor, whatever ends the worker, and
 	 * no copy can be left behind. tiffcp holds the compressed strip, not the
-	 * decoded one: measured with libtiff 4.5, a 348 MB one-strip LZW TIFF
-	 * passed under 384 MB of address space, so it runs under libvips' cap.
+	 * decoded one: measured with libtiff 4.5, a 348 MiB one-strip LZW TIFF
+	 * passed under 384 MiB of address space, so it runs under libvips' cap.
 	 *
 	 * The disc is guarded three ways: a copy larger than tiff_restrip_max_mb
 	 * is not made; one copy is made at a time, under a lock in the scratch

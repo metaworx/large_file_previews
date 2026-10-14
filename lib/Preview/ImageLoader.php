@@ -13,7 +13,7 @@ use OCP\IImage;
 use OCP\Image;
 
 /**
- * Loads a rendered PNG as Nextcloud's image.
+ * Loads a rendered preview, a PNG, a JPEG or a WebP, as Nextcloud's image.
  *
  * Its own class so that the provider can be tested without a server:
  * OCP\Image extends a server class.

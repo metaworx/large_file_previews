@@ -13,7 +13,8 @@ namespace OCA\LargeFilePreviews\Config;
  * What one MIME type or one extension says: each field set, or null to
  * leave it to the level below.
  *
- * Sizes are in MB; a `maxSizeMb` of -1 means no limit.
+ * Sizes are in MiB, as every size the app sets; a `maxSizeMb` of -1 means
+ * no limit.
  */
 final readonly class TypeRule
 {

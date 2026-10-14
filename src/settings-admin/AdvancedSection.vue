@@ -47,10 +47,10 @@ function foundBy(program: ProgramRow): string {
 				<span class="lfp-hint">{{ t('large_file_previews', '(system config)') }}</span>
 			</p>
 			<p class="lfp-hint">
-				{{ t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers. They are allowed in system config only, with the command beneath.') }}
+				{{ t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: with libvips 8.15, JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers. They are allowed in system config only, with the command beneath.') }}
 			</p>
 			<NcNoteCard v-if="!state.untrusted.allowed && state.untrusted.blockable === false" type="warning">
-				{{ t('large_file_previews', 'libvips here is older than 8.13 and cannot block them, so no image is rendered until it is upgraded or they are allowed.') }}
+				{{ t('large_file_previews', 'libvips here is older than 8.13, or did not report its version, and cannot block them, so no image is rendered until it is upgraded or they are allowed.') }}
 			</NcNoteCard>
 			<OccCommand :command="untrustedCommand(state.untrusted.allowed)" />
 		</div>
@@ -70,7 +70,7 @@ function foundBy(program: ProgramRow): string {
 
 		<h4>{{ t('large_file_previews', 'Programs') }}</h4>
 		<p class="lfp-hint">
-			{{ t('large_file_previews', 'Found once and kept; found again after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it.') }}
+			{{ t('large_file_previews', 'Found once and kept in the memory cache for a day, without one found on every request; found again on install, after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it.') }}
 		</p>
 		<table class="lfp-table lfp-programs">
 			<thead>

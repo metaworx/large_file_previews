@@ -15,20 +15,23 @@ use OCP\ITempManager;
 /**
  * Runs a program under the limits the configuration switches on:
  *
- *     timeout --kill-after=<K>s <T>s  prlimit --as=<BYTES> --  choom -n <ADJ> --  <program> …
+ *     timeout --kill-after=<K>s <T>s  prlimit --as=<BYTES> --fsize=<BYTES> --  choom -n <ADJ> --  <program> …
  *
  * `timeout` is outermost, so it can stop the whole chain, and follows SIGTERM
- * with SIGKILL after its grace period. `prlimit` caps the address space and
- * execs the rest, which inherits the cap: a runaway allocation fails inside
- * the program, and the kernel's OOM killer is not involved. `choom` raises
- * the OOM score, so that if memory runs short anyway the program dies before
- * a web server worker; an unprivileged process may raise it only.
+ * with SIGKILL after its grace period; a render's runs share its time
+ * (Deadline). `prlimit` caps the address space and the largest file written,
+ * and execs the rest, which inherits the caps: a runaway allocation fails
+ * inside the program, and the kernel's OOM killer is not involved; a write
+ * past the file-size cap ends it with SIGXFSZ. `choom` raises the OOM score,
+ * so that if memory runs short anyway the program dies before a web server
+ * worker; an unprivileged process may raise it only.
  *
  * The program is started with proc_open() and an argument array: no shell
- * takes part, so nothing in a path needs quoting. stdout goes nowhere, since
- * the programs write files, and stderr to a temporary file, kept to its
- * first and last few KB: neither pipe can fill and stall the run. A limit
- * switched on whose program is missing fails the run before it starts.
+ * takes part, so nothing in a path needs quoting. A user's file is handed on
+ * as a descriptor (RunOptions). stdout goes nowhere, unless a program answers
+ * on it, and is then kept with stderr; stderr goes to a temporary file, kept
+ * to its first and last few KB: neither pipe can fill and stall the run. A
+ * limit switched on whose program is missing fails the run before it starts.
  */
 class CommandRunner
 {

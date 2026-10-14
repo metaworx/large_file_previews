@@ -65,7 +65,7 @@ class BinaryLocator
 			// rendering them, and a PDF previewed as WebP is a JPEG.
 			'vips'          => [ 'version' => '--version', 'limit' => false, 'for' => 'telling which image types libvips reads, and WebP previews of PDFs', 'source' => 'vips' ],
 			// Without it, a TIFF in one large strip that runs out of memory stays a failure.
-			'tiffcp'        => [ 'version' => '-h', 'limit' => false, 'for' => 'a second chance for a TIFF in one strip that runs out of memory', 'source' => 'tiff' ],
+			'tiffcp'        => [ 'version' => '-h', 'limit' => false, 'for' => 'a second chance for a TIFF in one strip that runs out of memory, with vipsheader', 'source' => 'tiff' ],
 			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render', 'source' => 'core' ],
 			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space and file-size caps of each render', 'source' => 'util' ],
 			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render', 'source' => 'util' ],
@@ -197,7 +197,9 @@ class BinaryLocator
 	}
 
 	/**
-	 * Forgets every path found, in this request and in the cache.
+	 * Forgets every path found, in this request and in the cache, and with
+	 * the cache all else DetectionCache keeps: versions, libvips' decoders,
+	 * and the files that failed.
 	 */
 	public function refresh(): void
 	{

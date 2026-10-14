@@ -1,14 +1,14 @@
 > **Fragment** — inlined by `tools/sync-docs.sh`; not a standalone document.
 
-# {{project_name}} (v1.0.0)
+# {{project_name}} (v1.0.1)
 
 Large File Previews is a Nextcloud app for instances that hold files too large for
-Nextcloud's own preview providers - multi-gigabyte PDFs, and later very large images. It
-renders the first page or a reduced image straight from the file's local path with a
-command-line renderer (`pdftoppm` first), so no file is copied into memory or sent over a
-socket, and every renderer runs under a time limit, a memory cap and a low out-of-memory
-priority. It is for administrators who run Nextcloud on local storage and want sharp
-previews of archives such as scanned catalogues.
+Nextcloud's own preview providers - multi-gigabyte PDFs and very large images. It
+renders the first page or a reduced image straight from the file where it lies with a
+command-line renderer (`pdftoppm` for PDFs, libvips for images), so no file is loaded into
+memory or sent over a socket, and every renderer runs under a time limit, an address-space
+and file-size cap and a raised out-of-memory score. It is for administrators who run
+Nextcloud on local storage and want sharp previews of archives such as scanned catalogues.
 
 ## Working on it
 
@@ -21,7 +21,7 @@ composer install
 The app is tested inside a `nextcloud_testing` instance, which mounts this checkout as
 `apps/large_file_previews`; put that instance's directory in
 `GUIDELINES/config.local.ini` under `[phpunit]` (see the contract below). The instance
-needs `poppler-utils` installed.
+needs `poppler-utils`, `libvips-tools` and `libtiff-tools` installed.
 
 ## The rules that apply here
 

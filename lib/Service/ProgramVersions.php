@@ -20,6 +20,12 @@ namespace OCA\LargeFilePreviews\Service;
  */
 class ProgramVersions
 {
+
+//  constants
+
+	/** Seconds a version that could not be read is kept. */
+	public const UNKNOWN_TTL = 60;
+
 	/** @var array<string, string|null> by path */
 	private array $versions = [];
 
@@ -57,7 +63,9 @@ class ProgramVersions
 		{
 			$outcome = $this->runner->runBare( $program, [ $flag ] );
 			$line    = trim( (string) strtok( $outcome->stderr, "\n" ) );
-			$this->cache->set( 'version.' . $path, $line );
+			// A version not said - a run that failed, a limit missing - is
+			// asked again soon: libvips' renders hang on it.
+			$this->cache->set( 'version.' . $path, $line, $line === '' ? self::UNKNOWN_TTL : DetectionCache::TTL );
 		}
 
 		return $this->versions[ $path ] = $line === '' ? null : $line;
