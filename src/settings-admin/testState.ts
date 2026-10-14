@@ -61,7 +61,6 @@ export function testState(): SettingsState {
 			choom_adjust: scalar(1000, 0, 1000),
 			scan_native_enabled: scalar(true),
 			scan_coverage_percent: scalar(90, 50, 100),
-			vips_block_untrusted: scalar(true),
 			vips_concurrency: scalar(1, 1, 64),
 			preview_format: word('nextcloud', ['nextcloud', 'png', 'jpeg', 'webp']),
 			preview_background: word('white', ['white', 'black']),
@@ -82,6 +81,7 @@ export function testState(): SettingsState {
 			{ name: 'vipsthumbnail', path: null, source: 'finder', problem: null, version: null, install: { command: 'apt install libvips-tools', note: null } },
 		],
 		scratch: { path: '/var/tmp/nextcloud', overridden: false },
+		untrusted: { allowed: false, blockable: true },
 		platform: 'debian',
 	}
 }

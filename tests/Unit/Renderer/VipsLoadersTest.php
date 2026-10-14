@@ -13,6 +13,7 @@ use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\Outcome;
+use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryCache;
 use OCP\IBinaryFinder;
@@ -107,6 +108,48 @@ class VipsLoadersTest
 		self::assertArrayNotHasKey( 'vips-loaders./usr/bin/vips', $this->cacheValues );
 	}
 
+	/**
+	 * libvips blocks untrusted decoders from 8.13 on; a version it does not
+	 * say counts as one that cannot.
+	 */
+	public function testWhichVersionsBlock(): void
+	{
+		self::assertTrue( VipsLoaders::blocks( 'vips-8.15.1' ) );
+		self::assertTrue( VipsLoaders::blocks( 'vips-8.13.0-Mon Jan  1 00:00:00 UTC 2024' ) );
+		self::assertTrue( VipsLoaders::blocks( 'vips-9.0.0' ) );
+		self::assertFalse( VipsLoaders::blocks( 'vips-8.12.1' ) );
+		self::assertFalse( VipsLoaders::blocks( 'vips-8.9.2' ) );
+		self::assertFalse( VipsLoaders::blocks( '' ) );
+		self::assertFalse( VipsLoaders::blocks( 'vipsthumbnail: unknown option' ) );
+	}
+
+	/**
+	 * From vipsthumbnail's version, asked once and kept by its path;
+	 * nothing known where it is not there.
+	 */
+	public function testWhetherThisLibvipsCanBlock(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->expects( self::once() )
+		       ->method( 'runBare' )
+		       ->with( 'vipsthumbnail', [ '--version' ] )
+		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, "vips-8.12.1\n" ) )
+		;
+
+		self::assertFalse( $this->loaders( $runner, '/usr/bin/vipsthumbnail' )->canBlockUntrusted() );
+		self::assertFalse( $this->loaders( $runner, '/usr/bin/vipsthumbnail' )->canBlockUntrusted() );
+		self::assertSame( 'vips-8.12.1', $this->cacheValues['version./usr/bin/vipsthumbnail'] ?? null );
+
+		$this->cacheValues = [ 'version./usr/bin/vipsthumbnail' => 'vips-8.15.1' ];
+
+		self::assertTrue( $this->loaders( $runner, '/usr/bin/vipsthumbnail' )->canBlockUntrusted() );
+
+		// Found again, as after a refresh, and not there.
+		$this->cacheValues = [];
+
+		self::assertNull( $this->loaders( $runner, false )->canBlockUntrusted() );
+	}
+
 	private function loaders(
 		CommandRunner $runner,
 		string|false  $vips,
@@ -128,6 +171,7 @@ class VipsLoadersTest
 			$runner,
 			new BinaryLocator( $config, $finder, $cache, $this->createMock( LoggerInterface::class ) ),
 			$cache,
+			new ProgramVersions( $runner, $cache ),
 		);
 	}
 }

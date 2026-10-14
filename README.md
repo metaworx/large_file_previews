@@ -155,8 +155,18 @@ a directory on tmpfs or ramfs is refused, since the copy would sit in memory.
 occ lfp:config:set scratch_directory /var/cache/large_file_previews
 ```
 
-libvips' untrusted decoders are blocked (`vips_block_untrusted`, on by default):
+libvips' untrusted decoders are blocked:
 JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.
+They are allowed in system config only, never from the settings page,
+since an administrator can write app config without shell access:
+
+```bash
+occ lfp:config:set vips_allow_untrusted true
+```
+
+libvips blocks them from 8.13 on;
+an older one cannot, and picks its decoder by the content,
+so while they are blocked it renders no image at all.
 A type whose decoder is blocked, or missing from the server's libvips,
 is left to the next provider, and the settings page says why;
 `occ lfp:check --refresh` asks libvips again.
@@ -208,7 +218,7 @@ with `occ lfp:config:unset`, and then from the file.
 A file is read where it lies and handed to the renderer by its path,
 as an argument, never through a shell.
 libvips' untrusted decoders, not hardened against hostile files,
-stay blocked unless switched on.
+stay blocked unless system config allows them.
 The only copy ever made is the re-striped TIFF, in the scratch directory,
 removed once rendered.
 

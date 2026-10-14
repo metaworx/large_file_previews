@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Prerequisite;
@@ -55,6 +56,7 @@ class SettingsController
 		private readonly PrerequisitesService $prerequisites,
 		private readonly BinaryLocator        $binaries,
 		private readonly ScratchDirectory     $scratch,
+		private readonly VipsLoaders          $vips,
 		private readonly IL10N                $l10n,
 	)
 	{
@@ -328,6 +330,11 @@ class SettingsController
 			'scratch'       => [
 				'path'       => $this->scratch->path(),
 				'overridden' => $this->scratch->override() !== null,
+			],
+			// Read only: set in system config, never from the page.
+			'untrusted'     => [
+				'allowed'   => $this->config->untrustedAllowed(),
+				'blockable' => $this->vips->canBlockUntrusted(),
 			],
 		];
 	}

@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Renderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\DetectionCache;
+use OCA\LargeFilePreviews\Service\ProgramVersions;
 
 /**
  * The loaders this server's libvips has, and which of them it counts as
@@ -21,6 +22,10 @@ use OCA\LargeFilePreviews\Service\DetectionCache;
  *
  * Asked once and kept in DetectionCache, by the path of `vips`: another
  * binary there may have other loaders. Refreshed with the paths.
+ *
+ * And whether it can block those at all: VIPS_BLOCK_UNTRUSTED and the
+ * untrusted flag are libvips 8.13's. Before it nothing is blocked, and
+ * libvips picks its decoder by the content, not by the type.
  */
 class VipsLoaders
 {
@@ -28,6 +33,9 @@ class VipsLoaders
 //  constants
 
 	public const PROGRAM = 'vips';
+
+	/** The first libvips that blocks untrusted decoders. */
+	public const BLOCKS_FROM = '8.13';
 
 	/**
 	 * libvips 8.15 lists its foreign classes in about 16 KB.
@@ -41,9 +49,10 @@ class VipsLoaders
 //  constructor
 
 	public function __construct(
-		private readonly CommandRunner  $runner,
-		private readonly BinaryLocator  $binaries,
-		private readonly DetectionCache $cache,
+		private readonly CommandRunner   $runner,
+		private readonly BinaryLocator   $binaries,
+		private readonly DetectionCache  $cache,
+		private readonly ProgramVersions $versions,
 	)
 	{
 	}
@@ -99,8 +108,35 @@ class VipsLoaders
 		return $this->loaders = $loaders;
 	}
 
+	/**
+	 * Whether this libvips can block its untrusted decoders, by the version
+	 * vipsthumbnail, which renders, reports; null where it is not there. A
+	 * version it does not say counts as one that cannot.
+	 */
+	public function canBlockUntrusted(): ?bool
+	{
+		$location = $this->binaries->locate( VipsRenderer::PROGRAM );
+
+		if ( ! $location->isFound() )
+		{
+			return null;
+		}
+
+		return self::blocks( (string) $this->versions->of( VipsRenderer::PROGRAM, (string) $location->path, '--version' ) );
+	}
+
 
 //  static methods
+
+	/**
+	 * Whether the version a libvips program prints, `vips-8.15.1`, is one
+	 * that blocks untrusted decoders.
+	 */
+	public static function blocks( string $version ): bool
+	{
+		return preg_match( '/^vips-(\d+\.\d+)/', $version, $matches ) === 1
+			&& version_compare( $matches[1], self::BLOCKS_FROM, '>=' );
+	}
 
 	/**
 	 * @return array<string, bool>

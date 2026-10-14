@@ -29,11 +29,11 @@ export type RuleChange = {
 
 /**
  * Why a renderer cannot decode a type here: its decoder is missing, or
- * untrusted and blocked.
+ * untrusted and blocked, or libvips cannot block untrusted decoders at all.
  */
 export interface Unsupported {
 	decoder: string
-	problem: 'missing' | 'untrusted'
+	problem: 'missing' | 'untrusted' | 'unblockable'
 }
 
 /**
@@ -128,6 +128,12 @@ export interface SettingsState {
 	programs: ProgramRow[]
 	/** Where a large working copy goes; set in system config only. */
 	scratch: { path: string, overridden: boolean }
+	/**
+	 * Whether libvips' untrusted decoders are allowed, in system config only,
+	 * and whether this libvips can block them at all; null where it is not
+	 * there.
+	 */
+	untrusted: { allowed: boolean, blockable: boolean | null }
 	/** The distribution's family, where it is one the app knows packages for. */
 	platform: 'debian' | 'fedora' | 'rhel' | 'alpine' | 'arch' | null
 }

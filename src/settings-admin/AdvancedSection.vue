@@ -3,17 +3,18 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * What most servers leave as it is: libvips' untrusted decoders and threads,
- * and, read only, where each program is, its version, and the scratch
- * directory. A path is set in system config with occ, never here: a path is
- * code the web server runs.
+ * What most servers leave as it is: libvips' threads, and, read only,
+ * whether its untrusted decoders are allowed, where each program is, its
+ * version, and the scratch directory. These are set in system config with
+ * occ, never here: a path is code the web server runs, and an untrusted
+ * decoder is code a user's file reaches.
  */
 import NcButton from '@nextcloud/vue/components/NcButton'
-import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import InstallHint from './InstallHint.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
-import { binaryCommand, scalarCommand, scratchCommand } from './occ'
+import { binaryCommand, scalarCommand, scratchCommand, untrustedCommand } from './occ'
 import { t } from '../l10n'
 import type { Changes, ProgramRow, SettingsState } from './types'
 
@@ -39,17 +40,18 @@ function foundBy(program: ProgramRow): string {
 		<h3>{{ t('large_file_previews', 'Advanced') }}</h3>
 
 		<h4>{{ t('large_file_previews', 'libvips') }}</h4>
-		<div data-setting="vips_block_untrusted">
-			<NcCheckboxRadioSwitch type="switch"
-				:model-value="state.scalars.vips_block_untrusted.value as boolean"
-				:disabled="saving"
-				@update:model-value="emit('save', { scalars: { vips_block_untrusted: $event as boolean } })">
-				{{ t('large_file_previews', 'Block untrusted decoders') }}
-			</NcCheckboxRadioSwitch>
-			<p class="lfp-hint">
-				{{ t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers.') }}
+		<div data-setting="vips_allow_untrusted">
+			<p>
+				{{ state.untrusted.allowed ? t('large_file_previews', 'Untrusted decoders: allowed') : t('large_file_previews', 'Untrusted decoders: blocked') }}
+				<span class="lfp-hint">{{ t('large_file_previews', '(system config)') }}</span>
 			</p>
-			<OccCommand :command="scalarCommand('vips_block_untrusted', state.scalars.vips_block_untrusted.value)" />
+			<p class="lfp-hint">
+				{{ t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers. They are allowed in system config only, with the command beneath.') }}
+			</p>
+			<NcNoteCard v-if="!state.untrusted.allowed && state.untrusted.blockable === false" type="warning">
+				{{ t('large_file_previews', 'libvips here is older than 8.13 and cannot block them, so no image is rendered until it is upgraded or they are allowed.') }}
+			</NcNoteCard>
+			<OccCommand :command="untrustedCommand(state.untrusted.allowed)" />
 		</div>
 		<div data-setting="vips_concurrency">
 			<NumberField id="lfp-vips-concurrency"

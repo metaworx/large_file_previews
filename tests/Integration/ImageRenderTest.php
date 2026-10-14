@@ -109,9 +109,9 @@ class ImageRenderTest
 
 	/**
 	 * JPEG 2000's decoder is untrusted: blocked, the type goes to the next
-	 * provider; unblocked, libvips reads it.
+	 * provider; allowed in system config, libvips reads it.
 	 */
-	public function testAnUntrustedDecoderIsBlockedUntilSwitchedOff(): void
+	public function testAnUntrustedDecoderIsBlockedUntilAllowed(): void
 	{
 		$this->settings()->setMimeRule( 'image/jp2', new TypeRule( true, 0 ) );
 		$file     = $this->file( 'small.jp2', self::made( '.jp2', [ 'black', '', '64', '32', '--bands', '3' ] ) );
@@ -120,7 +120,7 @@ class ImageRenderTest
 		self::assertSame( 'image/jp2', $file->getMimetype() );
 		self::assertFalse( $provider->isAvailable( $file ) );
 
-		$this->settings()->setScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED, false );
+		$this->settings()->setUntrustedAllowed( true );
 
 		self::assertTrue( $provider->isAvailable( $file ) );
 		self::assertSame( 64, $provider->getThumbnail( $file, 256, 256 )?->width() );

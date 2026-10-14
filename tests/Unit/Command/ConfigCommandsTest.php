@@ -128,6 +128,30 @@ class ConfigCommandsTest
 		self::assertSame( [], $this->systemValues );
 	}
 
+	/**
+	 * Untrusted decoders are allowed in system config only, and blocked
+	 * again when unset; no setting in app config takes the name.
+	 */
+	public function testUntrustedDecodersAreAllowedInSystemConfigAndUnset(): void
+	{
+		$set = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
+
+		self::assertSame( Command::SUCCESS, $set->execute( [ 'key' => 'vips_allow_untrusted', 'value' => 'true' ] ) );
+		self::assertSame( [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => true ], $this->systemValues );
+		self::assertSame( [], $this->appValues );
+		self::assertTrue( $this->config->untrustedAllowed() );
+
+		self::assertSame( Command::INVALID, $set->execute( [ 'key' => 'vips_allow_untrusted', 'value' => 'perhaps' ] ) );
+		self::assertStringContainsString( 'vips_allow_untrusted takes true or false.', $set->getDisplay() );
+		self::assertSame( Command::FAILURE, $set->execute( [ 'key' => 'vips_block_untrusted', 'value' => 'false' ] ) );
+
+		$unset = new CommandTester( new ConfigUnset( $this->config, $this->binaries, $this->scratch ) );
+
+		self::assertSame( Command::SUCCESS, $unset->execute( [ 'key' => 'vips_allow_untrusted' ] ) );
+		self::assertSame( [], $this->systemValues );
+		self::assertFalse( $this->config->untrustedAllowed() );
+	}
+
 	public function testNamesAndAliases(): void
 	{
 		$set = new ConfigSet( $this->config, $this->binaries, $this->scratch );
@@ -280,8 +304,9 @@ class ConfigCommandsTest
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--output' => 'json' ] ) );
 		$result = json_decode( $tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR );
 
-		self::assertSame( [ 'stored', 'programs', 'scratch', 'resolved', 'problems' ], array_keys( $result ) );
+		self::assertSame( [ 'stored', 'programs', 'scratch', 'untrustedAllowed', 'resolved', 'problems' ], array_keys( $result ) );
 		self::assertSame( [ 'path' => rtrim( sys_get_temp_dir(), '/' ), 'source' => 'temporary directory' ], $result['scratch'] );
+		self::assertFalse( $result['untrustedAllowed'] );
 		self::assertTrue( $result['stored']['extensions']['stored'] );
 		self::assertFalse( $result['stored']['timeout_seconds']['stored'] );
 		self::assertNull( $result['programs']['pdftoppm']['path'] );

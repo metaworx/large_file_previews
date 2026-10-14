@@ -11,7 +11,8 @@ namespace OCA\LargeFilePreviews\Renderer;
 
 /**
  * Why a renderer cannot decode a type on this server: its decoder is not
- * there, or it is untrusted and blocked.
+ * there, it is untrusted and blocked, or libvips cannot block untrusted
+ * decoders at all.
  */
 final readonly class Unsupported
 {
@@ -22,12 +23,22 @@ final readonly class Unsupported
 
 	public const UNTRUSTED = 'untrusted';
 
+	/**
+	 * libvips cannot block its untrusted decoders here, and they are not
+	 * allowed: it picks its decoder by the content, so any image type could
+	 * reach one.
+	 */
+	public const UNBLOCKABLE = 'unblockable';
+
+	/** What UNBLOCKABLE means, in English, for the log and `lfp:check`. */
+	public const UNBLOCKABLE_TEXT = 'libvips blocks untrusted decoders from 8.13 on, and this one is older or did not say, so no image is rendered unless vips_allow_untrusted is set';
+
 
 //  constructor
 
 	/**
 	 * @param string $decoder the decoder's name, as libvips lists it
-	 * @param string $problem self::MISSING or self::UNTRUSTED
+	 * @param string $problem self::MISSING, UNTRUSTED or UNBLOCKABLE
 	 */
 	public function __construct(
 		public string $decoder,
@@ -44,9 +55,12 @@ final readonly class Unsupported
 	 */
 	public function describe(): string
 	{
-		return $this->problem === self::UNTRUSTED
-			? sprintf( '%s is an untrusted decoder, and those are blocked (vips_block_untrusted)', $this->decoder )
-			: sprintf( 'libvips here has no %s', $this->decoder );
+		return match ( $this->problem )
+		{
+			self::UNTRUSTED   => sprintf( '%s is an untrusted decoder, and those are blocked unless vips_allow_untrusted is set', $this->decoder ),
+			self::UNBLOCKABLE => self::UNBLOCKABLE_TEXT,
+			default           => sprintf( 'libvips here has no %s', $this->decoder ),
+		};
 	}
 
 	/**

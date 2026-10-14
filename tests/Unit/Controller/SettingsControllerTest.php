@@ -80,9 +80,11 @@ class SettingsControllerTest
 	{
 		$data = $this->controller( '' )->get()->getData();
 
-		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch' ], array_keys( $data ) );
+		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted' ], array_keys( $data ) );
 		self::assertSame( 'pdftoppm version 24.02.0', $data['programs'][0]['version'] );
 		self::assertSame( [ 'path' => '/var/tmp/nextcloud', 'overridden' => false ], $data['scratch'] );
+		self::assertSame( [ 'allowed' => false, 'blockable' => null ], $data['untrusted'] );
+		self::assertArrayNotHasKey( 'vips_block_untrusted', $data['scalars'] );
 		self::assertSame( [ 'nextcloud', 'png', 'jpeg', 'webp' ], $data['scalars']['preview_format']['choices'] );
 		self::assertNull( $data['scalars']['timeout_seconds']['choices'] );
 		self::assertSame( 30, $data['scalars']['timeout_seconds']['value'] );
@@ -275,6 +277,7 @@ class SettingsControllerTest
 			$prerequisites,
 			$binaries,
 			$scratch,
+			$loaders,
 			$this->markingL10n(),
 		)
 		    extends

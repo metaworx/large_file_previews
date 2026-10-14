@@ -142,6 +142,34 @@ class ConfigurationService
 	}
 
 	/**
+	 * Whether libvips may use its untrusted decoders, from system config:
+	 *
+	 *     'large_file_previews.vips_allow_untrusted' => true,
+	 *
+	 * set with `occ lfp:config:set vips_allow_untrusted true`. Blocked
+	 * unless the value is true itself: which decoders a user's file reaches
+	 * is for whoever can write config.php, who can run code already, not
+	 * for an administrator without shell access.
+	 */
+	public function untrustedAllowed(): bool
+	{
+		return $this->system->getSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, false ) === true;
+	}
+
+	/**
+	 * From occ only.
+	 */
+	public function setUntrustedAllowed( bool $allowed ): void
+	{
+		$this->system->setSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, $allowed );
+	}
+
+	public function unsetUntrustedAllowed(): void
+	{
+		$this->system->deleteSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY );
+	}
+
+	/**
 	 * Whether a key has a value of its own, rather than its default.
 	 */
 	public function isStored( string $key ): bool

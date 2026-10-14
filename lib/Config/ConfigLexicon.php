@@ -65,8 +65,6 @@ class ConfigLexicon
 
 	public const SCAN_COVERAGE_PERCENT = 'scan_coverage_percent';
 
-	public const VIPS_BLOCK_UNTRUSTED = 'vips_block_untrusted';
-
 	public const VIPS_CONCURRENCY = 'vips_concurrency';
 
 	public const PREVIEW_FORMAT = 'preview_format';
@@ -84,6 +82,26 @@ class ConfigLexicon
 	public const IMAGE_DEFAULT_MIN_SIZE_MB = 50;
 
 	public const IMAGE_LIMIT_SYSTEM_KEY = 'preview_max_filesize_image';
+
+	/**
+	 * Whether libvips may use its untrusted decoders: JPEG 2000, JPEG XL,
+	 * PNM, and ImageMagick, which BMP needs. In system config, false unless
+	 * set, since an administrator can write app config without shell access
+	 * (ConfigurationService::untrustedAllowed()).
+	 */
+	public const ALLOW_UNTRUSTED_SYSTEM_KEY = 'large_file_previews.vips_allow_untrusted';
+
+	/**
+	 * Keys the app once declared, removed from app config on install and
+	 * upgrade (RemoveObsoleteKeys); a value left there is never read.
+	 *
+	 * @var list<string>
+	 */
+	public const OBSOLETE
+		 = [
+			// The untrusted-decoder switch, now in system config.
+			'vips_block_untrusted',
+		];
 
 	/**
 	 * The settings that are one value each: default, for a number its
@@ -177,10 +195,6 @@ class ConfigLexicon
 				'min'        => 50,
 				'max'        => 100,
 				'definition' => 'How much of the page, in percent each way, its one image must cover for the page to count as a scan.',
-			],
-			self::VIPS_BLOCK_UNTRUSTED       => [
-				'default'    => true,
-				'definition' => 'Whether libvips runs with its untrusted decoders blocked (VIPS_BLOCK_UNTRUSTED): JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.',
 			],
 			// One thread was fastest for a thumbnail, measured with libvips
 			// 8.15; each thread reserves memory under the cap besides.

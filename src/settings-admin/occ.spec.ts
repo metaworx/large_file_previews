@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { binaryCommand, ruleCommand, scalarCommand, scratchCommand } from './occ'
+import { binaryCommand, ruleCommand, scalarCommand, scratchCommand, untrustedCommand } from './occ'
 
 describe('occ commands', () => {
 	it('sets a setting to the value it has', () => {
@@ -15,6 +15,11 @@ describe('occ commands', () => {
 		expect(ruleCommand('ext', 'tif', { enabled: false, max_size_mb: -1 }))
 			.toBe('occ lfp:config:set --ext tif --enabled=no --max=-1')
 		expect(ruleCommand('ext', 'tif', {})).toBe('occ lfp:config:unset --ext tif')
+	})
+
+	it('allows untrusted decoders, or blocks them again', () => {
+		expect(untrustedCommand(false)).toBe('occ lfp:config:set vips_allow_untrusted true')
+		expect(untrustedCommand(true)).toBe('occ lfp:config:unset vips_allow_untrusted')
 	})
 
 	it('quotes a path the shell would split', () => {

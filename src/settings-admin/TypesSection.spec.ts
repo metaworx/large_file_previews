@@ -117,6 +117,24 @@ describe('TypesSection', () => {
 		expect(wrapper.findAll('.lfp-active tbody tr')[1].find('.lfp-badge').text()).toBe('no decoder')
 	})
 
+	it('says where libvips is too old to block untrusted decoders', () => {
+		const state = testState()
+		const unblockable = { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'unblockable' as const } }
+		state.mimetypes[1].renderer = unblockable
+		state.active.push({
+			mime: 'image/tiff',
+			extension: null,
+			processing: 'enabled',
+			renderer: unblockable,
+			min_size_mb: { value: 50, source: 'mime' },
+			max_size_mb: { value: -1, source: 'default' },
+		})
+		const wrapper = section(state)
+
+		expect(row(wrapper, '[data-mime="image/tiff"]').text()).toContain('older than 8.13 and cannot block untrusted decoders')
+		expect(wrapper.findAll('.lfp-active tbody tr')[1].find('.lfp-badge').text()).toBe('libvips too old')
+	})
+
 	it('offers a reset only where a type differs from what it ships with', async () => {
 		const state = testState()
 		state.mimetypes[0].rule = { enabled: true, max_size_mb: 900 }

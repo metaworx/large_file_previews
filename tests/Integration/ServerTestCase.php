@@ -108,6 +108,8 @@ abstract class ServerTestCase
 			$this->appConfig()->deleteKey( Application::APP_ID, $entry->getKey() );
 		}
 
+		// The one switch a test sets in system config.
+		$this->settings()->unsetUntrustedAllowed();
 		$this->settings()->forget();
 	}
 }

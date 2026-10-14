@@ -64,6 +64,7 @@ class ConfigSet
 					     'A setting:          config:set timeout_seconds 60',
 					     'A program\'s path:   config:set binaries.pdftoppm /opt/poppler/bin/pdftoppm   (system config)',
 					     'Scratch directory:  config:set scratch_directory /var/cache/large_file_previews   (system config)',
+					     'Untrusted decoders: config:set vips_allow_untrusted true   (system config)',
 					     'A MIME type\'s rule: config:set --mime image/tiff --enabled=yes --min=100',
 					     'An extension\'s:     config:set --ext tif --max=2048',
 					     '',
@@ -133,6 +134,23 @@ class ConfigSet
 			{
 				$this->scratch->set( $value );
 				$output->writeln( sprintf( '%s: %s (system config)', $key, $this->scratch->path() ) );
+
+				return self::SUCCESS;
+			}
+
+			if ( $key === self::UNTRUSTED )
+			{
+				$allowed = ValueParser::bool( $value );
+
+				if ( $allowed === null )
+				{
+					$output->writeln( sprintf( '<error>%s takes true or false.</error>', $key ) );
+
+					return self::INVALID;
+				}
+
+				$this->config->setUntrustedAllowed( $allowed );
+				$output->writeln( sprintf( '%s: %s (system config)', $key, $allowed ? 'true' : 'false' ) );
 
 				return self::SUCCESS;
 			}

@@ -173,15 +173,28 @@ class VipsRendererTest
 	}
 
 	/**
-	 * Switched off, the variable is not set at all: libvips blocks where it
-	 * is set, whatever its value. The threads are a setting.
+	 * Allowed in system config, the variable is not set at all: libvips
+	 * blocks where it is set, whatever its value. A value left in app
+	 * config, or one in system config that is not true itself, is not read
+	 * as allowing them. The threads are a setting.
 	 */
 	public function testTheUntrustedSwitchAndTheThreads(): void
 	{
-		$this->appValues = [
-			ConfigLexicon::VIPS_BLOCK_UNTRUSTED => false,
-			ConfigLexicon::VIPS_CONCURRENCY     => 4,
+		$this->appValues    = [
+			'vips_block_untrusted'          => false,
+			ConfigLexicon::VIPS_CONCURRENCY => 4,
 		];
+		$this->systemValues = [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => 'true' ];
+
+		$this->renderer( $this->runner( '' ) )
+		     ->render( $this->input, 1024, $this->output )
+		;
+
+		self::assertSame( '1', $this->runs[0]['environment']['VIPS_BLOCK_UNTRUSTED'] ?? null );
+		self::assertSame( '--vips-concurrency=4', $this->runs[1]['arguments'][3] );
+
+		$this->runs         = [];
+		$this->systemValues = [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => true ];
 
 		$this->renderer( $this->runner( '' ) )
 		     ->render( $this->input, 1024, $this->output )
@@ -189,13 +202,11 @@ class VipsRendererTest
 
 		self::assertArrayNotHasKey( 'VIPS_BLOCK_UNTRUSTED', $this->runs[0]['environment'] );
 		self::assertArrayNotHasKey( 'VIPS_BLOCK_UNTRUSTED', $this->runs[1]['environment'] );
-		self::assertSame( '--vips-concurrency=4', $this->runs[1]['arguments'][3] );
 	}
 
 	/**
 	 * A decoder `vips -l` does not list is missing; an untrusted one is
-	 * blocked while the switch is on; nothing is known where `vips` did not
-	 * answer.
+	 * blocked unless allowed; nothing is known where `vips` did not answer.
 	 */
 	public function testWhichTypesLibvipsCannotDecode(): void
 	{
@@ -206,10 +217,32 @@ class VipsRendererTest
 		self::assertEquals( new Unsupported( 'jp2kload', Unsupported::UNTRUSTED ), $renderer->unsupported( 'image/jp2' ) );
 		self::assertEquals( new Unsupported( 'heifload', Unsupported::MISSING ), $renderer->unsupported( 'image/heic' ) );
 
-		$this->appValues = [ ConfigLexicon::VIPS_BLOCK_UNTRUSTED => false ];
+		$this->systemValues = [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => true ];
 
 		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ), $loaders )->unsupported( 'image/jp2' ) );
 		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ) )->unsupported( 'image/heic' ) );
+	}
+
+	/**
+	 * Before libvips 8.13 nothing can be blocked, and libvips picks its
+	 * decoder by the content: every image type is unsupported unless
+	 * untrusted decoders are allowed. Where vipsthumbnail is not there,
+	 * nothing is known, and the render says.
+	 */
+	public function testEveryImageTypeWhereLibvipsCannotBlock(): void
+	{
+		$loaders = [ 'tiffload' => false, 'jp2kload' => true ];
+
+		self::assertEquals(
+			new Unsupported( 'tiffload', Unsupported::UNBLOCKABLE ),
+			$this->renderer( $this->createMock( CommandRunner::class ), $loaders, blockable: false )->unsupported( 'image/tiff' ),
+		);
+		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ), $loaders, blockable: null )->unsupported( 'image/tiff' ) );
+		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ), $loaders )->unsupported( 'application/pdf' ) );
+
+		$this->systemValues = [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => true ];
+
+		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ), $loaders, blockable: false )->unsupported( 'image/tiff' ) );
 	}
 
 	/**
@@ -443,11 +476,15 @@ class VipsRendererTest
 		?string           $vips = '/usr/bin/vips',
 		?ScratchDirectory $scratch = null,
 		bool              $tiffcp = true,
+		?bool             $blockable = true,
 	): VipsRenderer
 	{
 		$listed = $this->createMock( VipsLoaders::class );
 		$listed->method( 'loaders' )
 		       ->willReturn( $loaders )
+		;
+		$listed->method( 'canBlockUntrusted' )
+		       ->willReturn( $blockable )
 		;
 
 		$binaries = $this->createMock( BinaryLocator::class );

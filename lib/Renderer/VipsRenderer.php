@@ -49,7 +49,7 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  *
  * Each run has libvips' own address-space cap (vips_prlimit_as_mb), two
  * malloc arenas, with which a HEIC and a WebP passed at 640 MB rather than
- * 768, untrusted decoders blocked while vips_block_untrusted is on, and its
+ * 768, untrusted decoders blocked unless vips_allow_untrusted is set, and its
  * spill to disc in the render folder, which the provider removes. Under the
  * cap libvips or libtiff says it is out of memory, or fails to start a
  * thread and aborts; any of these is a render out of memory. libheif may
@@ -63,7 +63,8 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * (restripped()); tiffcp needs about the compressed strip.
  *
  * A type whose decoder `vips -l` does not list, or lists as untrusted
- * while those are blocked, is unsupported (VipsLoaders).
+ * while those are blocked, is unsupported (VipsLoaders); and every type,
+ * while they are, where libvips is older than 8.13 and cannot block them.
  */
 class VipsRenderer
     implements
@@ -160,18 +161,33 @@ class VipsRenderer
 	public function unsupported( string $mime ): ?Unsupported
 	{
 		$decoder = SupportedTypes::DECODERS[ $mime ] ?? null;
+
+		if ( $decoder === null )
+		{
+			return null;
+		}
+
+		$allowed = $this->config->untrustedAllowed();
+
+		// Before 8.13 libvips blocks nothing, and picks its decoder by the
+		// content: a file of any image type could reach an untrusted one.
+		if ( ! $allowed && $this->loaders->canBlockUntrusted() === false )
+		{
+			return new Unsupported( $decoder, Unsupported::UNBLOCKABLE );
+		}
+
 		$loaders = $this->loaders->loaders();
 
-		if ( $decoder === null || $loaders === null )
+		if ( $loaders === null )
 		{
 			return null;
 		}
 
 		return match ( true )
 		{
-			! array_key_exists( $decoder, $loaders )                                                => new Unsupported( $decoder, Unsupported::MISSING ),
-			$loaders[ $decoder ] && $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) => new Unsupported( $decoder, Unsupported::UNTRUSTED ),
-			default                                                                                 => null,
+			! array_key_exists( $decoder, $loaders ) => new Unsupported( $decoder, Unsupported::MISSING ),
+			$loaders[ $decoder ] && ! $allowed       => new Unsupported( $decoder, Unsupported::UNTRUSTED ),
+			default                                  => null,
 		};
 	}
 
@@ -437,7 +453,8 @@ class VipsRenderer
 
 	/**
 	 * What every libvips run is given: two malloc arenas, its spill in the
-	 * render folder, and untrusted decoders blocked while that is on.
+	 * render folder, and untrusted decoders blocked unless system config
+	 * allows them.
 	 *
 	 * @return array<string, string>
 	 */
@@ -449,7 +466,7 @@ class VipsRenderer
 		];
 
 		// libvips blocks where the variable is set at all, whatever its value.
-		if ( $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) )
+		if ( ! $this->config->untrustedAllowed() )
 		{
 			$environment['VIPS_BLOCK_UNTRUSTED'] = '1';
 		}

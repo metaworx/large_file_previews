@@ -63,6 +63,7 @@ class ConfigUnset
 					     'A setting:          config:unset timeout_seconds',
 					     'A program\'s path:   config:unset binaries.pdftoppm',
 					     'Scratch directory:  config:unset scratch_directory',
+					     'Untrusted decoders: config:unset vips_allow_untrusted',
 					     'A MIME type\'s rule: config:unset --mime image/tiff',
 					     'One field of it:    config:unset --mime image/tiff --field min_size_mb',
 					     '',
@@ -122,6 +123,14 @@ class ConfigUnset
 			{
 				$this->scratch->unset();
 				$output->writeln( sprintf( '%s: Nextcloud\'s temporary directory again, %s', $key, $this->scratch->path() ) );
+
+				return self::SUCCESS;
+			}
+
+			if ( $key === self::UNTRUSTED )
+			{
+				$this->config->unsetUntrustedAllowed();
+				$output->writeln( sprintf( '%s: blocked again', $key ) );
 
 				return self::SUCCESS;
 			}

@@ -44,6 +44,12 @@ abstract class Base
 	 */
 	protected const SCRATCH = 'scratch_directory';
 
+	/**
+	 * The key libvips' untrusted decoders are allowed under; system config
+	 * too, since it widens what a user's file reaches.
+	 */
+	protected const UNTRUSTED = 'vips_allow_untrusted';
+
 	private const FORMATS
 		 = [
 			'plain',

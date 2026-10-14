@@ -52,7 +52,6 @@ class ConfigLexiconTest
 				'choom_adjust',
 				'scan_native_enabled',
 				'scan_coverage_percent',
-				'vips_block_untrusted',
 				'vips_concurrency',
 				'preview_format',
 				'preview_background',
@@ -67,6 +66,17 @@ class ConfigLexiconTest
 				( new ConfigLexicon() )->getAppConfigs(),
 			),
 		);
+	}
+
+	/**
+	 * A key removed stays removed: none is declared again.
+	 */
+	public function testNoObsoleteKeyIsDeclared(): void
+	{
+		foreach ( ( new ConfigLexicon() )->getAppConfigs() as $entry )
+		{
+			self::assertNotContains( $entry->getKey(), ConfigLexicon::OBSOLETE );
+		}
 	}
 
 	/**

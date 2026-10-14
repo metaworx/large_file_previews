@@ -40,6 +40,9 @@ function noRenderer(renderer: Renderer): string {
 	if (renderer.unsupported?.problem === 'untrusted') {
 		return t('large_file_previews', 'Its decoder, {decoder}, is untrusted, and untrusted decoders are blocked', { decoder: renderer.unsupported.decoder })
 	}
+	if (renderer.unsupported?.problem === 'unblockable') {
+		return t('large_file_previews', 'libvips here is older than 8.13 and cannot block untrusted decoders, so no image is rendered with it')
+	}
 	if (renderer.unsupported?.problem === 'missing') {
 		return t('large_file_previews', 'libvips here has no decoder for it ({decoder})', { decoder: renderer.unsupported.decoder })
 	}

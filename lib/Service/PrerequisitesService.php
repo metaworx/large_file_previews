@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Service;
 
+use OCA\LargeFilePreviews\Renderer\Unsupported;
+use OCA\LargeFilePreviews\Renderer\VipsLoaders;
+use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCP\ITempManager;
 
 /**
@@ -54,9 +57,8 @@ class PrerequisitesService
 	public function __construct(
 		private readonly ConfigurationService $config,
 		private readonly BinaryLocator        $binaries,
-		private readonly CommandRunner        $runner,
+		private readonly ProgramVersions      $versions,
 		private readonly ITempManager         $tempManager,
-		private readonly DetectionCache       $cache,
 		private readonly Platform             $platform,
 	)
 	{
@@ -118,7 +120,7 @@ class PrerequisitesService
 				'source'  => $location->source,
 				'problem' => $location->problem,
 				'version' => $location->path !== null && $flag !== null
-					? $this->version( $program, $location->path, $flag )
+					? $this->versions->of( $program, $location->path, $flag )
 					: null,
 				'install' => $this->platform->install( $program ),
 			];
@@ -248,8 +250,14 @@ class PrerequisitesService
 
 			if ( $versions )
 			{
-				$version = $this->version( $program, (string) $location->path, $spec['version'] );
+				$version = $this->versions->of( $program, (string) $location->path, $spec['version'] );
 				$detail .= $version === null ? '' : ', ' . $version;
+
+				// libvips renders no image it cannot keep from untrusted decoders.
+				if ( $program === VipsRenderer::PROGRAM && ! $this->config->untrustedAllowed() && ! VipsLoaders::blocks( (string) $version ) )
+				{
+					$detail .= '; ' . Unsupported::UNBLOCKABLE_TEXT;
+				}
 			}
 
 			$items[] = new Prerequisite(
@@ -262,29 +270,5 @@ class PrerequisitesService
 		}
 
 		return $items;
-	}
-
-	/**
-	 * The first line a program prints when asked for its version.
-	 */
-	private function version(
-		string $program,
-		string $path,
-		string $flag,
-	): ?string
-	{
-		// Kept by path: another binary in its place is another version.
-		$cached = $this->cache->get( 'version.' . $path );
-
-		if ( $cached !== null )
-		{
-			return $cached === '' ? null : $cached;
-		}
-
-		$outcome = $this->runner->runBare( $program, [ $flag ] );
-		$line    = trim( (string) strtok( $outcome->stderr, "\n" ) );
-		$this->cache->set( 'version.' . $path, $line );
-
-		return $line === '' ? null : $line;
 	}
 }

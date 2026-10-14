@@ -9,12 +9,28 @@ function section(state = testState()) {
 }
 
 describe('AdvancedSection', () => {
-	it('switches the untrusted decoders\' block', async () => {
-		const wrapper = section()
+	it('shows the untrusted decoders read only, with the command that changes them', () => {
+		const blocked = section().find('[data-setting="vips_allow_untrusted"]')
 
-		await wrapper.find('[data-setting="vips_block_untrusted"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', false)
+		expect(blocked.text()).toContain('Untrusted decoders: blocked')
+		expect(blocked.find('input').exists()).toBe(false)
+		expect(blocked.findComponent(OccCommand).props('command')).toBe('occ lfp:config:set vips_allow_untrusted true')
 
-		expect(wrapper.emitted('save')).toEqual([[{ scalars: { vips_block_untrusted: false } }]])
+		const state = testState()
+		state.untrusted = { allowed: true, blockable: true }
+		const allowed = section(state).find('[data-setting="vips_allow_untrusted"]')
+
+		expect(allowed.text()).toContain('Untrusted decoders: allowed')
+		expect(allowed.findComponent(OccCommand).props('command')).toBe('occ lfp:config:unset vips_allow_untrusted')
+	})
+
+	it('warns where libvips cannot block them', () => {
+		expect(section().find('[data-setting="vips_allow_untrusted"]').text()).not.toContain('older than 8.13')
+
+		const state = testState()
+		state.untrusted = { allowed: false, blockable: false }
+
+		expect(section(state).find('[data-setting="vips_allow_untrusted"]').text()).toContain('older than 8.13')
 	})
 
 	it('shows each program\'s path, version and the command that sets it', () => {

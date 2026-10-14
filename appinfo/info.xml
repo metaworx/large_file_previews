@@ -38,9 +38,11 @@ Only files on local, unencrypted storage are rendered. Everything else is left t
 	</dependencies>
 	<repair-steps>
 		<post-migration>
+			<step>OCA\LargeFilePreviews\Migration\RemoveObsoleteKeys</step>
 			<step>OCA\LargeFilePreviews\Migration\RefreshDetection</step>
 		</post-migration>
 		<install>
+			<step>OCA\LargeFilePreviews\Migration\RemoveObsoleteKeys</step>
 			<step>OCA\LargeFilePreviews\Migration\RefreshDetection</step>
 		</install>
 	</repair-steps>

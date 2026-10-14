@@ -45,6 +45,16 @@ export function binaryCommand(program: string, path: string): string {
 	return [SET, 'binaries.' + program, quoted(path)].join(' ')
 }
 
+/**
+ * What changes whether libvips' untrusted decoders are allowed, in system
+ * config: allowing them, or blocking them again.
+ */
+export function untrustedCommand(allowed: boolean): string {
+	return allowed
+		? [UNSET, 'vips_allow_untrusted'].join(' ')
+		: [SET, 'vips_allow_untrusted', 'true'].join(' ')
+}
+
 /** The scratch directory, in system config. */
 export function scratchCommand(path: string): string {
 	return [SET, 'scratch_directory', quoted(path)].join(' ')

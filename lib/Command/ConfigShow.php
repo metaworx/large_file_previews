@@ -75,18 +75,20 @@ class ConfigShow
 			'path'   => $this->scratch->path(),
 			'source' => $this->scratch->override() === null ? 'temporary directory' : 'system config',
 		];
-		$resolved = $this->resolved();
-		$problems = [ ...$this->config->problems(), ...$this->binaries->problems() ];
+		$untrusted = $this->config->untrustedAllowed();
+		$resolved  = $this->resolved();
+		$problems  = [ ...$this->config->problems(), ...$this->binaries->problems() ];
 
 		if ( $this->writeJson(
 			$output,
 			$format,
 			[
-				'stored'   => $stored,
-				'programs' => $programs,
-				'scratch'  => $scratch,
-				'resolved' => $resolved,
-				'problems' => $problems,
+				'stored'           => $stored,
+				'programs'         => $programs,
+				'scratch'          => $scratch,
+				'untrustedAllowed' => $untrusted,
+				'resolved'         => $resolved,
+				'problems'         => $problems,
 			],
 		) )
 		{
@@ -128,6 +130,13 @@ class ConfigShow
 		$table->render();
 		$output->writeln( sprintf( 'A path is overridden in system config (%s) only: occ lfp:config:set binaries.<program> <path>', BinaryLocator::SYSTEM_KEY ) );
 		$output->writeln( sprintf( 'Scratch directory: %s (%s); occ lfp:config:set scratch_directory <path>', $scratch['path'], $scratch['source'] ) );
+		$output->writeln(
+			sprintf(
+				'Untrusted decoders: %s (system config); occ lfp:config:set %s true|false',
+				$untrusted ? 'allowed' : 'blocked',
+				self::UNTRUSTED,
+			),
+		);
 
 		$output->writeln( '' );
 		$output->writeln( '<info>Resolved</info> (value, and the level it came from: default, mime or ext)' );

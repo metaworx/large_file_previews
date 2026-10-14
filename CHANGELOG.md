@@ -31,6 +31,9 @@ the first stable release.
   size, images from `preview_max_filesize_image`; scans; each render's
   limits; libvips' untrusted decoders, blocked by default, and threads.
 
+- `README.md`, *Configuration*: untrusted decoders allowed in system
+  config only (`vips_allow_untrusted`); before libvips 8.13, no images.
+
 - `README.md`, *Configuration*: previews stored as PNG, JPEG or WebP,
   by default as Nextcloud's `preview_format` says; `preview_background`.
 

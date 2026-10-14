@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -17,6 +18,7 @@ use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\Platform;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
+use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
@@ -199,6 +201,29 @@ class PrerequisitesServiceTest
 		self::assertSame( 'Debian or Ubuntu', $this->service( $programs )->platformName() );
 	}
 
+	/**
+	 * libvips before 8.13 cannot block untrusted decoders: the command
+	 * says no image is rendered, unless they are allowed.
+	 */
+	public function testAnOldLibvipsIsNamed(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'runBare' )
+		       ->willReturnCallback(
+			       static fn(
+				       string $program,
+			       ): RenderOutcome => new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, $program === 'vipsthumbnail' ? 'vips-8.12.1' : 'v1' ),
+		       )
+		;
+		$programs = [ 'pdftoppm', 'vipsthumbnail', 'timeout', 'prlimit', 'choom' ];
+
+		self::assertStringEndsWith( 'vips-8.12.1; ' . Unsupported::UNBLOCKABLE_TEXT, self::item( $this->service( $programs, $runner )->check( true ), 'vipsthumbnail' )->detail );
+
+		$this->systemValues = [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY => true ];
+
+		self::assertStringEndsWith( 'vips-8.12.1', self::item( $this->service( $programs, $runner )->check( true ), 'vipsthumbnail' )->detail );
+	}
+
 	public function testAnUnwritableTemporaryDirectoryBlocks(): void
 	{
 		$items = $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ], null, '/nonexistent' )->check();
@@ -237,9 +262,8 @@ class PrerequisitesServiceTest
 		return new PrerequisitesService(
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
-			$runner ?? $this->createMock( CommandRunner::class ),
+			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $this->detectionCache() ),
 			$tempManager,
-			$this->detectionCache(),
 			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),
 		);
 	}

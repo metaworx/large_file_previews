@@ -65,6 +65,7 @@ function processingText(processing: string): string {
 					{{ row.renderer.program ?? '' }}
 					<span v-if="row.renderer.program === null" class="lfp-badge">{{ t('large_file_previews', 'not handled') }}</span>
 					<span v-else-if="row.renderer.unsupported?.problem === 'untrusted'" class="lfp-badge">{{ t('large_file_previews', 'decoder blocked') }}</span>
+					<span v-else-if="row.renderer.unsupported?.problem === 'unblockable'" class="lfp-badge">{{ t('large_file_previews', 'libvips too old') }}</span>
 					<span v-else-if="row.renderer.unsupported?.problem === 'missing'" class="lfp-badge">{{ t('large_file_previews', 'no decoder') }}</span>
 					<span v-else-if="!row.renderer.available" class="lfp-badge">{{ t('large_file_previews', 'not available') }}</span>
 				</td>
