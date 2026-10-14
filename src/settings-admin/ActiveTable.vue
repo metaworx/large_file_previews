@@ -51,8 +51,8 @@ function processingText(processing: ActiveRow['processing']): string {
 				<th>{{ t('large_file_previews', 'Extension') }}</th>
 				<th>{{ t('large_file_previews', 'Processing') }}</th>
 				<th>{{ t('large_file_previews', 'Renderer') }}</th>
-				<th>{{ t('large_file_previews', 'Minimum, MB') }}</th>
-				<th>{{ t('large_file_previews', 'Maximum, MB') }}</th>
+				<th>{{ t('large_file_previews', 'Minimum, MiB') }}</th>
+				<th>{{ t('large_file_previews', 'Maximum, MiB') }}</th>
 			</tr>
 		</thead>
 		<tbody>

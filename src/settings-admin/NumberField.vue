@@ -87,9 +87,10 @@ function save(): void {
 	gap: calc(var(--default-grid-baseline) * 2);
 }
 
+/* Wide enough for its label, which the field would otherwise cut. */
 .lfp-number__field {
 	flex: 0 0 auto;
-	width: 12rem;
+	width: 16rem;
 }
 
 .lfp-number--narrow .lfp-number__field {

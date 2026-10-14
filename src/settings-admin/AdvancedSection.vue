@@ -11,6 +11,7 @@
  */
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
+import HelpPopover from './HelpPopover.vue'
 import InstallHint from './InstallHint.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
@@ -42,36 +43,41 @@ function foundBy(program: ProgramRow): string {
 
 		<h4>{{ t('large_file_previews', 'libvips') }}</h4>
 		<div data-setting="vips_allow_untrusted">
-			<p>
-				{{ state.untrusted.allowed ? t('large_file_previews', 'Untrusted decoders: allowed') : t('large_file_previews', 'Untrusted decoders: blocked') }}
-				<span class="lfp-hint">{{ t('large_file_previews', '(system config)') }}</span>
-			</p>
-			<p class="lfp-hint">
-				{{ t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: with libvips 8.15, JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers. They are allowed in system config only, with the command beneath.') }}
+			<p class="lfp-named">
+				<span>
+					{{ state.untrusted.allowed ? t('large_file_previews', 'Untrusted decoders: allowed') : t('large_file_previews', 'Untrusted decoders: blocked') }}
+					<span class="lfp-hint">{{ t('large_file_previews', '(system config)') }}</span>
+				</span>
+				<HelpPopover :text="t('large_file_previews', 'libvips counts some of its decoders as untrusted, not hardened against hostile files: with libvips 8.15, JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud\'s other providers. They are allowed in system config only, with the command beneath.')"
+					:label="t('large_file_previews', 'Untrusted decoders')" />
 			</p>
 			<NcNoteCard v-if="!state.untrusted.allowed && state.untrusted.blockable === false" type="warning">
 				{{ t('large_file_previews', 'libvips here is older than 8.13, or did not report its version, and cannot block them, so no image is rendered until it is upgraded or they are allowed.') }}
 			</NcNoteCard>
 			<OccCommand :command="untrustedCommand(state.untrusted.allowed)" />
 		</div>
-		<div data-setting="vips_concurrency">
-			<NumberField id="lfp-vips-concurrency"
-				:label="t('large_file_previews', 'Threads per render')"
-				:value="state.scalars.vips_concurrency.value"
-				:min="state.scalars.vips_concurrency.min"
-				:max="state.scalars.vips_concurrency.max"
-				:disabled="saving"
-				@save="emit('save', scalarChange('vips_concurrency', $event))" />
-			<p class="lfp-hint">
-				{{ t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.') }}
-			</p>
-			<OccCommand :command="scalarCommand('vips_concurrency', state.scalars.vips_concurrency.value)" />
+		<div class="lfp-fields" data-setting="vips_concurrency">
+			<div>
+				<div class="lfp-named">
+					<NumberField id="lfp-vips-concurrency"
+						:label="t('large_file_previews', 'Threads per render')"
+						:value="state.scalars.vips_concurrency.value"
+						:min="state.scalars.vips_concurrency.min"
+						:max="state.scalars.vips_concurrency.max"
+						:disabled="saving"
+						@save="emit('save', scalarChange('vips_concurrency', $event))" />
+					<HelpPopover :text="t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.')"
+						:label="t('large_file_previews', 'Threads per render')" />
+				</div>
+				<OccCommand :command="scalarCommand('vips_concurrency', state.scalars.vips_concurrency.value)" />
+			</div>
 		</div>
 
-		<h4>{{ t('large_file_previews', 'Programs') }}</h4>
-		<p class="lfp-hint">
-			{{ t('large_file_previews', 'Found once and kept in the memory cache for a day, without one found on every request; found again on install, after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it.') }}
-		</p>
+		<h4 class="lfp-named">
+			{{ t('large_file_previews', 'Programs') }}
+			<HelpPopover :text="t('large_file_previews', 'Found once and kept in the memory cache for a day, without one found on every request; found again on install, after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it.')"
+				:label="t('large_file_previews', 'Programs')" />
+		</h4>
 		<table class="lfp-table lfp-programs">
 			<thead>
 				<tr>
@@ -101,10 +107,11 @@ function foundBy(program: ProgramRow): string {
 			{{ t('large_file_previews', 'Find programs again') }}
 		</NcButton>
 
-		<h4>{{ t('large_file_previews', 'Scratch directory') }}</h4>
-		<p class="lfp-hint">
-			{{ t('large_file_previews', 'Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MB more; the copy is gone once rendered.') }}
-		</p>
+		<h4 class="lfp-named">
+			{{ t('large_file_previews', 'Scratch directory') }}
+			<HelpPopover :text="t('large_file_previews', 'Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MiB more; the copy is gone once rendered.')"
+				:label="t('large_file_previews', 'Scratch directory')" />
+		</h4>
 		<p data-setting="scratch_directory">
 			{{ state.scratch.path }}
 			<span class="lfp-hint">
@@ -112,18 +119,21 @@ function foundBy(program: ProgramRow): string {
 			</span>
 		</p>
 		<OccCommand :command="scratchCommand(state.scratch.path)" />
-		<div data-setting="tiff_restrip_max_mb">
-			<NumberField id="lfp-tiff-restrip-max"
-				:label="t('large_file_previews', 'Largest copy, MB')"
-				:value="state.scalars.tiff_restrip_max_mb.value"
-				:min="state.scalars.tiff_restrip_max_mb.min"
-				:max="state.scalars.tiff_restrip_max_mb.max"
-				:disabled="saving"
-				@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
-			<p class="lfp-hint">
-				{{ t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.') }}
-			</p>
-			<OccCommand :command="scalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb.value)" />
+		<div class="lfp-fields" data-setting="tiff_restrip_max_mb">
+			<div>
+				<div class="lfp-named">
+					<NumberField id="lfp-tiff-restrip-max"
+						:label="t('large_file_previews', 'Largest copy, MiB')"
+						:value="state.scalars.tiff_restrip_max_mb.value"
+						:min="state.scalars.tiff_restrip_max_mb.min"
+						:max="state.scalars.tiff_restrip_max_mb.max"
+						:disabled="saving"
+						@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
+					<HelpPopover :text="t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.')"
+						:label="t('large_file_previews', 'Largest copy, MiB')" />
+				</div>
+				<OccCommand :command="scalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb.value)" />
+			</div>
 		</div>
 	</div>
 </template>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import HelpPopover from './HelpPopover.vue'
 import LimitsSection from './LimitsSection.vue'
 import NumberField from './NumberField.vue'
 import { testState } from './testState'
@@ -43,6 +44,19 @@ describe('LimitsSection', () => {
 		await caps.findAllComponents(NumberField)[2].vm.$emit('save', 2048)
 
 		expect(wrapper.emitted('save')).toEqual([[{ scalars: { prlimit_fsize_mb: 2048 } }]])
+	})
+
+	it('keeps what a limit does behind its help button, its fields labelled in MiB', () => {
+		const caps = section().find('[data-limit="prlimit_enabled"]')
+
+		expect(caps.findComponent(HelpPopover).props('label')).toBe('Address-space and file-size caps')
+		expect(caps.text()).not.toContain('runaway allocation')
+		const labels: unknown[] = []
+		for (const field of caps.findAllComponents(NumberField)) {
+			labels.push(field.props('label'))
+		}
+
+		expect(labels).toEqual(['Address space, MiB', 'libvips, MiB', 'Largest file, MiB'])
 	})
 
 	it('sets how long a file that failed is left alone', async () => {

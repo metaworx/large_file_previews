@@ -82,3 +82,19 @@
 .lfp-settings .lfp-new-extension {
 	width: 12rem;
 }
+
+/* A setting's fields, one under the other on the left, each with its
+   command beneath it. */
+.lfp-settings .lfp-fields {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--default-grid-baseline) * 3);
+	margin-block: calc(var(--default-grid-baseline) * 2);
+}
+
+/* A setting's name, a switch or a heading, with its help beside it. */
+.lfp-settings .lfp-named {
+	display: flex;
+	align-items: center;
+}

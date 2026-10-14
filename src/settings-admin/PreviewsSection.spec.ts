@@ -19,6 +19,9 @@ describe('PreviewsSection', () => {
 
 		expect(values).toEqual(['nextcloud', 'png', 'jpeg', 'webp'])
 		expect(radios[0].props('modelValue')).toBe('nextcloud')
+		// Short; what each means is behind the heading's help button.
+		expect(radios[0].text()).toBe('As Nextcloud\'s preview_format')
+		expect(radios[3].text()).toBe('WebP')
 	})
 
 	it('offers the choices the server sends, one it has no words for as it is', () => {

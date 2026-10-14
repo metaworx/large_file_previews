@@ -6,9 +6,10 @@
  * The limits each render runs under, each switchable, each with its value,
  * and how long a file that failed is left alone. A limit switched on whose
  * program is missing stops rendering rather than let it run without; the
- * status above says which.
+ * status above says which. What each does is behind its ⓘ.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import HelpPopover from './HelpPopover.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import { scalarCommand } from './occ'
@@ -45,11 +46,11 @@ const LIMITS: Limit[] = [
 	{
 		switch: 'prlimit_enabled',
 		name: t('large_file_previews', 'Address-space and file-size caps'),
-		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each. The file-size cap is the largest file a render may write: its preview, its messages, what libvips spills to disc.'),
+		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MiB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each. The file-size cap is the largest file a render may write: its preview, its messages, what libvips spills to disc.'),
 		values: [
-			{ key: 'prlimit_as_mb', label: t('large_file_previews', 'Address space, MB') },
-			{ key: 'vips_prlimit_as_mb', label: t('large_file_previews', 'Address space, MB, libvips') },
-			{ key: 'prlimit_fsize_mb', label: t('large_file_previews', 'Largest file written, MB') },
+			{ key: 'prlimit_as_mb', label: t('large_file_previews', 'Address space, MiB') },
+			{ key: 'vips_prlimit_as_mb', label: t('large_file_previews', 'libvips, MiB') },
+			{ key: 'prlimit_fsize_mb', label: t('large_file_previews', 'Largest file, MiB') },
 		],
 	},
 	{
@@ -73,17 +74,17 @@ const LIMITS: Limit[] = [
 			:key="limit.switch"
 			class="lfp-limit"
 			:data-limit="limit.switch">
-			<NcCheckboxRadioSwitch type="switch"
-				:model-value="state.scalars[limit.switch].value"
-				:disabled="saving"
-				@update:model-value="emit('save', scalarChange(limit.switch, $event as boolean))">
-				{{ limit.name }}
-			</NcCheckboxRadioSwitch>
-			<p class="lfp-hint">
-				{{ limit.help }}
-			</p>
+			<div class="lfp-named">
+				<NcCheckboxRadioSwitch type="switch"
+					:model-value="state.scalars[limit.switch].value"
+					:disabled="saving"
+					@update:model-value="emit('save', scalarChange(limit.switch, $event as boolean))">
+					{{ limit.name }}
+				</NcCheckboxRadioSwitch>
+				<HelpPopover :text="limit.help" :label="limit.name" />
+			</div>
 			<OccCommand :command="scalarCommand(limit.switch, state.scalars[limit.switch].value)" />
-			<div class="lfp-row">
+			<div class="lfp-fields">
 				<div v-for="value in limit.values" :key="value.key">
 					<NumberField :id="'lfp-' + value.key"
 						:label="value.label"
@@ -98,10 +99,11 @@ const LIMITS: Limit[] = [
 		</div>
 
 		<div class="lfp-limit" data-setting="failure_retry_minutes">
-			<h4>{{ t('large_file_previews', 'Files that failed') }}</h4>
-			<p class="lfp-hint">
-				{{ t('large_file_previews', 'A file that failed to render is left to Nextcloud\'s other providers for this many minutes, rather than tried again on every page that shows it; 0 tries it every time. A change to the file, or to a setting, tries it at once. Kept in the memory cache, so without one every request tries it.') }}
-			</p>
+			<h4 class="lfp-named">
+				{{ t('large_file_previews', 'Files that failed') }}
+				<HelpPopover :text="t('large_file_previews', 'A file that failed to render is left to Nextcloud\'s other providers for this many minutes, rather than tried again on every page that shows it; 0 tries it every time. A change to the file, or to a setting a render uses, tries it at once. Kept in the memory cache, so without one every request tries it.')"
+					:label="t('large_file_previews', 'Files that failed')" />
+			</h4>
 			<NumberField id="lfp-failure_retry_minutes"
 				:label="t('large_file_previews', 'Minutes')"
 				:value="state.scalars.failure_retry_minutes.value"
