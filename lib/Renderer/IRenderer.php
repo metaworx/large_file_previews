@@ -12,8 +12,8 @@ namespace OCA\LargeFilePreviews\Renderer;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 
 /**
- * Turns a local file into a PNG that fits a square box, by running a
- * program on its path.
+ * Turns a local file into a PNG, JPEG or WebP image that fits a square box,
+ * by running a program on its path.
  */
 interface IRenderer
 {
@@ -37,18 +37,25 @@ interface IRenderer
 	public function unsupported( string $mime ): ?Unsupported;
 
 	/**
-	 * Renders the file's first page or frame into `$outputPng`, its longer
-	 * side `$box` pixels or less.
+	 * The format it writes when asked for one: that one, or what it writes
+	 * instead where it cannot on this server.
+	 */
+	public function format( PreviewFormat $wanted ): PreviewFormat;
+
+	/**
+	 * Renders the file's first page or frame into `$output`, its longer
+	 * side `$box` pixels or less, in the format its extension names.
 	 *
 	 * Success means the program succeeded and the file is there; whether it
 	 * is an image is the caller's to check.
 	 *
 	 * @param string $localPath an absolute path on local storage
-	 * @param string $outputPng an absolute path ending in `.png`
+	 * @param string $output    an absolute path ending in the extension of
+	 *                          a format format() answers
 	 */
 	public function render(
 		string $localPath,
 		int    $box,
-		string $outputPng,
+		string $output,
 	): RenderOutcome;
 }

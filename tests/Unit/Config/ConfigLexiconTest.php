@@ -52,6 +52,8 @@ class ConfigLexiconTest
 				'scan_coverage_percent',
 				'vips_block_untrusted',
 				'vips_concurrency',
+				'preview_format',
+				'preview_background',
 				'mimetypes',
 				'extensions',
 				'last_failure',
@@ -98,10 +100,21 @@ class ConfigLexiconTest
 		foreach ( ConfigLexicon::SCALARS as $key => $spec )
 		{
 			self::assertSame(
-				is_bool( $spec['default'] ) ? ValueType::BOOL : ValueType::INT,
+				match ( true )
+				{
+					is_bool( $spec['default'] )   => ValueType::BOOL,
+					is_string( $spec['default'] ) => ValueType::STRING,
+					default                       => ValueType::INT,
+				},
 				$entries[ $key ]->getValueType(),
 				$key,
 			);
+
+			// A word's default is one of its words.
+			if ( is_string( $spec['default'] ) )
+			{
+				self::assertContains( $spec['default'], $spec['choices'] ?? [], $key );
+			}
 		}
 
 		self::assertSame( ValueType::ARRAY, $entries[ ConfigLexicon::MIMETYPES ]->getValueType() );

@@ -11,6 +11,7 @@ namespace OCA\LargeFilePreviews\Renderer;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
@@ -20,7 +21,13 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
  * Images through libvips:
  *
  *     vipsheader <input>
- *     vipsthumbnail <input> --size <N> --vips-concurrency=<C> -o <output>
+ *     vipsthumbnail <input> --size <N> --vips-concurrency=<C> -o <output>[<save options>]
+ *
+ * The output is a PNG, a JPEG at quality 95 laid on preview_background, or a
+ * WebP at quality 95; Nextcloud keeps the type and re-encodes at its own
+ * quality. convert() writes the same from a PNG, for poppler's pages:
+ *
+ *     vips copy <page.png> <output>[<save options>]
  *
  * vipsthumbnail decodes only what the thumbnail needs: a pyramid TIFF from
  * its nearest level, a JPEG shrunk while it is decoded, anything else in
@@ -56,6 +63,14 @@ class VipsRenderer
 
 	public const HEADER = 'vipsheader';
 
+	public const CONVERTER = 'vips';
+
+	/**
+	 * The quality a JPEG or WebP preview is written at, before Nextcloud
+	 * re-encodes it at its own (preview jpeg_quality, webp_quality).
+	 */
+	public const QUALITY = 95;
+
 	/**
 	 * What libvips and glib print when the cap stops them, measured with
 	 * libvips 8.15.
@@ -74,6 +89,7 @@ class VipsRenderer
 		private readonly CommandRunner        $runner,
 		private readonly ConfigurationService $config,
 		private readonly VipsLoaders          $loaders,
+		private readonly BinaryLocator        $binaries,
 	)
 	{
 	}
@@ -115,17 +131,28 @@ class VipsRenderer
 		};
 	}
 
+	/**
+	 * libvips writes each of them.
+	 */
+	#[\Override]
+	public function format( PreviewFormat $wanted ): PreviewFormat
+	{
+		return $wanted;
+	}
+
 	#[\Override]
 	public function render(
 		string $localPath,
 		int    $box,
-		string $outputPng,
+		string $output,
 	): RenderOutcome
 	{
+		$format = PreviewFormat::ofPath( $output );
+
 		// An absolute path cannot be read as an option.
-		if ( ! str_starts_with( $localPath, '/' ) || ! str_starts_with( $outputPng, '/' ) || ! str_ends_with( $outputPng, '.png' ) || $box < 1 )
+		if ( ! str_starts_with( $localPath, '/' ) || ! str_starts_with( $output, '/' ) || $format === null || $box < 1 )
 		{
-			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute input path, an absolute .png output and a box' );
+			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute input path, an absolute .png, .jpg or .webp output and a box' );
 		}
 
 		if ( str_ends_with( $localPath, ']' ) )
@@ -133,23 +160,13 @@ class VipsRenderer
 			return new RenderOutcome( Outcome::START_FAILED, 'libvips cannot open a file whose name ends in "]"' );
 		}
 
-		if ( str_contains( $outputPng, '%' ) )
+		if ( str_contains( $output, '%' ) )
 		{
 			return new RenderOutcome( Outcome::START_FAILED, 'an output path holding "%" is a format to vipsthumbnail' );
 		}
 
-		$environment = [
-			'MALLOC_ARENA_MAX' => '2',
-			'TMPDIR'           => dirname( $outputPng ),
-		];
-
-		// libvips blocks where the variable is set at all, whatever its value.
-		if ( $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) )
-		{
-			$environment['VIPS_BLOCK_UNTRUSTED'] = '1';
-		}
-
-		$cap = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
+		$environment = $this->environment( dirname( $output ) );
+		$cap         = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
 
 		// Not enlarged: a header that cannot be read leaves the box, and the
 		// thumbnail says what is wrong with the file.
@@ -169,24 +186,94 @@ class VipsRenderer
 				(string) $box,
 				sprintf( '--vips-concurrency=%d', (int) $this->config->getScalar( ConfigLexicon::VIPS_CONCURRENCY ) ),
 				'-o',
-				$outputPng,
+				$output . $this->saveOptions( $format ),
 			],
 			false,
 			$environment,
 			$cap,
 		);
 
-		if ( ! $outcome->isSuccess() && self::outOfMemory( $outcome->stderr ) )
+		return self::judged( $outcome, $output );
+	}
+
+	/**
+	 * Whether a PNG can be converted here: `vips` is there.
+	 */
+	public function canConvert(): bool
+	{
+		return $this->binaries->locate( self::CONVERTER )->isFound();
+	}
+
+	/**
+	 * Converts a PNG into the format `$output`'s extension names, under the
+	 * same cap and environment as a render: a page poppler wrote, where a
+	 * WebP preview is asked for.
+	 *
+	 * @param string $png    an absolute path ending in `.png`
+	 * @param string $output an absolute path ending in `.png`, `.jpg` or `.webp`
+	 */
+	public function convert(
+		string $png,
+		string $output,
+	): RenderOutcome
+	{
+		$format = PreviewFormat::ofPath( $output );
+
+		if ( ! str_starts_with( $png, '/' ) || ! str_ends_with( $png, '.png' ) || ! str_starts_with( $output, '/' ) || $format === null )
 		{
-			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (vips_prlimit_as_mb)' );
+			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute .png input and an absolute .png, .jpg or .webp output' );
 		}
 
-		if ( $outcome->isSuccess() && ! is_file( $outputPng ) )
+		$outcome = $this->runner->run(
+			self::CONVERTER,
+			[ 'copy', $png, $output . $this->saveOptions( $format ) ],
+			false,
+			$this->environment( dirname( $output ) ),
+			(int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
+		);
+
+		return self::judged( $outcome, $output );
+	}
+
+	/**
+	 * What every libvips run is given: two malloc arenas, its spill in the
+	 * render folder, and untrusted decoders blocked while that is on.
+	 *
+	 * @return array<string, string>
+	 */
+	private function environment( string $folder ): array
+	{
+		$environment = [
+			'MALLOC_ARENA_MAX' => '2',
+			'TMPDIR'           => $folder,
+		];
+
+		// libvips blocks where the variable is set at all, whatever its value.
+		if ( $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) )
 		{
-			return $outcome->as( Outcome::NO_OUTPUT, 'exit status 0, but no PNG written' );
+			$environment['VIPS_BLOCK_UNTRUSTED'] = '1';
 		}
 
-		return $outcome;
+		return $environment;
+	}
+
+	/**
+	 * The options a preview is saved with: a lossy one at a quality that
+	 * Nextcloud's own re-encoding, at its quality, hardly adds to, and a
+	 * JPEG laid on the background, since it keeps no transparency.
+	 */
+	private function saveOptions( PreviewFormat $format ): string
+	{
+		return match ( $format )
+		{
+			PreviewFormat::PNG  => '',
+			PreviewFormat::JPEG => sprintf(
+				'[Q=%d,background=%d]',
+				self::QUALITY,
+				$this->config->getScalar( ConfigLexicon::PREVIEW_BACKGROUND ) === 'black' ? 0 : 255,
+			),
+			PreviewFormat::WEBP => sprintf( '[Q=%d]', self::QUALITY ),
+		};
 	}
 
 
@@ -209,6 +296,28 @@ class VipsRenderer
 		$side = max( (int) $matches[1], (int) $matches[2] );
 
 		return $side > 0 ? $side : null;
+	}
+
+	/**
+	 * Out of memory, where libvips said so, or no output where it said
+	 * nothing.
+	 */
+	private static function judged(
+		RenderOutcome $outcome,
+		string        $output,
+	): RenderOutcome
+	{
+		if ( ! $outcome->isSuccess() && self::outOfMemory( $outcome->stderr ) )
+		{
+			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (vips_prlimit_as_mb)' );
+		}
+
+		if ( $outcome->isSuccess() && ! is_file( $output ) )
+		{
+			return $outcome->as( Outcome::NO_OUTPUT, 'exit status 0, but no image written' );
+		}
+
+		return $outcome;
 	}
 
 	private static function outOfMemory( string $stderr ): bool

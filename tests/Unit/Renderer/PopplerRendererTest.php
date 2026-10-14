@@ -11,13 +11,13 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
+use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Renderer\Renderers;
-use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
-use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class PopplerRendererTest
@@ -44,19 +44,23 @@ class PopplerRendererTest
 
 	protected function tearDown(): void
 	{
-		@unlink( $this->output );
+		foreach ( [ '.png', '.jpg', '.webp' ] as $extension )
+		{
+			@unlink( substr( $this->output, 0, (int) strrpos( $this->output, '.' ) ) . $extension );
+		}
 
 		parent::tearDown();
 	}
 
 	public function testItHandlesPdfAndIllustratorOnly(): void
 	{
-		$renderer = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ) );
+		$renderer = $this->poppler( $this->createMock( CommandRunner::class ) );
 
 		self::assertTrue( $renderer->supports( 'application/pdf' ) );
 		self::assertTrue( $renderer->supports( 'application/illustrator' ) );
 		self::assertFalse( $renderer->supports( 'image/tiff' ) );
 		self::assertFalse( $renderer->supports( 'application/postscript' ) );
+		self::assertNull( $renderer->unsupported( 'application/pdf' ) );
 	}
 
 	/**
@@ -64,13 +68,54 @@ class PopplerRendererTest
 	 */
 	public function testTheCommand(): void
 	{
-		$runner = $this->renders( 4096 );
+		$runner = $this->renders( 4096, [ '-png' ] );
 
 		self::assertTrue(
-			( new PopplerRenderer( $runner, $this->probe( null ) ) )
-				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
-				->isSuccess(),
+			$this->poppler( $runner )
+			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->isSuccess(),
 		);
+	}
+
+	/**
+	 * A JPEG is pdftoppm's own, at the quality the renderers share.
+	 */
+	public function testAJpeg(): void
+	{
+		$this->output = substr( $this->output, 0, -4 ) . '.jpg';
+		$runner       = $this->renders( 4096, [ '-jpeg', '-jpegopt', 'quality=95' ] );
+
+		self::assertTrue(
+			$this->poppler( $runner )
+			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->isSuccess(),
+		);
+	}
+
+	/**
+	 * A WebP is pdftoppm's PNG converted by libvips; without libvips, the
+	 * format asked for becomes JPEG.
+	 */
+	public function testAWebpThroughLibvips(): void
+	{
+		$webp   = substr( $this->output, 0, -4 ) . '.webp';
+		$runner = $this->renders( 4096, [ '-png' ] );
+		$vips   = $this->vips( true );
+		$vips->expects( self::once() )
+		     ->method( 'convert' )
+		     ->with( $this->output, $webp )
+		     ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) )
+		;
+
+		$renderer = new PopplerRenderer( $runner, $this->probe( null ), $vips );
+
+		self::assertSame( PreviewFormat::WEBP, $renderer->format( PreviewFormat::WEBP ) );
+		self::assertTrue( $renderer->render( '/data/alice/files/a b.pdf', 4096, $webp )->isSuccess() );
+
+		$without = $this->poppler( $this->createMock( CommandRunner::class ) );
+
+		self::assertSame( PreviewFormat::JPEG, $without->format( PreviewFormat::WEBP ) );
+		self::assertSame( PreviewFormat::PNG, $without->format( PreviewFormat::PNG ) );
 	}
 
 	/**
@@ -78,12 +123,12 @@ class PopplerRendererTest
 	 */
 	public function testAScanIsRenderedAtItsOwnSize(): void
 	{
-		$runner = $this->renders( 3508 );
+		$runner = $this->renders( 3508, [ '-png' ] );
 
 		self::assertTrue(
-			( new PopplerRenderer( $runner, $this->probe( 3508 ) ) )
-				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
-				->isSuccess(),
+			$this->poppler( $runner, 3508 )
+			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->isSuccess(),
 		);
 	}
 
@@ -92,12 +137,12 @@ class PopplerRendererTest
 	 */
 	public function testALargerScanKeepsTheBox(): void
 	{
-		$runner = $this->renders( 4096 );
+		$runner = $this->renders( 4096, [ '-png' ] );
 
 		self::assertTrue(
-			( new PopplerRenderer( $runner, $this->probe( 7016 ) ) )
-				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
-				->isSuccess(),
+			$this->poppler( $runner, 7016 )
+			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->isSuccess(),
 		);
 	}
 
@@ -119,7 +164,7 @@ class PopplerRendererTest
 		       )
 		;
 
-		$outcome = ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 4096, $this->output );
+		$outcome = $this->poppler( $runner )->render( '/in.pdf', 4096, $this->output );
 
 		self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome );
 		self::assertSame( 'out of memory under the address-space cap (prlimit_as_mb)', $outcome->reason );
@@ -133,13 +178,16 @@ class PopplerRendererTest
 		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'Syntax Warning: x' ) )
 		;
 
-		$outcome = ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 100, $this->output );
+		$outcome = $this->poppler( $runner )->render( '/in.pdf', 100, $this->output );
 
 		self::assertSame( Outcome::NO_OUTPUT, $outcome->outcome );
 		self::assertSame( 0, $outcome->exitStatus );
 		self::assertSame( 'Syntax Warning: x', $outcome->stderr );
 	}
 
+	/**
+	 * A failure is not converted.
+	 */
 	public function testAFailurePassesThrough(): void
 	{
 		$failed = new RenderOutcome( Outcome::FAILED, 'exit status 1', 1 );
@@ -147,8 +195,12 @@ class PopplerRendererTest
 		$runner->method( 'run' )
 		       ->willReturn( $failed )
 		;
+		$vips = $this->vips( true );
+		$vips->expects( self::never() )
+		     ->method( 'convert' )
+		;
 
-		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 100, $this->output ) );
+		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ), $vips ) )->render( '/in.pdf', 100, '/tmp/out.webp' ) );
 	}
 
 	/**
@@ -166,17 +218,18 @@ class PopplerRendererTest
 		      ->method( 'scanBox' )
 		;
 
-		$renderer = new PopplerRenderer( $runner, $probe );
+		$renderer = new PopplerRenderer( $runner, $probe, $this->vips( false ) );
 
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-opw', 100, $this->output )->outcome );
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 0, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 100, '/tmp/out.jpg' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 100, '/tmp/out.gif' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 100, 'out.png' )->outcome );
 	}
 
 	public function testRenderersFindByType(): void
 	{
-		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ) );
-		$vips      = new VipsRenderer( $this->createMock( CommandRunner::class ), $this->createMock( ConfigurationService::class ), $this->createMock( VipsLoaders::class ) );
+		$vips      = $this->vips( false );
+		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ), $vips );
 		$renderers = new Renderers( $poppler, $vips );
 
 		self::assertSame( $poppler, $renderers->for( 'application/pdf' ) );
@@ -184,23 +237,40 @@ class PopplerRendererTest
 		self::assertNull( $renderers->for( 'application/x-7z-compressed' ) );
 	}
 
-	/**
-	 * A runner that expects pdftoppm once, with the box given, and writes
-	 * the PNG.
-	 */
-	private function renders( int $box ): CommandRunner
+	private function poppler(
+		CommandRunner $runner,
+		?int          $scanBox = null,
+	): PopplerRenderer
 	{
+		return new PopplerRenderer( $runner, $this->probe( $scanBox ), $this->vips( false ) );
+	}
+
+	/**
+	 * A runner that expects pdftoppm once, with the box and the format's
+	 * options given, and writes its file.
+	 *
+	 * @param list<string> $format
+	 */
+	private function renders(
+		int   $box,
+		array $format,
+	): CommandRunner
+	{
+		$stem   = substr( $this->output, 0, (int) strrpos( $this->output, '.' ) );
 		$runner = $this->createMock( CommandRunner::class );
 		$runner->expects( self::once() )
 		       ->method( 'run' )
 		       ->with(
 			       'pdftoppm',
-			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, '-png', '-singlefile', '/data/alice/files/a b.pdf', substr( $this->output, 0, -4 ) ],
+			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, ...$format, '-singlefile', '/data/alice/files/a b.pdf', $stem ],
 		       )
 		       ->willReturnCallback(
-			       function(): RenderOutcome
+			       static function() use (
+				       $stem,
+				       $format,
+			       ): RenderOutcome
 			       {
-				       touch( $this->output );
+				       touch( $stem . ( $format[0] === '-jpeg' ? '.jpg' : '.png' ) );
 
 				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
 			       },
@@ -218,5 +288,18 @@ class PopplerRendererTest
 		;
 
 		return $probe;
+	}
+
+	private function vips( bool $canConvert ): VipsRenderer&MockObject
+	{
+		$vips = $this->createMock( VipsRenderer::class );
+		$vips->method( 'canConvert' )
+		     ->willReturn( $canConvert )
+		;
+		$vips->method( 'supports' )
+		     ->willReturnCallback( static fn( string $mime ): bool => str_starts_with( $mime, 'image/' ) )
+		;
+
+		return $vips;
 	}
 }

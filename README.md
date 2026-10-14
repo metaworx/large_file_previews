@@ -124,6 +124,16 @@ is left to the next provider, and the settings page says why;
 `occ lfp:check --refresh` asks libvips again.
 `vips_concurrency` is the threads one render may use, 1 by default.
 
+Nextcloud stores a preview in the type it is given, which `preview_format` sets:
+`png`, `jpeg`, `webp`, or `nextcloud`, the default,
+which follows Nextcloud's own `preview_format` as Imaginary does:
+WebP where it says `webp`, JPEG otherwise.
+A PDF previewed as WebP is converted by libvips, and is a JPEG without it.
+A JPEG keeps no transparency,
+so a transparent image is laid on `preview_background`, white or black.
+The quality is Nextcloud's:
+it re-encodes every preview at its app config `preview` `jpeg_quality` or `webp_quality`.
+
 ## Measured
 
 On a production server (Nextcloud 33.0.5, PHP 8.4, poppler 24.02),

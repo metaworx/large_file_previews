@@ -68,6 +68,19 @@ trait MemoryAppConfig
 			       },
 		       )
 		;
+		$config->method( 'getSystemValueString' )
+		       ->willReturnCallback(
+			       static function(
+				       string $key,
+				       string $default = '',
+			       ) use (
+				       &$values,
+			       ): string
+			       {
+				       return (string) ( $values[ $key ] ?? $default );
+			       },
+		       )
+		;
 		$config->method( 'setSystemValue' )
 		       ->willReturnCallback(
 			       static function(
@@ -133,6 +146,9 @@ trait MemoryAppConfig
 		$config->method( 'getValueBool' )
 		       ->willReturnCallback( $get )
 		;
+		$config->method( 'getValueString' )
+		       ->willReturnCallback( $get )
+		;
 		$config->method( 'getValueArray' )
 		       ->willReturnCallback(
 			       static fn(
@@ -160,6 +176,9 @@ trait MemoryAppConfig
 		       ->willReturnCallback( $set )
 		;
 		$config->method( 'setValueBool' )
+		       ->willReturnCallback( $set )
+		;
+		$config->method( 'setValueString' )
 		       ->willReturnCallback( $set )
 		;
 		$config->method( 'setValueArray' )

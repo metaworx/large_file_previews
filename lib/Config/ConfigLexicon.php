@@ -65,6 +65,10 @@ class ConfigLexicon
 
 	public const VIPS_CONCURRENCY = 'vips_concurrency';
 
+	public const PREVIEW_FORMAT = 'preview_format';
+
+	public const PREVIEW_BACKGROUND = 'preview_background';
+
 	public const LAST_FAILURE = 'last_failure';
 
 	/**
@@ -78,10 +82,11 @@ class ConfigLexicon
 	public const IMAGE_LIMIT_SYSTEM_KEY = 'preview_max_filesize_image';
 
 	/**
-	 * The settings that are one value each: default, and for a number its
-	 * range, `null` where it has no upper bound.
+	 * The settings that are one value each: default, for a number its
+	 * range, `null` where it has no upper bound, and for a word the words
+	 * it may be.
 	 *
-	 * @var array<string, array{default: int|bool, min?: int, max?: int|null, definition: string}>
+	 * @var array<string, array{default: int|bool|string, min?: int, max?: int|null, choices?: list<string>, definition: string}>
 	 */
 	public const SCALARS
 		 = [
@@ -167,6 +172,19 @@ class ConfigLexicon
 				'max'        => 64,
 				'definition' => 'Threads libvips may use for one render (--vips-concurrency).',
 			],
+			// Nextcloud stores a preview in the type of the image it is
+			// given, re-encoded at its own quality (preview jpeg_quality and
+			// webp_quality), so the app chooses only the type.
+			self::PREVIEW_FORMAT             => [
+				'default'    => 'nextcloud',
+				'choices'    => [ 'nextcloud', 'png', 'jpeg', 'webp' ],
+				'definition' => 'The type previews are stored in; nextcloud follows the system setting preview_format, WebP where it says webp and JPEG otherwise. A PDF previewed as WebP without libvips is JPEG.',
+			],
+			self::PREVIEW_BACKGROUND         => [
+				'default'    => 'white',
+				'choices'    => [ 'white', 'black' ],
+				'definition' => 'What a transparent image is laid on in a JPEG preview, which keeps no transparency.',
+			],
 		];
 
 
@@ -187,9 +205,12 @@ class ConfigLexicon
 		{
 			$entries[] = self::entry(
 				$key,
-				is_bool( $spec['default'] )
-					? ValueType::BOOL
-					: ValueType::INT,
+				match ( true )
+				{
+					is_bool( $spec['default'] )   => ValueType::BOOL,
+					is_string( $spec['default'] ) => ValueType::STRING,
+					default                       => ValueType::INT,
+				},
 				$spec['default'],
 				$spec['definition'] . self::rangeText( $spec ),
 			);
@@ -254,10 +275,15 @@ class ConfigLexicon
 	}
 
 	/**
-	 * @param array{default: int|bool, min?: int, max?: int|null, definition: string} $spec
+	 * @param array{default: int|bool|string, min?: int, max?: int|null, choices?: list<string>, definition: string} $spec
 	 */
 	private static function rangeText( array $spec ): string
 	{
+		if ( isset( $spec['choices'] ) )
+		{
+			return sprintf( ' One of %s.', implode( ', ', $spec['choices'] ) );
+		}
+
 		if ( ! isset( $spec['min'] ) )
 		{
 			return '';
@@ -269,10 +295,10 @@ class ConfigLexicon
 	}
 
 	private static function entry(
-		string         $key,
-		ValueType      $type,
-		int|bool|array $default,
-		string         $definition,
+		string                $key,
+		ValueType             $type,
+		int|bool|string|array $default,
+		string                $definition,
 	): Entry
 	{
 		return new Entry(

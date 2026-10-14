@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Config\Limits;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
+use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCP\Files\IMimeTypeDetector;
 use OCP\IAppConfig;
 use OCP\IConfig;
@@ -106,15 +107,37 @@ class ConfigurationService
 //  getters / setters / is* / has*
 
 	/**
-	 * One scalar setting, held to its range.
+	 * One scalar setting, held to its range or its words.
 	 */
-	public function getScalar( string $key ): int|bool
+	public function getScalar( string $key ): int|bool|string
 	{
 		$spec = self::scalarSpec( $key );
 
-		return is_bool( $spec['default'] )
-			? $this->getBool( $key )
-			: $this->getInt( $key );
+		return match ( true )
+		{
+			is_bool( $spec['default'] )   => $this->getBool( $key ),
+			is_string( $spec['default'] ) => $this->getWord( $key ),
+			default                       => $this->getInt( $key ),
+		};
+	}
+
+	/**
+	 * The type previews are written in; `nextcloud` reads the system
+	 * setting Imaginary follows, `preview_format`: WebP where it says so,
+	 * JPEG otherwise, as Imaginary does.
+	 */
+	public function previewFormat(): PreviewFormat
+	{
+		$format = $this->getWord( ConfigLexicon::PREVIEW_FORMAT );
+
+		if ( $format === 'nextcloud' )
+		{
+			$format = $this->system->getSystemValueString( 'preview_format', 'jpeg' ) === 'webp'
+				? 'webp'
+				: 'jpeg';
+		}
+
+		return PreviewFormat::from( $format );
 	}
 
 	/**
@@ -192,12 +215,13 @@ class ConfigurationService
 	 * Sets one scalar setting.
 	 *
 	 * A string is read as occ passes it: `true`/`false`, `yes`/`no`, `on`/`off`
-	 * or `1`/`0` for a switch, digits with an optional minus for a number.
+	 * or `1`/`0` for a switch, digits with an optional minus for a number,
+	 * one of its words, in any case, for a word.
 	 *
 	 * @throws ConfigurationException
 	 */
 	public function setScalar(
-		string                 $key,
+		string          $key,
 		int|bool|string $value,
 	): void
 	{
@@ -206,6 +230,25 @@ class ConfigurationService
 		if ( is_bool( $spec['default'] ) )
 		{
 			$this->appConfig->setValueBool( Application::APP_ID, $key, $this->parseBool( $key, $value ) );
+
+			return;
+		}
+
+		if ( isset( $spec['choices'] ) )
+		{
+			$word = is_string( $value ) ? strtolower( trim( $value ) ) : null;
+
+			if ( $word === null || ! in_array( $word, $spec['choices'], true ) )
+			{
+				$choices = implode( ', ', $spec['choices'] );
+
+				throw new ConfigurationException(
+					sprintf( '%s must be one of %s.', $key, $choices ),
+					$this->l10n->t( '%1$s must be one of %2$s.', [ $key, $choices ] ),
+				);
+			}
+
+			$this->appConfig->setValueString( Application::APP_ID, $key, $word );
 
 			return;
 		}
@@ -434,6 +477,19 @@ class ConfigurationService
 	private function getBool( string $key ): bool
 	{
 		return $this->appConfig->getValueBool( Application::APP_ID, $key, (bool) self::scalarSpec( $key )['default'] );
+	}
+
+	/**
+	 * A word, or its default where what is stored is not one of its words.
+	 */
+	private function getWord( string $key ): string
+	{
+		$spec  = self::scalarSpec( $key );
+		$value = $this->appConfig->getValueString( Application::APP_ID, $key, (string) $spec['default'] );
+
+		return in_array( $value, $spec['choices'] ?? [], true )
+			? $value
+			: (string) $spec['default'];
 	}
 
 	/**
@@ -688,7 +744,7 @@ class ConfigurationService
 	}
 
 	/**
-	 * @return array{default: int|bool, min?: int, max?: int|null, definition: string}
+	 * @return array{default: int|bool|string, min?: int, max?: int|null, choices?: list<string>, definition: string}
 	 * @throws ConfigurationException
 	 */
 	private static function scalarSpec(

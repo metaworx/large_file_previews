@@ -18,6 +18,8 @@ use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
+use OCA\LargeFilePreviews\Service\BinaryLocation;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
@@ -53,6 +55,9 @@ class LargeFileProviderTest
 
 	private string $folder;
 
+	/** @var list<string> the format of each page pdftoppm wrote */
+	private array $formats = [];
+
 
 //  getters / setters / is* / has*
 
@@ -71,7 +76,7 @@ class LargeFileProviderTest
 
 	protected function tearDown(): void
 	{
-		@unlink( $this->folder . '/preview.png' );
+		array_map( unlink( ... ), glob( $this->folder . '/*' ) ?: [] );
 		@rmdir( $this->folder );
 
 		parent::tearDown();
@@ -171,6 +176,28 @@ class LargeFileProviderTest
 
 		self::assertSame( $image, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 2048 ) );
 		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	/**
+	 * As Nextcloud's preview_format, JPEG unless it says webp; a WebP of a
+	 * PDF without libvips is a JPEG; PNG where the app is told so.
+	 */
+	public function testThePreviewFormat(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) );
+		$this->images->method( 'load' )
+		             ->willReturn( $this->createMock( IImage::class ) )
+		;
+
+		$this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 );
+
+		$this->systemValues = [ 'preview_format' => 'webp' ];
+		$this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 );
+
+		$this->appValues = [ ConfigLexicon::PREVIEW_FORMAT => 'png' ];
+		$this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 100, 100 );
+
+		self::assertSame( [ 'jpeg', 'jpeg', 'png' ], $this->formats );
 	}
 
 	public function testAFailedRenderIsNullAndAWarning(): void
@@ -273,9 +300,11 @@ class LargeFileProviderTest
 					             self::assertSame( (string) $box, $arguments[5] );
 				             }
 
+				             // pdftoppm writes <stem>.jpg or <stem>.png.
 				             if ( $outcome->isSuccess() )
 				             {
-					             file_put_contents( $arguments[9] . '.png', 'png' );
+					             $this->formats[] = in_array( '-jpeg', $arguments, true ) ? 'jpeg' : 'png';
+					             file_put_contents( end( $arguments ) . ( in_array( '-jpeg', $arguments, true ) ? '.jpg' : '.png' ), 'image' );
 				             }
 
 				             return $outcome;
@@ -311,12 +340,20 @@ class LargeFileProviderTest
 		        ->willReturn( [ 'tiffload' => false, 'jp2kload' => true ] )
 		;
 
+		// No program is found: whether `vips` is there is all that is asked.
+		$binaries = $this->createMock( BinaryLocator::class );
+		$binaries->method( 'locate' )
+		         ->willReturnCallback( static fn( string $program ): BinaryLocation => new BinaryLocation( $program, null, BinaryLocation::SOURCE_FINDER ) )
+		;
+
+		$vips = new VipsRenderer( $this->runner, $config, $loaders, $binaries );
+
 		return new LargeFileProvider(
 			new TypePolicy( $config ),
 			// A probe that finds no scan: the box is what was asked for.
 			new Renderers(
-				new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ) ),
-				new VipsRenderer( $this->runner, $config, $loaders ),
+				new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ), $vips ),
+				$vips,
 			),
 			$this->images,
 			$tempManager,

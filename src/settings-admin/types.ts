@@ -6,10 +6,12 @@
  */
 
 export interface Scalar {
-	value: number | boolean
-	default: number | boolean
+	value: number | boolean | string
+	default: number | boolean | string
 	min: number | null
 	max: number | null
+	/** The words a word may be; null for a number or a switch. */
+	choices: string[] | null
 	stored: boolean
 }
 

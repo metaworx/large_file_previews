@@ -10,7 +10,11 @@ const POPPLER: Renderer = { program: 'pdftoppm', available: true, unsupported: n
 const VIPS: Renderer = { program: 'vipsthumbnail', available: false, unsupported: null }
 
 function scalar(value: number | boolean, min: number | null = null, max: number | null = null): Scalar {
-	return { value, default: value, min, max, stored: false }
+	return { value, default: value, min, max, choices: null, stored: false }
+}
+
+function word(value: string, choices: string[]): Scalar {
+	return { value, default: value, min: null, max: null, choices, stored: false }
 }
 
 function pdf(): MimeRow {
@@ -59,6 +63,8 @@ export function testState(): SettingsState {
 			scan_coverage_percent: scalar(90, 50, 100),
 			vips_block_untrusted: scalar(true),
 			vips_concurrency: scalar(1, 1, 64),
+			preview_format: word('nextcloud', ['nextcloud', 'png', 'jpeg', 'webp']),
+			preview_background: word('white', ['white', 'black']),
 		},
 		active: [activePdf()],
 		mimetypes: [pdf(), tiff()],

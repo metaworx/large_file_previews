@@ -13,6 +13,9 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
+use OCA\LargeFilePreviews\Renderer\PreviewFormat;
+use OCA\LargeFilePreviews\Service\BinaryLocation;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
@@ -51,7 +54,7 @@ class VipsRendererTest
 
 	protected function tearDown(): void
 	{
-		@unlink( $this->output );
+		array_map( unlink( ... ), glob( dirname( $this->output ) . '/*' ) ?: [] );
 		@rmdir( dirname( $this->output ) );
 
 		parent::tearDown();
@@ -107,6 +110,47 @@ class VipsRendererTest
 			],
 			$this->runs,
 		);
+	}
+
+	/**
+	 * A JPEG at 95 on the background, white unless told black; a WebP at
+	 * 95; a PNG as it is. libvips writes each.
+	 */
+	public function testTheSaveOptions(): void
+	{
+		$stem = substr( $this->output, 0, -4 );
+
+		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.jpg' );
+		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.webp' );
+
+		$this->appValues = [ ConfigLexicon::PREVIEW_BACKGROUND => 'black' ];
+
+		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.jpg' );
+
+		self::assertSame( $stem . '.jpg[Q=95,background=255]', $this->runs[1]['arguments'][5] );
+		self::assertSame( $stem . '.webp[Q=95]', $this->runs[3]['arguments'][5] );
+		self::assertSame( $stem . '.jpg[Q=95,background=0]', $this->runs[5]['arguments'][5] );
+		self::assertSame( PreviewFormat::WEBP, $this->renderer( $this->runner( '' ) )->format( PreviewFormat::WEBP ) );
+	}
+
+	/**
+	 * A page from poppler, through `vips copy`, under libvips' cap and
+	 * environment; only where vips is there.
+	 */
+	public function testAPngConverted(): void
+	{
+		$this->appValues = [ ConfigLexicon::VIPS_PRLIMIT_AS_MB => 2048 ];
+		$webp            = substr( $this->output, 0, -4 ) . '.webp';
+		$renderer        = $this->renderer( $this->runner( '' ) );
+
+		self::assertTrue( $renderer->canConvert() );
+		self::assertTrue( $renderer->convert( $this->output, $webp )->isSuccess() );
+		self::assertSame( 'vips', $this->runs[0]['program'] );
+		self::assertSame( [ 'copy', $this->output, $webp . '[Q=95]' ], $this->runs[0]['arguments'] );
+		self::assertSame( 2048, $this->runs[0]['cap'] );
+		self::assertSame( dirname( $webp ), $this->runs[0]['environment']['TMPDIR'] );
+		self::assertSame( Outcome::START_FAILED, $renderer->convert( 'page.png', $webp )->outcome );
+		self::assertFalse( $this->renderer( $this->runner( '' ), vips: null )->canConvert() );
 	}
 
 	/**
@@ -256,7 +300,7 @@ class VipsRendererTest
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-o', 100, $this->output )->outcome );
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 0, $this->output )->outcome );
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, 'out.png' )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, '/tmp/out.jpg' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, '/tmp/out.gif' )->outcome );
 	}
 
 	public function testTheLongerSideFromTheHeader(): void
@@ -275,6 +319,7 @@ class VipsRendererTest
 	private function renderer(
 		CommandRunner $runner,
 		?array        $loaders = null,
+		?string       $vips = '/usr/bin/vips',
 	): VipsRenderer
 	{
 		$listed = $this->createMock( VipsLoaders::class );
@@ -282,10 +327,20 @@ class VipsRendererTest
 		       ->willReturn( $loaders )
 		;
 
+		$binaries = $this->createMock( BinaryLocator::class );
+		$binaries->method( 'locate' )
+		         ->willReturnCallback(
+			         static fn(
+				         string $program,
+			         ): BinaryLocation => new BinaryLocation( $program, $program === 'vips' ? $vips : null, BinaryLocation::SOURCE_FINDER ),
+		         )
+		;
+
 		return new VipsRenderer(
 			$runner,
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			$listed,
+			$binaries,
 		);
 	}
 
@@ -330,8 +385,10 @@ class VipsRendererTest
 					       return new RenderOutcome( $headerOutcome, 'header', 0, null, $header );
 				       }
 
-				       @mkdir( dirname( $this->output ) );
-				       touch( $this->output );
+				       // The output is the last argument, its save options cut.
+				       $target = (string) preg_replace( '/\[[^]]*]$/', '', (string) end( $arguments ) );
+				       @mkdir( dirname( $target ) );
+				       touch( $target );
 
 				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
 			       },

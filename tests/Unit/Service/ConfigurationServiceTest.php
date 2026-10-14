@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\TypeRule;
+use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
@@ -45,6 +46,53 @@ class ConfigurationServiceTest
 		self::assertEquals( new TypeRule( false, 50 ), $service->mimeRules()['image/tiff'] );
 		self::assertSame( [], $service->extensionRules() );
 		self::assertSame( [], $service->problems() );
+	}
+
+	/**
+	 * A word is one of its words, in any case; anything else is refused,
+	 * and one stored past the service reads as its default.
+	 */
+	public function testAWordIsOneOfItsWords(): void
+	{
+		$service = $this->service();
+
+		self::assertSame( 'nextcloud', $service->getScalar( ConfigLexicon::PREVIEW_FORMAT ) );
+
+		$service->setScalar( ConfigLexicon::PREVIEW_FORMAT, ' WebP ' );
+
+		self::assertSame( 'webp', $this->appValues[ ConfigLexicon::PREVIEW_FORMAT ] );
+		self::assertSame( 'webp', $service->getScalar( ConfigLexicon::PREVIEW_FORMAT ) );
+
+		try
+		{
+			$service->setScalar( ConfigLexicon::PREVIEW_BACKGROUND, 'grey' );
+			self::fail( 'grey is not a background' );
+		}
+		catch ( ConfigurationException $e )
+		{
+			self::assertSame( 'preview_background must be one of white, black.', $e->getMessage() );
+		}
+
+		$this->appValues[ ConfigLexicon::PREVIEW_BACKGROUND ] = 'grey';
+
+		self::assertSame( 'white', $service->getScalar( ConfigLexicon::PREVIEW_BACKGROUND ) );
+	}
+
+	/**
+	 * As Nextcloud's: WebP where its preview_format says so, else JPEG, as
+	 * Imaginary reads it; or the format set.
+	 */
+	public function testThePreviewFormat(): void
+	{
+		self::assertSame( PreviewFormat::JPEG, $this->service()->previewFormat() );
+
+		$this->systemValues = [ 'preview_format' => 'webp' ];
+
+		self::assertSame( PreviewFormat::WEBP, $this->service()->previewFormat() );
+
+		$this->appValues = [ ConfigLexicon::PREVIEW_FORMAT => 'png' ];
+
+		self::assertSame( PreviewFormat::PNG, $this->service()->previewFormat() );
 	}
 
 	/**

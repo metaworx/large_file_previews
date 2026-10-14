@@ -234,14 +234,16 @@ class SettingsControllerTest
 		        ->willReturn( [ 'tiffload' => false, 'jp2kload' => true ] )
 		;
 
+		$vips = new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders, $binaries );
+
 		return new class (
 			$body,
 			$this->createMock( IRequest::class ),
 			$config,
 			new TypePolicy( $config ),
 			new Renderers(
-				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ),
-				new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders ),
+				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ), $vips ),
+				$vips,
 			),
 			$prerequisites,
 			$binaries,

@@ -160,7 +160,9 @@ class LargeFileProvider
 				return $this->failed( $file, new RenderOutcome( Outcome::START_FAILED, 'no temporary folder' ) );
 			}
 
-			$output  = rtrim( $folder, '/' ) . '/preview.png';
+			// Nextcloud stores the preview in the type it is given.
+			$format  = $renderer->format( $this->config->previewFormat() );
+			$output  = rtrim( $folder, '/' ) . '/preview.' . $format->extension();
 			$outcome = $renderer->render( $localPath, max( $maxX, $maxY ), $output );
 
 			if ( ! $outcome->isSuccess() )

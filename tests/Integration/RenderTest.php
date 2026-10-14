@@ -13,6 +13,8 @@ use OCA\LargeFilePreviews\AppInfo\Application;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Preview\LargeFileProvider;
+use OCA\LargeFilePreviews\Renderer\VipsRenderer;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\SetupCheck\RendererCheck;
 use OCP\IPreview;
@@ -29,6 +31,12 @@ class RenderTest
     extends
     ServerTestCase
 {
+
+//  constants
+
+	/** A PNG of 2 x 2 pixels. */
+	private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAC0lEQVQImWNgQAYAAA4AAbGa6gYAAAAASUVORK5CYII=';
+
 
 //  getters / setters / is* / has*
 
@@ -117,11 +125,48 @@ class RenderTest
 		self::assertFalse( Server::get( LargeFileProvider::class )->isAvailable( $this->file( 'small.pdf', PdfFixture::bytes() ) ) );
 	}
 
-	public function testAnImageTypeIsDeclinedUntilARendererShips(): void
+	/**
+	 * Switched on, an image goes to libvips; where libvips is not there, the
+	 * render fails and is recorded, and Nextcloud's next provider is tried.
+	 */
+	public function testAnImageWithoutLibvipsIsAFailureOnRecord(): void
 	{
-		$this->settings()->setMimeRule( 'image/png', new TypeRule( true ) );
+		if ( Server::get( BinaryLocator::class )->locate( VipsRenderer::PROGRAM )->isFound() )
+		{
+			self::markTestSkipped( 'libvips is installed here; ImageRenderTest renders images.' );
+		}
 
-		self::assertFalse( Server::get( LargeFileProvider::class )->isAvailable( $this->file( 'a.png', 'not really a png' ) ) );
+		// From 0 MB: an image type starts at 50 by default.
+		$this->settings()->setMimeRule( 'image/png', new TypeRule( true, 0 ) );
+		$file     = $this->file( 'a.png', (string) base64_decode( self::PNG ) );
+		$provider = Server::get( LargeFileProvider::class );
+
+		self::assertTrue( $provider->isAvailable( $file ) );
+		self::assertNull( $provider->getThumbnail( $file, 256, 256 ) );
+		self::assertSame( 'program_missing', $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE )['outcome'] ?? null );
+	}
+
+	/**
+	 * Nextcloud stores the preview in the type it is given: JPEG as its
+	 * preview_format reads by default, PNG where the app is told so, and
+	 * JPEG for a WebP of a PDF where libvips is not there.
+	 */
+	public function testThePreviewIsStoredInTheFormatAsked(): void
+	{
+		$preview = Server::get( IPreview::class );
+
+		self::assertSame( 'image/jpeg', $preview->getPreview( $this->file( 'jpeg.pdf', PdfFixture::bytes() ), 256, 256 )->getMimeType() );
+
+		$this->settings()->setScalar( ConfigLexicon::PREVIEW_FORMAT, 'png' );
+
+		self::assertSame( 'image/png', $preview->getPreview( $this->file( 'png.pdf', PdfFixture::bytes() ), 256, 256 )->getMimeType() );
+
+		$this->settings()->setScalar( ConfigLexicon::PREVIEW_FORMAT, 'webp' );
+
+		self::assertSame(
+			Server::get( BinaryLocator::class )->locate( VipsRenderer::CONVERTER )->isFound() ? 'image/webp' : 'image/jpeg',
+			$preview->getPreview( $this->file( 'webp.pdf', PdfFixture::bytes() ), 256, 256 )->getMimeType(),
+		);
 	}
 
 	public function testABrokenFileIsNullAndRecorded(): void

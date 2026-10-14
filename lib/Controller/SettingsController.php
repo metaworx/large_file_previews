@@ -236,6 +236,7 @@ class SettingsController
 				'default' => $spec['default'],
 				'min'     => $spec['min'] ?? null,
 				'max'     => $spec['max'] ?? null,
+				'choices' => $spec['choices'] ?? null,
 				'stored'  => $this->config->isStored( $key ),
 			];
 		}

@@ -28,6 +28,9 @@ the first stable release.
   size, images from `preview_max_filesize_image`; scans; each render's
   limits; libvips' untrusted decoders, blocked by default, and threads.
 
+- `README.md`, *Configuration*: previews stored as PNG, JPEG or WebP,
+  by default as Nextcloud's `preview_format` says; `preview_background`.
+
 - *Administration settings → Additional settings*: the status, what is
   active, which files are processed, and the limits, validated as `occ`
   validates them.
