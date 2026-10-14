@@ -38,6 +38,12 @@ final class SupportedTypes
 		];
 
 	/**
+	 * The program the image types are planned for, named where one of them
+	 * has no renderer yet.
+	 */
+	public const PLANNED_IMAGE_RENDERER = 'libvips';
+
+	/**
 	 * Not rendered yet: known so that they can be configured, and switched
 	 * off until an image renderer ships.
 	 */

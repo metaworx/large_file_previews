@@ -9,7 +9,6 @@
  */
 import { computed } from 'vue'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
-import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import { t } from '../l10n'
 import type { SettingsState } from './types'
 
@@ -36,8 +35,8 @@ function statusText(status: string): string {
 </script>
 
 <template>
-	<NcSettingsSection :name="t('large_file_previews', 'Large File Previews')"
-		:description="t('large_file_previews', 'Previews of PDF and Illustrator files too large for Nextcloud\'s own providers, rendered by pdftoppm from the file\'s local path. Anything this app declines goes to the next provider.')">
+	<div class="lfp-status">
+		<h3>{{ t('large_file_previews', 'Status') }}</h3>
 		<NcNoteCard v-if="state.ready" type="success">
 			{{ t('large_file_previews', 'Everything the app needs is available.') }}
 		</NcNoteCard>
@@ -74,7 +73,7 @@ function statusText(status: string): string {
 		<p class="lfp-hint">
 			{{ t('large_file_previews', 'A program\'s path is found by Nextcloud, or set in config.php only, never here: occ config:system:set {key} pdftoppm --value=/path/to/pdftoppm', { key: state.overrideKey }) }}
 		</p>
-	</NcSettingsSection>
+	</div>
 </template>
 
 <style scoped>

@@ -24,14 +24,17 @@ afterEach(() => {
 })
 
 describe('App', () => {
-	it('shows the three sections once the settings are loaded', async () => {
+	it('is one section under the app\'s name, with its parts as h3', async () => {
 		fetchMock.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(testState()) })
 		const wrapper = mount(App)
 
 		expect(wrapper.findComponent({ name: 'NcLoadingIcon' }).exists()).toBe(true)
 		await flushPromises()
 
-		expect(wrapper.findAllComponents({ name: 'NcSettingsSection' })).toHaveLength(3)
+		const sections = wrapper.findAllComponents({ name: 'NcSettingsSection' })
+		expect(sections).toHaveLength(1)
+		expect(sections[0].props('name')).toBe('Large File Previews')
+		expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Status', 'Which files', 'Limits'])
 	})
 
 	it('says so when they cannot be loaded', async () => {
@@ -40,6 +43,6 @@ describe('App', () => {
 		await flushPromises()
 
 		expect(wrapper.text()).toContain('The settings could not be loaded.')
-		expect(wrapper.findAllComponents({ name: 'NcSettingsSection' })).toHaveLength(0)
+		expect(wrapper.findAll('h3')).toHaveLength(0)
 	})
 })

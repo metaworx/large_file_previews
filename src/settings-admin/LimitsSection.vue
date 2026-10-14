@@ -8,7 +8,6 @@
  * let it run without; the status above says which.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
-import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import NumberField from './NumberField.vue'
 import { t } from '../l10n'
 import type { Changes, SettingsState } from './types'
@@ -63,8 +62,11 @@ function scalar(key: string) {
 </script>
 
 <template>
-	<NcSettingsSection :name="t('large_file_previews', 'Limits')"
-		:description="t('large_file_previews', 'What each render runs under. The defaults suit most servers.')">
+	<div class="lfp-limits">
+		<h3>{{ t('large_file_previews', 'Limits') }}</h3>
+		<p class="lfp-hint">
+			{{ t('large_file_previews', 'What each render runs under. The defaults suit most servers.') }}
+		</p>
 		<div v-for="limit in LIMITS"
 			:key="limit.switch"
 			class="lfp-limit"
@@ -90,5 +92,5 @@ function scalar(key: string) {
 					@save="emit('save', { scalars: { [value.key]: $event } })" />
 			</div>
 		</div>
-	</NcSettingsSection>
+	</div>
 </template>

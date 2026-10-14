@@ -5,7 +5,8 @@
  *
  * A number with its own Save button, enabled once the number differs from
  * what is saved. Where `clearable`, an empty field saves as null: the value
- * is cleared and the level below applies, which the placeholder shows.
+ * is not set at this level. The field shows only what is set here, never a
+ * value from another level.
  */
 import { computed, ref, watch } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -16,16 +17,16 @@ const props = withDefaults(defineProps<{
 	id: string
 	label: string
 	value: number | null
-	placeholder?: string
 	min?: number | null
 	max?: number | null
 	clearable?: boolean
+	narrow?: boolean
 	disabled?: boolean
 }>(), {
-	placeholder: '',
 	min: null,
 	max: null,
 	clearable: false,
+	narrow: false,
 	disabled: false,
 })
 
@@ -58,18 +59,19 @@ function save(): void {
 </script>
 
 <template>
-	<div class="lfp-number">
+	<div class="lfp-number" :class="{ 'lfp-number--narrow': narrow }">
 		<NcTextField :id="id"
 			v-model="draft"
+			class="lfp-number__field"
 			type="number"
 			:label="label"
-			:placeholder="placeholder"
 			:min="min ?? undefined"
 			:max="max ?? undefined"
 			:disabled="disabled"
 			:error="parsed === undefined"
 			@keyup.enter="save" />
-		<NcButton :variant="dirty ? 'primary' : 'secondary'"
+		<NcButton class="lfp-number__save"
+			:variant="dirty ? 'primary' : 'secondary'"
 			:disabled="disabled || !dirty"
 			:aria-label="t('large_file_previews', 'Save {label}', { label })"
 			@click="save">
@@ -80,9 +82,22 @@ function save(): void {
 
 <style scoped>
 .lfp-number {
-	display: flex;
+	display: inline-flex;
 	align-items: flex-end;
 	gap: calc(var(--default-grid-baseline) * 2);
-	max-width: 360px;
+}
+
+.lfp-number__field {
+	flex: 0 0 auto;
+	width: 12rem;
+}
+
+.lfp-number--narrow .lfp-number__field {
+	width: 8rem;
+}
+
+.lfp-number__save {
+	flex: 0 0 auto;
+	min-width: max-content;
 }
 </style>

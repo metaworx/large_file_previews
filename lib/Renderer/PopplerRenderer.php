@@ -51,6 +51,12 @@ class PopplerRenderer
 //  other non-static methods
 
 	#[\Override]
+	public function program(): string
+	{
+		return self::PROGRAM;
+	}
+
+	#[\Override]
 	public function supports( string $mime ): bool
 	{
 		return in_array( $mime, SupportedTypes::DOCUMENT_TYPES, true );

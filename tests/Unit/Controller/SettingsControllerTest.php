@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Controller\SettingsController;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
@@ -26,8 +27,11 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\Files\IMimeTypeDetector;
+use OCP\IBinaryFinder;
+use OCP\IConfig;
 use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionMethod;
 
@@ -73,13 +77,63 @@ class SettingsControllerTest
 	{
 		$data = $this->controller( '' )->get()->getData();
 
-		self::assertSame( [ 'scalars', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey' ], array_keys( $data ) );
+		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey' ], array_keys( $data ) );
 		self::assertSame( 30, $data['scalars']['timeout_seconds']['value'] );
 		self::assertSame( 600, $data['scalars']['timeout_seconds']['max'] );
 		self::assertCount( 16, $data['mimetypes'] );
-		self::assertSame( [ 'application/pdf', true ], [ $data['mimetypes'][0]['mime'], $data['mimetypes'][0]['renderer'] ] );
-		self::assertFalse( $data['mimetypes'][2]['renderer'] );
+		self::assertSame( 'application/pdf', $data['mimetypes'][0]['mime'] );
+		self::assertSame( [ 'program' => 'pdftoppm', 'available' => true ], $data['mimetypes'][0]['renderer'] );
+		self::assertSame( [ 'program' => 'libvips', 'available' => false ], $data['mimetypes'][2]['renderer'] );
 		self::assertSame( 'large_file_previews.binaries', $data['overrideKey'] );
+	}
+
+	/**
+	 * What is active out of the box: PDF and Illustrator, with where each
+	 * size comes from.
+	 */
+	public function testActiveListsTheEnabledTypes(): void
+	{
+		$active = $this->controller( '' )->get()->getData()['active'];
+
+		self::assertSame( [ 'application/pdf', 'application/illustrator' ], array_column( $active, 'mime' ) );
+		self::assertSame(
+			[
+				'mime'        => 'application/pdf',
+				'extension'   => null,
+				'processing'  => 'enabled',
+				'renderer'    => [ 'program' => 'pdftoppm', 'available' => true ],
+				'min_size_mb' => [ 'value' => 0, 'source' => 'default' ],
+				'max_size_mb' => [ 'value' => -1, 'source' => 'default' ],
+			],
+			$active[0],
+		);
+	}
+
+	/**
+	 * An extension enabled selects its files where its MIME type is off;
+	 * excluded, never; enabled with no size where its MIME type is on, it
+	 * changes nothing, and says so.
+	 */
+	public function testExtensionsInTheActiveListAndTheirEffect(): void
+	{
+		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [
+			'tif' => [ 'enabled' => true, 'min_size_mb' => 200 ],
+			'pdf' => [ 'enabled' => true ],
+			'ai'  => [ 'enabled' => false ],
+		];
+
+		$data       = $this->controller( '', [ 'tif' => 'image/tiff', 'pdf' => 'application/pdf', 'ai' => 'application/illustrator' ] )->get()->getData();
+		$extensions = array_column( $data['extensions'], null, 'extension' );
+		$active     = array_column( array_filter( $data['active'], static fn( array $row ): bool => $row['extension'] !== null ), null, 'extension' );
+
+		self::assertFalse( $extensions['tif']['noEffect'] );
+		self::assertTrue( $extensions['pdf']['noEffect'] );
+		self::assertFalse( $extensions['ai']['noEffect'] );
+
+		self::assertSame( 'enabled', $active['tif']['processing'] );
+		self::assertSame( [ 'value' => 200, 'source' => 'ext' ], $active['tif']['min_size_mb'] );
+		self::assertFalse( $active['tif']['renderer']['available'] );
+		self::assertSame( 'excluded', $active['ai']['processing'] );
 	}
 
 	public function testUpdateAppliesEachPart(): void
@@ -130,18 +184,43 @@ class SettingsControllerTest
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":{"colour":1}}}' )->update()->getStatus() );
 	}
 
-	private function controller( string $body ): SettingsController
+	/**
+	 * @param array<string, string> $mimeByExtension what Nextcloud would say each extension is
+	 */
+	private function controller(
+		string $body,
+		array  $mimeByExtension = [],
+	): SettingsController
 	{
 		$config   = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n() );
 		$detector = $this->createMock( IMimeTypeDetector::class );
 		$detector->method( 'detectPath' )
-		         ->willReturn( 'image/tiff' )
+		         ->willReturnCallback(
+			         static fn(
+				         string $path,
+			         ): string => $mimeByExtension[ substr( $path, 5 ) ] ?? 'image/tiff',
+		         )
 		;
 
 		$prerequisites = $this->createMock( PrerequisitesService::class );
 		$prerequisites->method( 'check' )
 		              ->willReturn( [] )
 		;
+
+		// pdftoppm is there; nothing else is asked for.
+		$systemConfig = $this->createMock( IConfig::class );
+		$systemConfig->method( 'getSystemValue' )
+		             ->willReturn( [] )
+		;
+		$finder = $this->createMock( IBinaryFinder::class );
+		$finder->method( 'findBinaryPath' )
+		       ->willReturnCallback(
+			       static fn(
+				       string $program,
+			       ): string|false => $program === 'pdftoppm' ? '/usr/bin/pdftoppm' : false,
+		       )
+		;
+		$binaries = new BinaryLocator( $systemConfig, $finder, $this->createMock( LoggerInterface::class ) );
 
 		return new class (
 			$body,
@@ -150,6 +229,7 @@ class SettingsControllerTest
 			new TypePolicy( $config ),
 			new Renderers( new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ) ),
 			$prerequisites,
+			$binaries,
 			$detector,
 			$this->markingL10n(),
 		)

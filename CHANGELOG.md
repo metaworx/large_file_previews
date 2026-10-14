@@ -27,8 +27,9 @@ the first stable release.
   extension, by size; how a scan is told; and the timeout, memory cap
   and OOM score of each render.
 
-- *Administration settings → Additional settings*: the status, which
-  files are taken, and the limits, validated as `occ` validates them.
+- *Administration settings → Additional settings*: the status, what is
+  active, which files are processed, and the limits, validated as `occ`
+  validates them.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes.

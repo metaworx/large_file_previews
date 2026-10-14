@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TypesSection from './TypesSection.vue'
 import { testState } from './testState'
-import type { SettingsState } from './types'
+import type { ExtensionRow, SettingsState } from './types'
 
 function section(state: SettingsState = testState()) {
 	return mount(TypesSection, { props: { state, saving: false } })
@@ -12,7 +12,51 @@ function row(wrapper: ReturnType<typeof section>, selector: string) {
 	return wrapper.find(selector)
 }
 
+function tif(extra: Partial<ExtensionRow> = {}): ExtensionRow {
+	return {
+		extension: 'tif',
+		mime: 'image/tiff',
+		rule: { enabled: true, min_size_mb: 200 },
+		renderer: { program: 'pdftoppm', available: true },
+		noEffect: false,
+		...extra,
+	}
+}
+
 describe('TypesSection', () => {
+	it('has its title as an h3 and its parts as h4', () => {
+		const wrapper = section()
+
+		expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Which files'])
+		expect(wrapper.findAll('h4').map((heading) => heading.text()))
+			.toEqual(['Active rendering', 'Defaults', 'PDF scanned pages', 'MIME types', 'Extensions'])
+	})
+
+	it('shows what is active, with each size\'s source, at the top', () => {
+		const active = section().find('.lfp-active')
+
+		expect(active.text()).toContain('application/pdf')
+		expect(active.text()).toContain('pdftoppm')
+		expect(active.text()).toContain('no limit (default)')
+	})
+
+	it('names a missing renderer\'s program, with a badge saying it is not available', () => {
+		const state = testState()
+		state.active.push({
+			mime: 'image/tiff',
+			extension: 'tif',
+			processing: 'enabled',
+			renderer: { program: 'libvips', available: false },
+			min_size_mb: { value: 200, source: 'ext' },
+			max_size_mb: { value: -1, source: 'default' },
+		})
+		const rows = section(state).findAll('.lfp-active tbody tr')
+
+		expect(rows[0].find('.lfp-badge').exists()).toBe(false)
+		expect(rows[1].text()).toContain('libvips')
+		expect(rows[1].find('.lfp-badge').text()).toBe('not available')
+	})
+
 	it('switches the scan sizing off, and sets its coverage', async () => {
 		const wrapper = section()
 		const scan = row(wrapper, '[data-setting="scan"]')
@@ -24,58 +68,82 @@ describe('TypesSection', () => {
 			[{ scalars: { scan_native_enabled: false } }],
 			[{ scalars: { scan_coverage_percent: 95 } }],
 		])
-		expect(scan.findComponent({ name: 'NumberField' }).props('max')).toBe(100)
 	})
 
-	it('leaves the coverage alone while the scan sizing is off', () => {
-		const state = testState()
-		state.scalars.scan_native_enabled.value = false
-
-		expect(row(section(state), '[data-setting="scan"]').findComponent({ name: 'NumberField' }).props('disabled')).toBe(true)
-	})
-
-	it('switches a MIME type on, that field alone', async () => {
+	it('enables a MIME type, that field alone, and says so', async () => {
 		const wrapper = section()
+		const pdf = row(wrapper, '[data-mime="application/pdf"]')
 
-		await row(wrapper, '[data-mime="image/tiff"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', true)
+		expect(pdf.text()).toContain('enabled')
 
-		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'image/tiff': { enabled: true } } }]])
+		await pdf.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', false)
+
+		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'application/pdf': { enabled: false } } }]])
 	})
 
-	it('shows a size not set at this level as empty, with what applies instead', () => {
-		const field = row(section(), '[data-mime="application/pdf"]').findAllComponents({ name: 'NumberField' })[0]
+	it('shows only what is set at the level, nothing inherited', () => {
+		const fields = row(section(), '[data-mime="application/pdf"]').findAllComponents({ name: 'NumberField' })
 
-		expect(field.props('value')).toBeNull()
-		expect(field.props('placeholder')).toBe('0 (from the default)')
+		expect(fields).toHaveLength(2)
+		for (const field of fields) {
+			expect(field.props('value')).toBeNull()
+		}
 	})
 
-	it('clears a size with null', async () => {
-		const wrapper = section()
+	it('shows a type without a usable renderer, and does not let it change', () => {
+		const tiff = row(section(), '[data-mime="image/tiff"]')
 
-		await row(wrapper, '[data-mime="image/tiff"]').findAllComponents({ name: 'NumberField' })[0].vm.$emit('save', null)
-
-		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'image/tiff': { min_size_mb: null } } }]])
+		expect(tiff.text()).toContain('No suitable renderer (libvips)')
+		expect(tiff.findComponent({ name: 'NcCheckboxRadioSwitch' }).props('disabled')).toBe(true)
+		for (const field of tiff.findAllComponents({ name: 'NumberField' })) {
+			expect(field.props('disabled')).toBe(true)
+		}
 	})
 
 	it('offers a reset only where a type differs from what it ships with', async () => {
 		const state = testState()
-		state.mimetypes[1].rule = { enabled: true, min_size_mb: 50 }
+		state.mimetypes[0].rule = { enabled: true, max_size_mb: 900 }
 		const wrapper = section(state)
 
-		expect(row(wrapper, '[data-mime="application/pdf"] .lfp-reset').exists()).toBe(false)
+		expect(row(wrapper, '[data-mime="image/tiff"] .lfp-reset').exists()).toBe(false)
 
-		await row(wrapper, '[data-mime="image/tiff"] button.lfp-reset').trigger('click')
-		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'image/tiff': null } }]])
+		await row(wrapper, '[data-mime="application/pdf"] button.lfp-reset').trigger('click')
+		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'application/pdf': null } }]])
 	})
 
-	it('says which types are not rendered yet', () => {
-		const wrapper = section()
+	it('says an extension is enabled or excluded, or follows its MIME type', () => {
+		const state = testState()
+		state.extensions = [
+			tif(),
+			tif({ extension: 'tiff', rule: { enabled: false } }),
+			tif({ extension: 'tf', rule: { max_size_mb: 10 } }),
+		]
+		const wrapper = section(state)
 
-		expect(row(wrapper, '[data-mime="image/tiff"]').text()).toContain('not rendered yet')
-		expect(row(wrapper, '[data-mime="application/pdf"]').text()).not.toContain('not rendered yet')
+		expect(row(wrapper, '[data-extension="tif"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).text()).toBe('enabled')
+		expect(row(wrapper, '[data-extension="tiff"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).text()).toBe('excluded')
+		expect(row(wrapper, '[data-extension="tf"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).text()).toBe('as MIME type')
 	})
 
-	it('adds an extension, lower-cased and without its dot, switched on', async () => {
+	it('excludes an extension', async () => {
+		const state = testState()
+		state.extensions = [tif()]
+		const wrapper = section(state)
+
+		await row(wrapper, '[data-extension="tif"]').findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', false)
+
+		expect(wrapper.emitted('save')).toEqual([[{ extensions: { tif: { enabled: false } } }]])
+	})
+
+	it('marks an extension that changes nothing', () => {
+		const state = testState()
+		state.extensions = [tif({ extension: 'pdf', mime: 'application/pdf', rule: { enabled: true }, noEffect: true })]
+
+		expect(row(section(state), '[data-extension="pdf"] .lfp-no-effect').text())
+			.toBe('No effect: its MIME type already selects it')
+	})
+
+	it('adds an extension, lower-cased and without its dot, enabled', async () => {
 		const wrapper = section()
 
 		await wrapper.find('#lfp-new-extension').setValue('.TIF')
@@ -86,11 +154,7 @@ describe('TypesSection', () => {
 
 	it('removes an extension with null', async () => {
 		const state = testState()
-		state.extensions = [{
-			extension: 'tif',
-			rule: { min_size_mb: 200 },
-			resolved: { ...state.mimetypes[1].resolved, extension: 'tif', min_size_mb: { value: 200, source: 'ext' } },
-		}]
+		state.extensions = [tif()]
 		const wrapper = section(state)
 		const extension = row(wrapper, '[data-extension="tif"]')
 

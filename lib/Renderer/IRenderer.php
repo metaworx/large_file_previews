@@ -26,6 +26,11 @@ interface IRenderer
 	public function supports( string $mime ): bool;
 
 	/**
+	 * The program it runs, by the name BinaryLocator finds it under.
+	 */
+	public function program(): string;
+
+	/**
 	 * Renders the file's first page or frame into `$outputPng`, its longer
 	 * side `$box` pixels or less.
 	 *

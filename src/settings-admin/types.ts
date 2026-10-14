@@ -25,16 +25,23 @@ export type RuleChange = {
 	[K in keyof Rule]?: Rule[K] | null
 }
 
+/** The program that renders a type, and whether the server has it. */
+export interface Renderer {
+	program: string
+	available: boolean
+}
+
 export interface Sourced<T> {
 	value: T
 	source: 'default' | 'mime' | 'ext'
 }
 
-export interface Resolved {
+/** One row of what the configuration resolves to. */
+export interface ActiveRow {
 	mime: string | null
 	extension: string | null
-	reachable: boolean
-	enabled: Sourced<boolean>
+	processing: 'enabled' | 'disabled' | 'excluded'
+	renderer: Renderer
 	min_size_mb: Sourced<number>
 	max_size_mb: Sourced<number>
 }
@@ -43,14 +50,16 @@ export interface MimeRow {
 	mime: string
 	rule: Rule
 	default: Rule
-	renderer: boolean
-	resolved: Resolved
+	renderer: Renderer
 }
 
 export interface ExtensionRow {
 	extension: string
+	mime: string | null
 	rule: Rule
-	resolved: Resolved
+	renderer: Renderer
+	/** Selected anyway by its MIME type, with no size of its own. */
+	noEffect: boolean
 }
 
 export interface PrerequisiteItem {
@@ -71,6 +80,7 @@ export interface Failure {
 
 export interface SettingsState {
 	scalars: Record<string, Scalar>
+	active: ActiveRow[]
 	mimetypes: MimeRow[]
 	extensions: ExtensionRow[]
 	prerequisites: PrerequisiteItem[]

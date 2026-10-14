@@ -7,6 +7,7 @@
  */
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import '@nextcloud/dialogs/style.css'
+import './toast.css'
 
 /** Long enough to read, short enough not to need dismissing. */
 const SUCCESS_TIMEOUT = 5000

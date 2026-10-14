@@ -34,3 +34,51 @@
 .lfp-settings .lfp-limit {
 	margin-block-end: calc(var(--default-grid-baseline) * 4);
 }
+
+.lfp-settings h3 {
+	margin-block-start: calc(var(--default-grid-baseline) * 6);
+}
+
+.lfp-settings h4 {
+	margin-block-start: calc(var(--default-grid-baseline) * 4);
+	font-weight: bold;
+}
+
+/* A type with no usable renderer: shown, and not to be changed. */
+.lfp-settings .lfp-unavailable td {
+	color: var(--color-text-maxcontrast);
+}
+
+/* A note about a row, on a line of its own below what it is about. */
+.lfp-settings .lfp-note {
+	display: block;
+	font-size: var(--font-size-small, 13px);
+}
+
+.lfp-settings .lfp-table td .lfp-hint {
+	margin-inline-start: var(--default-grid-baseline);
+}
+
+.lfp-settings .lfp-note--warning {
+	color: var(--color-warning-text);
+}
+
+.lfp-settings .lfp-note--error,
+.lfp-settings .lfp-unavailable td .lfp-note--error {
+	color: var(--color-error-text);
+}
+
+/* "not available": beside the program it is about. */
+.lfp-settings .lfp-badge {
+	display: inline-block;
+	margin-inline-start: var(--default-grid-baseline);
+	padding: 0 calc(var(--default-grid-baseline) * 2);
+	border-radius: var(--border-radius-pill, 999px);
+	background-color: var(--color-warning);
+	color: var(--color-warning-text, #000);
+	font-size: var(--font-size-small, 13px);
+}
+
+.lfp-settings .lfp-new-extension {
+	width: 12rem;
+}

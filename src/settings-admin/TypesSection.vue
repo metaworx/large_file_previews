@@ -3,20 +3,22 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * Which files the app takes: the app's size window, then each MIME type,
- * then each extension, the most specific level that sets a field winning.
+ * Which files the app processes: what is active, then the defaults, scanned
+ * pages, each MIME type and each extension.
  *
- * A size field left empty is not set at that level; its placeholder shows
- * what applies instead. A switch saves on click, a size on its own button.
+ * Each table shows only what is set at its own level; an empty size field
+ * is not set there. What applies in the end is the "Active rendering"
+ * table at the top. A switch saves on click, a size on its own button. A
+ * row whose type has no usable renderer is shown, and cannot be changed.
  */
 import { ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
-import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import ActiveTable from './ActiveTable.vue'
 import NumberField from './NumberField.vue'
 import { t } from '../l10n'
-import type { Changes, Resolved, Rule, RuleChange, SettingsState } from './types'
+import type { Changes, Renderer, Rule, RuleChange, SettingsState } from './types'
 
 defineProps<{
 	state: SettingsState
@@ -29,24 +31,8 @@ const emit = defineEmits<{
 
 const newExtension = ref('')
 
-function sizeText(value: number): string {
-	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
-}
-
-function sourceText(source: string): string {
-	switch (source) {
-	case 'ext':
-		return t('large_file_previews', 'from the extension')
-	case 'mime':
-		return t('large_file_previews', 'from the MIME type')
-	default:
-		return t('large_file_previews', 'from the default')
-	}
-}
-
-/** What applies where the field is empty: the resolution, and its level. */
-function placeholder(resolved: Resolved, field: 'min_size_mb' | 'max_size_mb'): string {
-	return `${sizeText(resolved[field].value)} (${sourceText(resolved[field].source)})`
+function noRenderer(renderer: Renderer): string {
+	return t('large_file_previews', 'No suitable renderer ({program})', { program: renderer.program })
 }
 
 function differs(rule: Rule, shipped: Rule): boolean {
@@ -71,9 +57,16 @@ function addExtension(): void {
 </script>
 
 <template>
-	<NcSettingsSection :name="t('large_file_previews', 'Which files')"
-		:description="t('large_file_previews', 'Sizes are in MB. A file is taken where it is switched on and its size lies within the minimum and the maximum, both included. An extension overrides its MIME type, field by field, and both override the defaults.')">
-		<h3>{{ t('large_file_previews', 'Defaults') }}</h3>
+	<div class="lfp-types">
+		<h3>{{ t('large_file_previews', 'Which files') }}</h3>
+		<p class="lfp-hint">
+			{{ t('large_file_previews', 'Sizes are in MB. A file is processed where its type is enabled and its size lies within the minimum and the maximum, both included. Anything this app does not process goes to Nextcloud\'s other preview providers.') }}
+		</p>
+
+		<h4>{{ t('large_file_previews', 'Active rendering') }}</h4>
+		<ActiveTable :rows="state.active" />
+
+		<h4>{{ t('large_file_previews', 'Defaults') }}</h4>
 		<div class="lfp-row">
 			<NumberField id="lfp-min-size"
 				:label="t('large_file_previews', 'Minimum size')"
@@ -89,7 +82,7 @@ function addExtension(): void {
 				@save="emit('save', { scalars: { max_size_mb: $event } })" />
 		</div>
 
-		<h3>{{ t('large_file_previews', 'Scanned pages') }}</h3>
+		<h4>{{ t('large_file_previews', 'PDF scanned pages') }}</h4>
 		<div class="lfp-scan" data-setting="scan">
 			<NcCheckboxRadioSwitch type="switch"
 				:model-value="state.scalars.scan_native_enabled.value as boolean"
@@ -109,56 +102,62 @@ function addExtension(): void {
 				@save="emit('save', { scalars: { scan_coverage_percent: $event } })" />
 		</div>
 
-		<h3>{{ t('large_file_previews', 'MIME types') }}</h3>
+		<h4>{{ t('large_file_previews', 'MIME types') }}</h4>
+		<p class="lfp-hint">
+			{{ t('large_file_previews', 'A MIME type overrides the defaults, field by field: a minimum or maximum left empty follows the default.') }}
+		</p>
 		<table class="lfp-table">
 			<thead>
 				<tr>
 					<th>{{ t('large_file_previews', 'MIME type') }}</th>
-					<th>{{ t('large_file_previews', 'Taken') }}</th>
+					<th>{{ t('large_file_previews', 'Processing') }}</th>
 					<th>{{ t('large_file_previews', 'Minimum') }}</th>
 					<th>{{ t('large_file_previews', 'Maximum') }}</th>
 					<th />
 				</tr>
 			</thead>
 			<tbody>
-				<tr v-for="row in state.mimetypes" :key="row.mime" :data-mime="row.mime">
+				<tr v-for="row in state.mimetypes"
+					:key="row.mime"
+					:data-mime="row.mime"
+					:class="{ 'lfp-unavailable': !row.renderer.available }">
 					<td>
 						{{ row.mime }}
-						<span v-if="!row.renderer" class="lfp-hint">{{ t('large_file_previews', 'not rendered yet') }}</span>
+						<span v-if="!row.renderer.available" class="lfp-note lfp-note--error">{{ noRenderer(row.renderer) }}</span>
 					</td>
 					<td>
 						<NcCheckboxRadioSwitch type="switch"
-							:model-value="row.resolved.enabled.value"
-							:disabled="saving"
+							:model-value="row.rule.enabled === true"
+							:disabled="saving || !row.renderer.available"
 							@update:model-value="saveMime(row.mime, { enabled: $event as boolean })">
-							{{ t('large_file_previews', 'Taken') }}
+							{{ row.rule.enabled === true ? t('large_file_previews', 'enabled') : t('large_file_previews', 'disabled') }}
 						</NcCheckboxRadioSwitch>
 					</td>
 					<td>
 						<NumberField :id="'lfp-min-' + row.mime"
 							:label="t('large_file_previews', 'Minimum')"
 							:value="row.rule.min_size_mb ?? null"
-							:placeholder="placeholder(row.resolved, 'min_size_mb')"
 							:min="0"
 							clearable
-							:disabled="saving"
+							narrow
+							:disabled="saving || !row.renderer.available"
 							@save="saveMime(row.mime, { min_size_mb: $event })" />
 					</td>
 					<td>
 						<NumberField :id="'lfp-max-' + row.mime"
 							:label="t('large_file_previews', 'Maximum')"
 							:value="row.rule.max_size_mb ?? null"
-							:placeholder="placeholder(row.resolved, 'max_size_mb')"
 							:min="-1"
 							clearable
-							:disabled="saving"
+							narrow
+							:disabled="saving || !row.renderer.available"
 							@save="saveMime(row.mime, { max_size_mb: $event })" />
 					</td>
 					<td>
 						<NcButton v-if="differs(row.rule, row.default)"
 							class="lfp-reset"
 							variant="tertiary"
-							:disabled="saving"
+							:disabled="saving || !row.renderer.available"
 							@click="saveMime(row.mime, null)">
 							{{ t('large_file_previews', 'Reset') }}
 						</NcButton>
@@ -167,52 +166,62 @@ function addExtension(): void {
 			</tbody>
 		</table>
 
-		<h3>{{ t('large_file_previews', 'Extensions') }}</h3>
+		<h4>{{ t('large_file_previews', 'Extensions') }}</h4>
 		<p class="lfp-hint">
-			{{ t('large_file_previews', 'For a finer choice than the MIME type: "TIFF, but not .tif", or ".tif only above 200 MB".') }}
+			{{ t('large_file_previews', 'An extension overrides its MIME type, field by field. Processing "enabled" selects its files even where the MIME type is disabled; "excluded" never selects them. A minimum or maximum set here replaces the MIME type\'s; one left empty follows it.') }}
 		</p>
 		<table v-if="state.extensions.length > 0" class="lfp-table">
 			<thead>
 				<tr>
 					<th>{{ t('large_file_previews', 'Extension') }}</th>
-					<th>{{ t('large_file_previews', 'Taken') }}</th>
+					<th>{{ t('large_file_previews', 'Processing') }}</th>
 					<th>{{ t('large_file_previews', 'Minimum') }}</th>
 					<th>{{ t('large_file_previews', 'Maximum') }}</th>
 					<th />
 				</tr>
 			</thead>
 			<tbody>
-				<tr v-for="row in state.extensions" :key="row.extension" :data-extension="row.extension">
+				<tr v-for="row in state.extensions"
+					:key="row.extension"
+					:data-extension="row.extension"
+					:class="{ 'lfp-unavailable': !row.renderer.available }">
 					<td>
 						.{{ row.extension }}
-						<span class="lfp-hint">{{ row.resolved.mime ?? '' }}</span>
+						<span class="lfp-hint">{{ row.mime ?? '' }}</span>
+						<span v-if="!row.renderer.available" class="lfp-note lfp-note--error">{{ noRenderer(row.renderer) }}</span>
+						<span v-else-if="row.noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
 					</td>
 					<td>
 						<NcCheckboxRadioSwitch type="switch"
-							:model-value="row.resolved.enabled.value"
-							:disabled="saving"
+							:model-value="row.rule.enabled === true"
+							:disabled="saving || !row.renderer.available"
 							@update:model-value="saveExtension(row.extension, { enabled: $event as boolean })">
-							{{ sourceText(row.resolved.enabled.source) }}
+							<template v-if="row.rule.enabled === undefined">
+								{{ t('large_file_previews', 'as MIME type') }}
+							</template>
+							<template v-else>
+								{{ row.rule.enabled ? t('large_file_previews', 'enabled') : t('large_file_previews', 'excluded') }}
+							</template>
 						</NcCheckboxRadioSwitch>
 					</td>
 					<td>
 						<NumberField :id="'lfp-min-ext-' + row.extension"
 							:label="t('large_file_previews', 'Minimum')"
 							:value="row.rule.min_size_mb ?? null"
-							:placeholder="placeholder(row.resolved, 'min_size_mb')"
 							:min="0"
 							clearable
-							:disabled="saving"
+							narrow
+							:disabled="saving || !row.renderer.available"
 							@save="saveExtension(row.extension, { min_size_mb: $event })" />
 					</td>
 					<td>
 						<NumberField :id="'lfp-max-ext-' + row.extension"
 							:label="t('large_file_previews', 'Maximum')"
 							:value="row.rule.max_size_mb ?? null"
-							:placeholder="placeholder(row.resolved, 'max_size_mb')"
 							:min="-1"
 							clearable
-							:disabled="saving"
+							narrow
+							:disabled="saving || !row.renderer.available"
 							@save="saveExtension(row.extension, { max_size_mb: $event })" />
 					</td>
 					<td>
@@ -229,11 +238,12 @@ function addExtension(): void {
 		<form class="lfp-row" @submit.prevent="addExtension">
 			<NcTextField id="lfp-new-extension"
 				v-model="newExtension"
+				class="lfp-new-extension"
 				:label="t('large_file_previews', 'Extension, e.g. tif')"
 				:disabled="saving" />
 			<NcButton type="submit" :disabled="saving || newExtension.trim() === ''">
 				{{ t('large_file_previews', 'Add') }}
 			</NcButton>
 		</form>
-	</NcSettingsSection>
+	</div>
 </template>

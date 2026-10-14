@@ -4,21 +4,13 @@
  *
  * A settings state as the server answers it out of the box, for specs.
  */
-import type { MimeRow, Resolved, Scalar, SettingsState } from './types'
+import type { ActiveRow, MimeRow, Renderer, Scalar, SettingsState } from './types'
+
+const POPPLER: Renderer = { program: 'pdftoppm', available: true }
+const VIPS: Renderer = { program: 'libvips', available: false }
 
 function scalar(value: number | boolean, min: number | null = null, max: number | null = null): Scalar {
 	return { value, default: value, min, max, stored: false }
-}
-
-function resolved(mime: string, enabled: boolean, min: number): Resolved {
-	return {
-		mime,
-		extension: null,
-		reachable: true,
-		enabled: { value: enabled, source: 'mime' },
-		min_size_mb: { value: min, source: min === 0 ? 'default' : 'mime' },
-		max_size_mb: { value: -1, source: 'default' },
-	}
 }
 
 function pdf(): MimeRow {
@@ -26,8 +18,7 @@ function pdf(): MimeRow {
 		mime: 'application/pdf',
 		rule: { enabled: true },
 		default: { enabled: true },
-		renderer: true,
-		resolved: resolved('application/pdf', true, 0),
+		renderer: { ...POPPLER },
 	}
 }
 
@@ -36,8 +27,18 @@ function tiff(): MimeRow {
 		mime: 'image/tiff',
 		rule: { enabled: false, min_size_mb: 50 },
 		default: { enabled: false, min_size_mb: 50 },
-		renderer: false,
-		resolved: resolved('image/tiff', false, 50),
+		renderer: { ...VIPS },
+	}
+}
+
+function activePdf(): ActiveRow {
+	return {
+		mime: 'application/pdf',
+		extension: null,
+		processing: 'enabled',
+		renderer: { ...POPPLER },
+		min_size_mb: { value: 0, source: 'default' },
+		max_size_mb: { value: -1, source: 'default' },
 	}
 }
 
@@ -56,6 +57,7 @@ export function testState(): SettingsState {
 			scan_native_enabled: scalar(true),
 			scan_coverage_percent: scalar(90, 50, 100),
 		},
+		active: [activePdf()],
 		mimetypes: [pdf(), tiff()],
 		extensions: [],
 		prerequisites: [
