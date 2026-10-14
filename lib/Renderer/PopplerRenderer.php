@@ -25,7 +25,8 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
  * why it is given the path and never a pipe. `-scale-to` fits the page into
  * an N x N box, and `-singlefile` writes exactly `<outstem>.png`. Many real
  * files print warnings and still exit 0: success is the exit status and
- * the file, never an empty stderr.
+ * the file, never an empty stderr. A page that is one scan is rendered at
+ * the scan's own resolution where that is smaller than the box (PageProbe).
  */
 class PopplerRenderer
     implements
@@ -41,6 +42,7 @@ class PopplerRenderer
 
 	public function __construct(
 		private readonly CommandRunner $runner,
+		private readonly PageProbe     $probe,
 	)
 	{
 	}
@@ -65,6 +67,15 @@ class PopplerRenderer
 		if ( ! str_starts_with( $localPath, '/' ) || ! str_ends_with( $outputPng, '.png' ) || $box < 1 )
 		{
 			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute input path, a .png output and a box' );
+		}
+
+		// A scanned page at its own resolution, where that is smaller: an
+		// enlarged scan is a larger preview with no more detail.
+		$scan = $this->probe->scanBox( $localPath );
+
+		if ( $scan !== null && $scan > 0 && $scan < $box )
+		{
+			$box = $scan;
 		}
 
 		$outcome = $this->runner->run(

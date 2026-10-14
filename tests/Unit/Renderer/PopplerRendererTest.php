@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
+use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Service\CommandRunner;
@@ -47,7 +48,7 @@ class PopplerRendererTest
 
 	public function testItHandlesPdfAndIllustratorOnly(): void
 	{
-		$renderer = new PopplerRenderer( $this->createMock( CommandRunner::class ) );
+		$renderer = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ) );
 
 		self::assertTrue( $renderer->supports( 'application/pdf' ) );
 		self::assertTrue( $renderer->supports( 'application/illustrator' ) );
@@ -60,24 +61,41 @@ class PopplerRendererTest
 	 */
 	public function testTheCommand(): void
 	{
-		$runner = $this->createMock( CommandRunner::class );
-		$runner->expects( self::once() )
-		       ->method( 'run' )
-		       ->with(
-			       'pdftoppm',
-			       [ '-f', '1', '-l', '1', '-scale-to', '4096', '-png', '-singlefile', '/data/alice/files/a b.pdf', substr( $this->output, 0, -4 ) ],
-		       )
-		       ->willReturnCallback(
-			       function(): RenderOutcome
-			       {
-				       touch( $this->output );
+		$runner = $this->renders( 4096 );
 
-				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
-			       },
-		       )
-		;
+		self::assertTrue(
+			( new PopplerRenderer( $runner, $this->probe( null ) ) )
+				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+				->isSuccess(),
+		);
+	}
 
-		self::assertTrue( ( new PopplerRenderer( $runner ) )->render( '/data/alice/files/a b.pdf', 4096, $this->output )->isSuccess() );
+	/**
+	 * A 300 dpi A4 scan is 3508 pixels tall: not enlarged to 4096.
+	 */
+	public function testAScanIsRenderedAtItsOwnSize(): void
+	{
+		$runner = $this->renders( 3508 );
+
+		self::assertTrue(
+			( new PopplerRenderer( $runner, $this->probe( 3508 ) ) )
+				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+				->isSuccess(),
+		);
+	}
+
+	/**
+	 * A scan larger than the box is fitted into the box, as any page is.
+	 */
+	public function testALargerScanKeepsTheBox(): void
+	{
+		$runner = $this->renders( 4096 );
+
+		self::assertTrue(
+			( new PopplerRenderer( $runner, $this->probe( 7016 ) ) )
+				->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+				->isSuccess(),
+		);
 	}
 
 	public function testSuccessWithoutAFileIsNoOutput(): void
@@ -87,7 +105,7 @@ class PopplerRendererTest
 		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'Syntax Warning: x' ) )
 		;
 
-		$outcome = ( new PopplerRenderer( $runner ) )->render( '/in.pdf', 100, $this->output );
+		$outcome = ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 100, $this->output );
 
 		self::assertSame( Outcome::NO_OUTPUT, $outcome->outcome );
 		self::assertSame( 0, $outcome->exitStatus );
@@ -102,12 +120,12 @@ class PopplerRendererTest
 		       ->willReturn( $failed )
 		;
 
-		self::assertSame( $failed, ( new PopplerRenderer( $runner ) )->render( '/in.pdf', 100, $this->output ) );
+		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 100, $this->output ) );
 	}
 
 	/**
-	 * A relative path could be read as an option; it never reaches the
-	 * program.
+	 * A relative path could be read as an option; it never reaches a
+	 * program, the probe's included.
 	 */
 	public function testARelativePathIsNotRun(): void
 	{
@@ -115,8 +133,12 @@ class PopplerRendererTest
 		$runner->expects( self::never() )
 		       ->method( 'run' )
 		;
+		$probe = $this->createMock( PageProbe::class );
+		$probe->expects( self::never() )
+		      ->method( 'scanBox' )
+		;
 
-		$renderer = new PopplerRenderer( $runner );
+		$renderer = new PopplerRenderer( $runner, $probe );
 
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-opw', 100, $this->output )->outcome );
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 0, $this->output )->outcome );
@@ -125,10 +147,46 @@ class PopplerRendererTest
 
 	public function testRenderersFindByType(): void
 	{
-		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ) );
+		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ) );
 		$renderers = new Renderers( $poppler );
 
 		self::assertSame( $poppler, $renderers->for( 'application/pdf' ) );
 		self::assertNull( $renderers->for( 'image/tiff' ) );
+	}
+
+	/**
+	 * A runner that expects pdftoppm once, with the box given, and writes
+	 * the PNG.
+	 */
+	private function renders( int $box ): CommandRunner
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->expects( self::once() )
+		       ->method( 'run' )
+		       ->with(
+			       'pdftoppm',
+			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, '-png', '-singlefile', '/data/alice/files/a b.pdf', substr( $this->output, 0, -4 ) ],
+		       )
+		       ->willReturnCallback(
+			       function(): RenderOutcome
+			       {
+				       touch( $this->output );
+
+				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
+			       },
+		       )
+		;
+
+		return $runner;
+	}
+
+	private function probe( ?int $scanBox ): PageProbe
+	{
+		$probe = $this->createMock( PageProbe::class );
+		$probe->method( 'scanBox' )
+		      ->willReturn( $scanBox )
+		;
+
+		return $probe;
 	}
 }

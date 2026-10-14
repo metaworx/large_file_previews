@@ -70,10 +70,14 @@ class CommandRunner
 	 * Runs a program by name, under the configured limits.
 	 *
 	 * @param list<string> $arguments
+	 * @param bool         $keepStdout for a program that answers on stdout:
+	 *                                 kept with stderr, in the outcome's
+	 *                                 `stderr`, cut short as it is
 	 */
 	public function run(
 		string $program,
 		array  $arguments,
+		bool   $keepStdout = false,
 	): RenderOutcome
 	{
 		$command = $this->command( $program, $arguments );
@@ -91,7 +95,7 @@ class CommandRunner
 			);
 		}
 
-		return $this->execute( $command );
+		return $this->execute( $command, $keepStdout );
 	}
 
 

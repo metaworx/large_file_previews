@@ -17,7 +17,8 @@ the first stable release.
   to 35 and PHP 8.2 and later.
 
 - `README.md`, *What it does*: previews of PDF and Illustrator files by
-  `pdftoppm`, from local, unencrypted storage; others go to Nextcloud's.
+  `pdftoppm`, a scan at its own resolution, from local, unencrypted
+  storage only; others go to Nextcloud's.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
   render, and `occ lfp:check`, listing what the app needs.

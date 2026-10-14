@@ -13,6 +13,7 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Preview\ImageLoader;
 use OCA\LargeFilePreviews\Preview\LargeFileProvider;
+use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Service\CommandRunner;
@@ -281,7 +282,8 @@ class LargeFileProviderTest
 
 		return new LargeFileProvider(
 			new TypePolicy( $config ),
-			new Renderers( new PopplerRenderer( $this->runner ) ),
+			// A probe that finds no scan: the box is what was asked for.
+			new Renderers( new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ) ) ),
 			$this->images,
 			$tempManager,
 			$config,

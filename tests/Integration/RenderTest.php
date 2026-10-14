@@ -61,6 +61,30 @@ class RenderTest
 		self::assertEqualsWithDelta( 600, $image->width(), 2 );
 	}
 
+	/**
+	 * A page that is one 300 dpi scan, 417 pixels wide, is not enlarged to
+	 * the 1024 asked for.
+	 */
+	public function testAScanIsRenderedAtItsOwnSize(): void
+	{
+		$file  = $this->file( 'scan.pdf', PdfFixture::scan( 100, 50, 417, 208 ) );
+		$image = Server::get( LargeFileProvider::class )->getThumbnail( $file, 1024, 1024 );
+
+		self::assertNotNull( $image );
+		self::assertEqualsWithDelta( 417, $image->width(), 1 );
+	}
+
+	/**
+	 * The same page drawn rather than scanned fills the box.
+	 */
+	public function testADrawnPageFillsTheBox(): void
+	{
+		$image = Server::get( LargeFileProvider::class )->getThumbnail( $this->file( 'drawn.pdf', PdfFixture::bytes( 100, 50 ) ), 1024, 1024 );
+
+		self::assertNotNull( $image );
+		self::assertSame( 1024, $image->width() );
+	}
+
 	public function testAnIllustratorFileIsRenderedAsTheSamePdf(): void
 	{
 		$file = $this->file( 'logo.ai', PdfFixture::bytes( 200, 200 ) );

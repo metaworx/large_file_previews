@@ -37,11 +37,11 @@ class PrerequisitesServiceTest
 
 	public function testEverythingThereIsReady(): void
 	{
-		$service = $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ] );
+		$service = $this->service( [ 'pdftoppm', 'pdfinfo', 'pdfimages', 'timeout', 'prlimit', 'choom' ] );
 		$items   = $service->check();
 
 		self::assertSame(
-			[ 'proc_open', 'proc_get_status', 'proc_close', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'timeout', 'prlimit', 'choom' ],
+			[ 'proc_open', 'proc_get_status', 'proc_close', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'pdfinfo', 'pdfimages', 'timeout', 'prlimit', 'choom' ],
 			array_map(
 				static fn(
 					Prerequisite $item,
@@ -63,6 +63,19 @@ class PrerequisitesServiceTest
 
 		self::assertSame( Prerequisite::MISSING, self::item( $items, 'pdftoppm' )->status );
 		self::assertTrue( self::item( $items, 'pdftoppm' )->isBlocking() );
+	}
+
+	/**
+	 * Without them a scan is enlarged to the full box: worth saying, no
+	 * reason to stop rendering.
+	 */
+	public function testTheScanProbesAreOptional(): void
+	{
+		$items = $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ] )->check();
+
+		self::assertSame( Prerequisite::OPTIONAL, self::item( $items, 'pdfinfo' )->status );
+		self::assertSame( Prerequisite::OPTIONAL, self::item( $items, 'pdfimages' )->status );
+		self::assertSame( 'rendering a scanned page at its own resolution', self::item( $items, 'pdfimages' )->neededFor );
 	}
 
 	/**

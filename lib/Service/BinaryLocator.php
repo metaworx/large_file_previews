@@ -40,6 +40,8 @@ class BinaryLocator
 	public const PROGRAMS
 		 = [
 			'pdftoppm',
+			'pdfinfo',
+			'pdfimages',
 			'timeout',
 			'prlimit',
 			'choom',

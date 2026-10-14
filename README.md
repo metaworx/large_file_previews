@@ -16,6 +16,8 @@ so the file is never loaded into PHP, copied, or sent to another service.
   the first page, at Nextcloud's maximum preview size.
   Only the page that is shown is read,
   so a file of several gigabytes renders in under a second.
+  A page that is one scan is rendered at the scan's own resolution where that is smaller,
+  not enlarged: a 300 dpi A4 scan gives a preview 3508 pixels tall, not 4096.
 - **Large images** through libvips are planned.
   Their types are known to the app from the start, and switched off.
 

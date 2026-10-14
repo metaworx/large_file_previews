@@ -30,10 +30,13 @@ class PrerequisitesService
 	 */
 	private const PROGRAMS
 		 = [
-			'pdftoppm' => [ 'version' => '-v', 'limit' => null, 'for' => 'rendering PDF and Illustrator files' ],
-			'timeout'  => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render' ],
-			'prlimit'  => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space cap of each render' ],
-			'choom'    => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render' ],
+			'pdftoppm'  => [ 'version' => '-v', 'limit' => null, 'for' => 'rendering PDF and Illustrator files' ],
+			// Without them a scanned page is enlarged to the full box; no reason to stop rendering.
+			'pdfinfo'   => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
+			'pdfimages' => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
+			'timeout'   => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render' ],
+			'prlimit'   => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space cap of each render' ],
+			'choom'     => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render' ],
 		];
 
 
@@ -152,7 +155,14 @@ class PrerequisitesService
 		foreach ( self::PROGRAMS as $program => $spec )
 		{
 			$location = $this->binaries->locate( $program );
-			$needed   = $spec['limit'] === null || $enabled[ $spec['limit'] ];
+			// null: always needed; false: never; a limit's name: while it is on.
+			$needed = match ( true )
+			{
+				$spec['limit'] === null  => true,
+				$spec['limit'] === false => false,
+				default                  => $enabled[ $spec['limit'] ],
+			};
+			$for    = $spec['for'] . ( is_string( $spec['limit'] ) && ! $needed ? ', switched off' : '' );
 
 			if ( ! $location->isFound() )
 			{
@@ -160,7 +170,7 @@ class PrerequisitesService
 					Prerequisite::GROUP_PROGRAM,
 					$program,
 					$needed ? Prerequisite::MISSING : Prerequisite::OPTIONAL,
-					$spec['for'] . ( $needed ? '' : ', switched off' ),
+					$for,
 					$location->problem ?? '',
 				);
 
@@ -179,7 +189,7 @@ class PrerequisitesService
 				Prerequisite::GROUP_PROGRAM,
 				$program,
 				Prerequisite::OK,
-				$spec['for'] . ( $needed ? '' : ', switched off' ),
+				$for,
 				$detail,
 			);
 		}

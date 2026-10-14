@@ -11,6 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Controller;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Controller\SettingsController;
+use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Service\CommandRunner;
@@ -147,7 +148,7 @@ class SettingsControllerTest
 			$this->createMock( IRequest::class ),
 			$config,
 			new TypePolicy( $config ),
-			new Renderers( new PopplerRenderer( $this->createMock( CommandRunner::class ) ) ),
+			new Renderers( new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ) ),
 			$prerequisites,
 			$detector,
 			$this->markingL10n(),
