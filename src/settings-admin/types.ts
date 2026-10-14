@@ -94,6 +94,15 @@ export interface Failure {
 	exit_status: number | null
 }
 
+/** A program the app runs: where it is, how it was found, its version. */
+export interface ProgramRow {
+	name: string
+	path: string | null
+	source: 'finder' | 'override'
+	problem: string | null
+	version: string | null
+}
+
 export interface SettingsState {
 	scalars: Record<string, Scalar>
 	active: ActiveRow[]
@@ -104,11 +113,14 @@ export interface SettingsState {
 	problems: string[]
 	lastFailure: Failure | null
 	overrideKey: string
+	programs: ProgramRow[]
+	/** Where a large working copy goes; set in system config only. */
+	scratch: { path: string, overridden: boolean }
 }
 
 /** What PUT /settings takes; every part optional, null clears. */
 export interface Changes {
-	scalars?: Record<string, number | boolean | null>
+	scalars?: Record<string, number | boolean | string | null>
 	mimetypes?: Record<string, RuleChange | null>
 	extensions?: Record<string, RuleChange | null>
 }

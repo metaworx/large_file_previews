@@ -20,6 +20,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -53,6 +54,7 @@ class SettingsController
 		private readonly Renderers            $renderers,
 		private readonly PrerequisitesService $prerequisites,
 		private readonly BinaryLocator        $binaries,
+		private readonly ScratchDirectory     $scratch,
 		private readonly IL10N                $l10n,
 	)
 	{
@@ -68,6 +70,18 @@ class SettingsController
 	#[ApiRoute( verb: 'GET', url: '/settings' )]
 	public function get(): DataResponse
 	{
+		return new DataResponse( $this->state() );
+	}
+
+	/**
+	 * Finds every program, its version and libvips' decoders again, as
+	 * `occ lfp:check --refresh` does: after installing one.
+	 */
+	#[ApiRoute( verb: 'POST', url: '/settings/refresh' )]
+	public function refresh(): DataResponse
+	{
+		$this->binaries->refresh();
+
 		return new DataResponse( $this->state() );
 	}
 
@@ -292,7 +306,7 @@ class SettingsController
 			);
 		}
 
-		$prerequisites = $this->prerequisites->check();
+		$prerequisites = $this->prerequisites->check( true );
 
 		return [
 			'scalars'       => $scalars,
@@ -309,6 +323,11 @@ class SettingsController
 			'problems'      => $this->config->problems(),
 			'lastFailure'   => $this->config->lastFailure(),
 			'overrideKey'   => BinaryLocator::SYSTEM_KEY,
+			'programs'      => $this->prerequisites->programList(),
+			'scratch'       => [
+				'path'       => $this->scratch->path(),
+				'overridden' => $this->scratch->override() !== null,
+			],
 		];
 	}
 

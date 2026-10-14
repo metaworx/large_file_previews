@@ -18,7 +18,8 @@ export default defineConfig({
 		// has no idea what a .css file is; inlined, they go through Vite,
 		// which knows. This is what lets a spec mount the real component
 		// rather than a stand-in, and .eslintrc.cjs holds the specs to that.
-		server: { deps: { inline: [/@nextcloud\/vue/] } },
+		// @nextcloud/dialogs, which the toasts come from, imports them too.
+		server: { deps: { inline: [/@nextcloud\/vue/, /@nextcloud\/dialogs/] } },
 		setupFiles: ['./vitest.setup.ts'],
 		include: ['src/**/*.spec.ts'],
 		exclude: [

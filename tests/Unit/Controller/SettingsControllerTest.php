@@ -80,7 +80,11 @@ class SettingsControllerTest
 	{
 		$data = $this->controller( '' )->get()->getData();
 
-		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey' ], array_keys( $data ) );
+		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'scratch' ], array_keys( $data ) );
+		self::assertSame( 'pdftoppm version 24.02.0', $data['programs'][0]['version'] );
+		self::assertSame( [ 'path' => '/var/tmp/nextcloud', 'overridden' => false ], $data['scratch'] );
+		self::assertSame( [ 'nextcloud', 'png', 'jpeg', 'webp' ], $data['scalars']['preview_format']['choices'] );
+		self::assertNull( $data['scalars']['timeout_seconds']['choices'] );
 		self::assertSame( 30, $data['scalars']['timeout_seconds']['value'] );
 		self::assertSame( 600, $data['scalars']['timeout_seconds']['max'] );
 		self::assertCount( 16, $data['mimetypes'] );
@@ -198,6 +202,20 @@ class SettingsControllerTest
 		self::assertSame( [], $this->appValues );
 	}
 
+	/**
+	 * Refresh forgets every path found, then answers the whole state.
+	 */
+	public function testRefreshFindsProgramsAgain(): void
+	{
+		$this->cacheValues = [ 'path.pdftoppm' => '/old/pdftoppm', 'vips-loaders./usr/bin/vips' => '{}' ];
+
+		$data = $this->controller( '' )->refresh()->getData();
+
+		self::assertArrayNotHasKey( 'vips-loaders./usr/bin/vips', $this->cacheValues );
+		self::assertSame( '/usr/bin/pdftoppm', $this->cacheValues['path.pdftoppm'] ?? null );
+		self::assertArrayHasKey( 'programs', $data );
+	}
+
 	public function testWhatIsNotARequestIsRefused(): void
 	{
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( 'not json' )->update()->getStatus() );
@@ -212,6 +230,14 @@ class SettingsControllerTest
 		$prerequisites = $this->createMock( PrerequisitesService::class );
 		$prerequisites->method( 'check' )
 		              ->willReturn( [] )
+		;
+		$prerequisites->method( 'programList' )
+		              ->willReturn( [ [ 'name' => 'pdftoppm', 'path' => '/usr/bin/pdftoppm', 'source' => 'finder', 'problem' => null, 'version' => 'pdftoppm version 24.02.0' ] ] )
+		;
+
+		$scratch = $this->createMock( ScratchDirectory::class );
+		$scratch->method( 'path' )
+		        ->willReturn( '/var/tmp/nextcloud' )
 		;
 
 		// pdftoppm is there; nothing else is asked for.
@@ -248,6 +274,7 @@ class SettingsControllerTest
 			),
 			$prerequisites,
 			$binaries,
+			$scratch,
 			$this->markingL10n(),
 		)
 		    extends

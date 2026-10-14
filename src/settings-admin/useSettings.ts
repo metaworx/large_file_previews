@@ -70,5 +70,30 @@ export function useSettings() {
 		}
 	}
 
-	return { state, saving, failed, load, save }
+	/** Has the server find every program again; true where it did. */
+	async function refresh(): Promise<boolean> {
+		saving.value = true
+		try {
+			const response = await fetch(generateOcsUrl(SETTINGS_URL + '/refresh'), {
+				method: 'POST',
+				headers: {
+					requesttoken: OC.requestToken,
+					'OCS-APIRequest': 'true',
+				},
+			})
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`)
+			}
+			state.value = (await response.json()) as SettingsState
+			toastSaved(t('large_file_previews', 'Programs found again.'))
+			return true
+		} catch (e) {
+			toastError(t('large_file_previews', 'The programs could not be found again.'))
+			return false
+		} finally {
+			saving.value = false
+		}
+	}
+
+	return { state, saving, failed, load, save, refresh }
 }

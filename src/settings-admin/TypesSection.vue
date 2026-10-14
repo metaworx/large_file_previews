@@ -17,6 +17,8 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwit
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import ActiveTable from './ActiveTable.vue'
 import NumberField from './NumberField.vue'
+import OccCommand from './OccCommand.vue'
+import { ruleCommand, scalarCommand } from './occ'
 import { t } from '../l10n'
 import type { Changes, Renderer, Rule, RuleChange, SettingsState } from './types'
 
@@ -77,18 +79,24 @@ function addExtension(): void {
 
 		<h4>{{ t('large_file_previews', 'Defaults') }}</h4>
 		<div class="lfp-row">
-			<NumberField id="lfp-min-size"
-				:label="t('large_file_previews', 'Minimum size')"
-				:value="state.scalars.min_size_mb.value as number"
-				:min="0"
-				:disabled="saving"
-				@save="emit('save', { scalars: { min_size_mb: $event } })" />
-			<NumberField id="lfp-max-size"
-				:label="t('large_file_previews', 'Maximum size (-1: no limit)')"
-				:value="state.scalars.max_size_mb.value as number"
-				:min="-1"
-				:disabled="saving"
-				@save="emit('save', { scalars: { max_size_mb: $event } })" />
+			<div>
+				<NumberField id="lfp-min-size"
+					:label="t('large_file_previews', 'Minimum size')"
+					:value="state.scalars.min_size_mb.value as number"
+					:min="0"
+					:disabled="saving"
+					@save="emit('save', { scalars: { min_size_mb: $event } })" />
+				<OccCommand :command="scalarCommand('min_size_mb', state.scalars.min_size_mb.value)" />
+			</div>
+			<div>
+				<NumberField id="lfp-max-size"
+					:label="t('large_file_previews', 'Maximum size (-1: no limit)')"
+					:value="state.scalars.max_size_mb.value as number"
+					:min="-1"
+					:disabled="saving"
+					@save="emit('save', { scalars: { max_size_mb: $event } })" />
+				<OccCommand :command="scalarCommand('max_size_mb', state.scalars.max_size_mb.value)" />
+			</div>
 		</div>
 
 		<h4>{{ t('large_file_previews', 'PDF scanned pages') }}</h4>
@@ -102,6 +110,7 @@ function addExtension(): void {
 			<p class="lfp-hint">
 				{{ t('large_file_previews', 'A page counts as scanned where one image covers it, each way, to at least the share set here. A 300 dpi A4 scan then gives a preview 3508 pixels tall rather than the full preview size.') }}
 			</p>
+			<OccCommand :command="scalarCommand('scan_native_enabled', state.scalars.scan_native_enabled.value)" />
 			<NumberField id="lfp-scan-coverage"
 				:label="t('large_file_previews', 'Coverage, percent')"
 				:value="state.scalars.scan_coverage_percent.value as number"
@@ -109,6 +118,7 @@ function addExtension(): void {
 				:max="state.scalars.scan_coverage_percent.max"
 				:disabled="saving || !state.scalars.scan_native_enabled.value"
 				@save="emit('save', { scalars: { scan_coverage_percent: $event } })" />
+			<OccCommand :command="scalarCommand('scan_coverage_percent', state.scalars.scan_coverage_percent.value)" />
 		</div>
 
 		<h4>{{ t('large_file_previews', 'MIME types') }}</h4>
@@ -133,6 +143,7 @@ function addExtension(): void {
 					<td>
 						{{ row.mime }}
 						<span v-if="!row.renderer.available" class="lfp-note lfp-note--error">{{ noRenderer(row.renderer) }}</span>
+						<OccCommand :command="ruleCommand('mime', row.mime, row.rule)" />
 					</td>
 					<td>
 						<NcCheckboxRadioSwitch type="switch"
@@ -199,6 +210,7 @@ function addExtension(): void {
 						<span class="lfp-hint">{{ row.mime ?? '' }}</span>
 						<span v-if="!row.renderer.available" class="lfp-note lfp-note--error">{{ noRenderer(row.renderer) }}</span>
 						<span v-else-if="row.noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
+						<OccCommand :command="ruleCommand('ext', row.extension, row.rule)" />
 					</td>
 					<td>
 						<NcCheckboxRadioSwitch type="switch"

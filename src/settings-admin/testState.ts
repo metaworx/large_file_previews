@@ -77,5 +77,10 @@ export function testState(): SettingsState {
 		problems: [],
 		lastFailure: null,
 		overrideKey: 'large_file_previews.binaries',
+		programs: [
+			{ name: 'pdftoppm', path: '/usr/bin/pdftoppm', source: 'finder', problem: null, version: 'pdftoppm version 24.02.0' },
+			{ name: 'vipsthumbnail', path: null, source: 'finder', problem: null, version: null },
+		],
+		scratch: { path: '/var/tmp/nextcloud', overridden: false },
 	}
 }

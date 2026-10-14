@@ -140,6 +140,27 @@ class PrerequisitesServiceTest
 		self::assertSame( '/usr/bin/choom (finder), choom 1.0', self::item( $items, 'choom' )->detail );
 	}
 
+	/**
+	 * Every program, for the settings page: path, how it was found, and
+	 * the version where it is there.
+	 */
+	public function testTheProgramList(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'runBare' )
+		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, "pdftoppm version 24.02.0\nCopyright" ) )
+		;
+
+		$list = $this->service( [ 'pdftoppm' ], $runner )->programList();
+
+		self::assertSame( BinaryLocator::PROGRAMS, array_column( $list, 'name' ) );
+		self::assertSame(
+			[ 'name' => 'pdftoppm', 'path' => '/usr/bin/pdftoppm', 'source' => 'finder', 'problem' => null, 'version' => 'pdftoppm version 24.02.0' ],
+			$list[0],
+		);
+		self::assertSame( [ 'name' => 'vips', 'path' => null, 'source' => 'finder', 'problem' => null, 'version' => null ], $list[5] );
+	}
+
 	public function testAnUnwritableTemporaryDirectoryBlocks(): void
 	{
 		$items = $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ], null, '/nonexistent' )->check();

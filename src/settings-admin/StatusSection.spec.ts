@@ -32,6 +32,6 @@ describe('StatusSection', () => {
 
 	it('says where a program\'s path is set, and that it is not here', () => {
 		expect(mount(StatusSection, { props: { state: testState() } }).text())
-			.toContain('occ lfp:config:set binaries.pdftoppm')
+			.toContain('set in system config only, never here')
 	})
 })

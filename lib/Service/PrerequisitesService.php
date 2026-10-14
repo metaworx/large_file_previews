@@ -99,6 +99,33 @@ class PrerequisitesService
 	}
 
 	/**
+	 * Every program the app runs: where it is, how it was found, and its
+	 * version, from the same cache as check()'s.
+	 *
+	 * @return list<array{name: string, path: ?string, source: string, problem: ?string, version: ?string}>
+	 */
+	public function programList(): array
+	{
+		$list = [];
+
+		foreach ( $this->binaries->locateAll() as $program => $location )
+		{
+			$flag   = self::PROGRAMS[ $program ]['version'] ?? null;
+			$list[] = [
+				'name'    => $program,
+				'path'    => $location->path,
+				'source'  => $location->source,
+				'problem' => $location->problem,
+				'version' => $location->path !== null && $flag !== null
+					? $this->version( $program, $location->path, $flag )
+					: null,
+			];
+		}
+
+		return $list;
+	}
+
+	/**
 	 * @return list<Prerequisite>
 	 */
 	private function permissions(): array

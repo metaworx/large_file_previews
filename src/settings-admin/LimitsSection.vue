@@ -9,6 +9,8 @@
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NumberField from './NumberField.vue'
+import OccCommand from './OccCommand.vue'
+import { scalarCommand } from './occ'
 import { t } from '../l10n'
 import type { Changes, SettingsState } from './types'
 
@@ -81,16 +83,18 @@ function scalar(key: string) {
 			<p class="lfp-hint">
 				{{ limit.help }}
 			</p>
+			<OccCommand :command="scalarCommand(limit.switch, scalar(limit.switch).value)" />
 			<div class="lfp-row">
-				<NumberField v-for="value in limit.values"
-					:id="'lfp-' + value.key"
-					:key="value.key"
-					:label="value.label"
-					:value="scalar(value.key).value as number"
-					:min="scalar(value.key).min"
-					:max="scalar(value.key).max"
-					:disabled="saving || !scalar(limit.switch).value"
-					@save="emit('save', { scalars: { [value.key]: $event } })" />
+				<div v-for="value in limit.values" :key="value.key">
+					<NumberField :id="'lfp-' + value.key"
+						:label="value.label"
+						:value="scalar(value.key).value as number"
+						:min="scalar(value.key).min"
+						:max="scalar(value.key).max"
+						:disabled="saving || !scalar(limit.switch).value"
+						@save="emit('save', { scalars: { [value.key]: $event } })" />
+					<OccCommand :command="scalarCommand(value.key, scalar(value.key).value)" />
+				</div>
 			</div>
 		</div>
 	</div>

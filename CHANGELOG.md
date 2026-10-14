@@ -34,9 +34,9 @@ the first stable release.
 - `README.md`, *Configuration*: a TIFF in one strip out of memory,
   re-striped by `tiffcp` into a copy in `scratch_directory`, on disk.
 
-- *Administration settings → Additional settings*: the status, what is
-  active, which files are processed, and the limits, validated as `occ`
-  validates them.
+- *Administration settings → Additional settings*: status, files
+  processed, preview format, limits, libvips, programs with versions;
+  each setting with its `occ` command, copied with one click.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes.

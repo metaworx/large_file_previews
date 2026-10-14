@@ -79,6 +79,10 @@ switched on, an image is taken from `preview_max_filesize_image` up,
 Everything below is set in *Administration settings → Additional settings*,
 which also shows whether previews can be rendered and the last render that failed,
 or with `occ`; both check a value the same way.
+Beneath each setting the page shows the `occ` command that sets it,
+copied with one click.
+Under *Advanced* it shows each program's path and version,
+and the scratch directory, which only `occ` sets.
 
 ```bash
 occ lfp:config:show

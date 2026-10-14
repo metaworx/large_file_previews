@@ -71,7 +71,7 @@ function statusText(status: string): string {
 			</tbody>
 		</table>
 		<p class="lfp-hint">
-			{{ t('large_file_previews', 'A program\'s path is found by Nextcloud, or set in system config only, never here: occ lfp:config:set binaries.pdftoppm /path/to/pdftoppm') }}
+			{{ t('large_file_previews', 'A program\'s path is found by Nextcloud, or set in system config only, never here; Advanced, below, shows each path and the command that sets it.') }}
 		</p>
 	</div>
 </template>

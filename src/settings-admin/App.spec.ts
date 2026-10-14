@@ -34,7 +34,7 @@ describe('App', () => {
 		const sections = wrapper.findAllComponents({ name: 'NcSettingsSection' })
 		expect(sections).toHaveLength(1)
 		expect(sections[0].props('name')).toBe('Large File Previews')
-		expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Status', 'Which files', 'Limits'])
+		expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Status', 'Which files', 'Previews', 'Limits', 'Advanced'])
 	})
 
 	it('says so when they cannot be loaded', async () => {
