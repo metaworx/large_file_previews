@@ -48,7 +48,7 @@ Editing a generated file is wasted work — change the fragment and re-run
 ---
 
 
-# Large File Previews — Project Contract (v1.2.0)
+# Large File Previews — Project Contract (v1.2.1)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `GUIDELINES/README.md` for people,
@@ -177,9 +177,13 @@ amends a bullet under `## [Unreleased]` in the same commit (`GUIDELINES/shared/C
 
 ### 3.6 The harness that tests this app is a separate repository
 
-`nextcloud_testing` spins up the Nextcloud versions above and mounts this app into them.
-Its instances need `poppler-utils` (and, once images are handled, `libvips-tools`) for the
-integration tests; a change to how instances are built belongs there, not here.
+`nextcloud_testing` spins up the Nextcloud versions above and mounts this app into them,
+in an instance of its own where another app uses the same version,
+such as `34-lfp`.
+Its instances need `poppler-utils`, `libvips-tools` and `libtiff-tools`
+for the integration tests, in the instance's `.ddev/config.extra.yaml`;
+the image tests are skipped where libvips is not there.
+A change to how instances are built belongs there, not here.
 
 ## 4. Document Governance
 
