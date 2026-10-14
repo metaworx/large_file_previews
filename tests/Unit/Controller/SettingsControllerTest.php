@@ -75,8 +75,9 @@ class SettingsControllerTest
 	{
 		$data = $this->controller( '' )->get()->getData();
 
-		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted', 'version' ], array_keys( $data ) );
+		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted', 'version', 'nextcloud' ], array_keys( $data ) );
 		self::assertSame( '0.1.0', $data['version'] );
+		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80 ], $data['nextcloud'] );
 		self::assertSame( 'pdftoppm version 24.02.0', $data['programs'][0]['version'] );
 		self::assertSame( [ 'path' => '/var/tmp/nextcloud', 'overridden' => false ], $data['scratch'] );
 		self::assertSame( [ 'allowed' => false, 'blockable' => null ], $data['untrusted'] );

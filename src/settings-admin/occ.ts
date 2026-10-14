@@ -55,6 +55,16 @@ export function untrustedCommand(allowed: boolean): string {
 		: [SET, 'vips_allow_untrusted', 'true'].join(' ')
 }
 
+/** One of Nextcloud's own system settings, as it stands. */
+export function systemCommand(key: string, value: string | number): string {
+	return ['occ config:system:set', key, '--value=' + quoted(String(value))].join(' ')
+}
+
+/** One of Nextcloud's own app settings, as it stands. */
+export function appConfigCommand(app: string, key: string, value: string | number): string {
+	return ['occ config:app:set', app, key, '--value=' + quoted(String(value))].join(' ')
+}
+
 /** The scratch directory, in system config. */
 export function scratchCommand(path: string): string {
 	return [SET, 'scratch_directory', quoted(path)].join(' ')

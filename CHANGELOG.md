@@ -41,7 +41,8 @@ the first stable release.
   config only (`vips_allow_untrusted`); before libvips 8.13, no images.
 
 - `README.md`, *Configuration*: previews stored as PNG, JPEG or WebP,
-  by default as Nextcloud's `preview_format` says; `preview_background`.
+  by default as Nextcloud's `preview_format` says; `preview_background`;
+  Nextcloud's own format and quality shown on the page, read only.
 
 - `README.md`, *Configuration*: a TIFF in one large strip out of memory,
   re-striped by `tiffcp` into an unlinked copy in `scratch_directory`,

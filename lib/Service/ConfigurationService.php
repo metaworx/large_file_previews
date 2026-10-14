@@ -144,6 +144,24 @@ class ConfigurationService
 	}
 
 	/**
+	 * Nextcloud's own preview settings, as Nextcloud reads them: the type
+	 * Imaginary writes (system `preview_format`), and the quality every
+	 * JPEG and WebP preview is re-encoded at (`preview` `jpeg_quality`,
+	 * `webp_quality`, 80 unless set, held to 10 to 100). Shown on the page,
+	 * never written by this app.
+	 *
+	 * @return array{preview_format: string, jpeg_quality: int, webp_quality: int}
+	 */
+	public function nextcloudPreview(): array
+	{
+		return [
+			'preview_format' => $this->system->getSystemValueString( 'preview_format', 'jpeg' ),
+			'jpeg_quality'   => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'jpeg_quality', 80 ) ) ),
+			'webp_quality'   => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'webp_quality', 80 ) ) ),
+		];
+	}
+
+	/**
 	 * Whether libvips may use its untrusted decoders, from system config:
 	 *
 	 *     'large_file_previews.vips_allow_untrusted' => true,

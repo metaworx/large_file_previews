@@ -88,6 +88,7 @@ export function testState(): SettingsState {
 		scratch: { path: '/var/tmp/nextcloud', overridden: false },
 		untrusted: { allowed: false, blockable: true },
 		version: '0.1.0',
+		nextcloud: { preview_format: 'jpeg', jpeg_quality: 80, webp_quality: 80 },
 		platform: 'debian',
 	}
 }

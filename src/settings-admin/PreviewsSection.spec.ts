@@ -41,9 +41,25 @@ describe('PreviewsSection', () => {
 		expect(wrapper.emitted('save')).toEqual([[{ scalars: { preview_format: 'webp' } }]])
 	})
 
-	it('shows the command for each setting', () => {
+	it('shows the command for each setting, Nextcloud\'s own among them', () => {
 		const commands = section().findAllComponents(OccCommand).map((command) => command.props('command'))
 
-		expect(commands).toEqual(['occ lfp:config:set preview_format nextcloud', 'occ lfp:config:set preview_background white'])
+		expect(commands).toEqual([
+			'occ lfp:config:set preview_format nextcloud',
+			'occ lfp:config:set preview_background white',
+			'occ config:system:set preview_format --value=jpeg',
+			'occ config:app:set preview jpeg_quality --value=80',
+			'occ config:app:set preview webp_quality --value=80',
+		])
+	})
+
+	it('shows Nextcloud\'s own preview settings, read only', () => {
+		const state = testState()
+		state.nextcloud = { preview_format: 'webp', jpeg_quality: 90, webp_quality: 65 }
+		const own = section(state).find('[data-setting="nextcloud"]')
+
+		expect(own.find('[data-nextcloud="preview_format"]').text()).toContain('Preview format: webp')
+		expect(own.find('[data-nextcloud="webp_quality"]').text()).toContain('WebP quality: 65')
+		expect(own.find('input').exists()).toBe(false)
 	})
 })

@@ -226,6 +226,9 @@ A JPEG keeps no transparency,
 so a transparent image is laid on `preview_background`, white or black.
 The quality is Nextcloud's:
 it re-encodes every preview at its app config `preview` `jpeg_quality` or `webp_quality`.
+The settings page shows those and Nextcloud's own `preview_format`, read only,
+each with the command that sets it:
+they apply to every preview, not only this app's.
 
 A page counts as scanned where one image covers it, each way,
 to at least `scan_coverage_percent` (90 by default, 50 to 100);

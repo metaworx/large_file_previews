@@ -81,6 +81,19 @@ class ConfigurationServiceTest
 	 * As Nextcloud's: WebP where its preview_format says so, else JPEG, as
 	 * Imaginary reads it; or the format set.
 	 */
+	/**
+	 * Nextcloud's own, as it reads them: the quality held to 10 to 100.
+	 */
+	public function testNextcloudsOwnPreviewSettings(): void
+	{
+		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80 ], $this->service()->nextcloudPreview() );
+
+		$this->systemValues = [ 'preview_format' => 'webp' ];
+		$this->appValues    = [ 'jpeg_quality' => 5, 'webp_quality' => 65 ];
+
+		self::assertSame( [ 'preview_format' => 'webp', 'jpeg_quality' => 10, 'webp_quality' => 65 ], $this->service()->nextcloudPreview() );
+	}
+
 	public function testThePreviewFormat(): void
 	{
 		self::assertSame( PreviewFormat::JPEG, $this->service()->previewFormat() );

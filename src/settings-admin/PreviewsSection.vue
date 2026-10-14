@@ -6,12 +6,14 @@
  * The type previews are stored in, and what a JPEG of a transparent image
  * is laid on. Nextcloud stores a preview in the type it is given, and
  * re-encodes it at its own quality. The choices are the server's; one this
- * page has no words for is shown as it is.
+ * page has no words for is shown as it is. Nextcloud's own preview format
+ * and quality are shown beneath, read only, each with the occ command that
+ * sets it: they apply to every preview, and are the server's to set.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import HelpPopover from './HelpPopover.vue'
 import OccCommand from './OccCommand.vue'
-import { scalarCommand } from './occ'
+import { appConfigCommand, scalarCommand, systemCommand } from './occ'
 import { t } from '../l10n'
 import { scalarChange } from './types'
 import type { Changes, SettingsState } from './types'
@@ -87,6 +89,26 @@ function label(choice: string): string {
 				{{ label(background) }}
 			</NcCheckboxRadioSwitch>
 			<OccCommand :command="scalarCommand('preview_background', state.scalars.preview_background.value)" />
+		</div>
+
+		<h4 class="lfp-named">
+			{{ t('large_file_previews', 'Nextcloud\'s own') }}
+			<HelpPopover :text="t('large_file_previews', 'Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s. Shown here, and changed with occ only, as Nextcloud has no page for them.')"
+				:label="t('large_file_previews', 'Nextcloud\'s own')" />
+		</h4>
+		<div class="lfp-fields" data-setting="nextcloud">
+			<div data-nextcloud="preview_format">
+				{{ t('large_file_previews', 'Preview format: {format}', { format: state.nextcloud.preview_format }) }}
+				<OccCommand :command="systemCommand('preview_format', state.nextcloud.preview_format)" />
+			</div>
+			<div data-nextcloud="jpeg_quality">
+				{{ t('large_file_previews', 'JPEG quality: {quality}', { quality: state.nextcloud.jpeg_quality }) }}
+				<OccCommand :command="appConfigCommand('preview', 'jpeg_quality', state.nextcloud.jpeg_quality)" />
+			</div>
+			<div data-nextcloud="webp_quality">
+				{{ t('large_file_previews', 'WebP quality: {quality}', { quality: state.nextcloud.webp_quality }) }}
+				<OccCommand :command="appConfigCommand('preview', 'webp_quality', state.nextcloud.webp_quality)" />
+			</div>
 		</div>
 	</div>
 </template>

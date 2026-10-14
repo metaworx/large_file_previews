@@ -168,6 +168,8 @@ export interface SettingsState {
 	untrusted: { allowed: boolean, blockable: boolean | null }
 	/** The app's version, as installed. */
 	version: string
+	/** Nextcloud's own preview settings, read only. */
+	nextcloud: { preview_format: string, jpeg_quality: number, webp_quality: number }
 	/** The distribution's family, where it is one the app knows packages for. */
 	platform: 'debian' | 'fedora' | 'rhel' | 'alpine' | 'arch' | null
 }

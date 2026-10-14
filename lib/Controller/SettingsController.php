@@ -336,6 +336,8 @@ class SettingsController
 			],
 			// The app's own, as installed, for the reader to quote.
 			'version'       => $this->apps->getAppVersion( Application::APP_ID ),
+			// Nextcloud's own, read only: they apply to every preview.
+			'nextcloud'     => $this->config->nextcloudPreview(),
 		];
 	}
 

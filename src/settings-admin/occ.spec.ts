@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { binaryCommand, ruleCommand, scalarCommand, scratchCommand, untrustedCommand } from './occ'
+import { appConfigCommand, binaryCommand, ruleCommand, scalarCommand, scratchCommand, systemCommand, untrustedCommand } from './occ'
 
 describe('occ commands', () => {
 	it('sets a setting to the value it has', () => {
@@ -20,6 +20,11 @@ describe('occ commands', () => {
 	it('allows untrusted decoders, or blocks them again', () => {
 		expect(untrustedCommand(false)).toBe('occ lfp:config:set vips_allow_untrusted true')
 		expect(untrustedCommand(true)).toBe('occ lfp:config:unset vips_allow_untrusted')
+	})
+
+	it('sets Nextcloud\'s own settings with its own commands', () => {
+		expect(systemCommand('preview_format', 'webp')).toBe('occ config:system:set preview_format --value=webp')
+		expect(appConfigCommand('preview', 'jpeg_quality', 80)).toBe('occ config:app:set preview jpeg_quality --value=80')
 	})
 
 	it('quotes a path the shell would split', () => {
