@@ -249,6 +249,7 @@ class SettingsController
 		}
 
 		$defaults  = $this->config->defaultMimeTypes();
+		$stored    = $this->config->storedMimeRules();
 		$mimeTypes = [];
 		$active    = [];
 
@@ -259,6 +260,8 @@ class SettingsController
 			$mimeTypes[] = [
 				'mime'     => $mime,
 				'rule'     => ( $this->config->mimeRules()[ $mime ] ?? new TypeRule() )->toArray(),
+				// Its own fields, which its command sets; the rest follow the default.
+				'stored'   => ( $stored[ $mime ] ?? new TypeRule() )->toArray(),
 				'default'  => $defaults[ $mime ],
 				'renderer' => $renderer,
 			];

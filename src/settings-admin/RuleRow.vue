@@ -28,12 +28,18 @@ const props = withDefaults(defineProps<{
 	saving: boolean
 	/** A MIME type's shipped rule, which a reset returns it to. */
 	shipped?: Rule | null
+	/**
+	 * What is stored at this level, which the command sets: a MIME type's
+	 * own fields; an extension's rule is what is stored already.
+	 */
+	stored?: Rule | null
 	/** An extension's MIME type. */
 	mime?: string | null
 	/** An extension selected anyway by its MIME type, with no size of its own. */
 	noEffect?: boolean
 }>(), {
 	shipped: null,
+	stored: null,
 	mime: null,
 	noEffect: false,
 })
@@ -76,7 +82,7 @@ function fieldId(field: string): string {
 			</template>
 			<span v-if="rendererProblem(renderer) !== null" class="lfp-note lfp-note--error">{{ rendererProblem(renderer)?.text }}</span>
 			<span v-else-if="noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
-			<OccCommand :command="ruleCommand(kind, name, rule)" />
+			<OccCommand :command="ruleCommand(kind, name, stored ?? rule)" />
 		</td>
 		<td>
 			<NcCheckboxRadioSwitch type="switch"

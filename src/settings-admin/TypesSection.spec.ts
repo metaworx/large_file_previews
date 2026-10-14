@@ -24,6 +24,26 @@ function tif(extra: Partial<ExtensionRow> = {}): ExtensionRow {
 }
 
 describe('TypesSection', () => {
+	it('gives a MIME type the command for what is stored for it, not the shipped default', () => {
+		const command = (state: SettingsState) => row(section(state), '[data-mime="image/tiff"]').findComponent({ name: 'OccCommand' }).props('command')
+
+		expect(command(testState())).toBe('occ lfp:config:unset --mime image/tiff')
+
+		const state = testState()
+		state.mimetypes[1].rule = { enabled: true, min_size_mb: 50 }
+		state.mimetypes[1].stored = { enabled: true }
+
+		expect(command(state)).toBe('occ lfp:config:set --mime image/tiff --enabled=yes')
+	})
+
+	it('gives an extension the command for its rule', () => {
+		const state = testState()
+		state.extensions = [tif()]
+
+		expect(row(section(state), '[data-extension="tif"]').findComponent({ name: 'OccCommand' }).props('command'))
+			.toBe('occ lfp:config:set --ext tif --enabled=yes --min=200')
+	})
+
 	it('has its title as an h3 and its parts as h4', () => {
 		const wrapper = section()
 

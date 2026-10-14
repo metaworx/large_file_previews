@@ -93,7 +93,10 @@ export interface ActiveRow {
 
 export interface MimeRow {
 	mime: string
+	/** The rule in force: the shipped default with what is stored laid over it. */
 	rule: Rule
+	/** What is stored for the type, its own fields: what its command sets. */
+	stored: Rule
 	default: Rule
 	renderer: Renderer
 }

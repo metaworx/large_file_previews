@@ -126,6 +126,7 @@ function addExtension(): void {
 					kind="mime"
 					:name="row.mime"
 					:rule="row.rule"
+					:stored="row.stored"
 					:shipped="row.default"
 					:renderer="row.renderer"
 					:saving="saving"

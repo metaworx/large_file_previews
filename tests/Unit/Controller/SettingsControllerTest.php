@@ -87,6 +87,7 @@ class SettingsControllerTest
 		self::assertSame( 600, $data['scalars']['timeout_seconds']['max'] );
 		self::assertCount( 16, $data['mimetypes'] );
 		self::assertSame( 'application/pdf', $data['mimetypes'][0]['mime'] );
+		self::assertSame( [], $data['mimetypes'][0]['stored'] );
 		self::assertSame( [ 'program' => 'pdftoppm', 'available' => true, 'unsupported' => null ], $data['mimetypes'][0]['renderer'] );
 		self::assertSame( [ 'program' => 'vipsthumbnail', 'available' => false, 'unsupported' => null ], $data['mimetypes'][2]['renderer'] );
 		self::assertSame(
@@ -100,6 +101,28 @@ class SettingsControllerTest
 	 * What is active out of the box: PDF and Illustrator, with where each
 	 * size comes from.
 	 */
+	/**
+	 * A MIME type's own fields come apart from the rule in force, so that
+	 * its command sets them alone: the image minimum keeps following the
+	 * server's limit.
+	 */
+	public function testAMimeRowSaysWhatIsStoredForIt(): void
+	{
+		$this->appValues[ ConfigLexicon::MIMETYPES ] = [ 'image/tiff' => [ 'enabled' => true ] ];
+
+		$tiff = array_values(
+			array_filter(
+				$this->controller( '' )->get()->getData()['mimetypes'],
+				static fn(
+					array $row,
+				): bool => $row['mime'] === 'image/tiff',
+			),
+		)[0];
+
+		self::assertSame( [ 'enabled' => true, 'min_size_mb' => 50 ], $tiff['rule'] );
+		self::assertSame( [ 'enabled' => true ], $tiff['stored'] );
+	}
+
 	public function testActiveListsTheEnabledTypes(): void
 	{
 		$active = $this->controller( '' )->get()->getData()['active'];

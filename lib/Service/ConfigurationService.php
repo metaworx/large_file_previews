@@ -193,6 +193,30 @@ class ConfigurationService
 	}
 
 	/**
+	 * What is stored for each MIME type, its own fields only, where it is
+	 * valid and in force: the fields a command must set to reproduce it.
+	 *
+	 * @return array<string, TypeRule>
+	 */
+	public function storedMimeRules(): array
+	{
+		$rules = [];
+
+		foreach ( $this->storedMap( ConfigLexicon::MIMETYPES ) as $mime => $stored )
+		{
+			$mime = (string) $mime;
+			$rule = TypeRule::fromArray( $stored );
+
+			if ( $rule instanceof TypeRule && SupportedTypes::matches( $mime ) && $this->shippedRule( $mime )->with( $rule )->problem() === null )
+			{
+				$rules[ $mime ] = $rule;
+			}
+		}
+
+		return $rules;
+	}
+
+	/**
 	 * The rule of every configured extension, keyed by the extension.
 	 *
 	 * @return array<string, TypeRule>

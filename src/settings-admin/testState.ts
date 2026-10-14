@@ -21,6 +21,7 @@ function pdf(): MimeRow {
 	return {
 		mime: 'application/pdf',
 		rule: { enabled: true },
+		stored: {},
 		default: { enabled: true },
 		renderer: { ...POPPLER },
 	}
@@ -30,6 +31,7 @@ function tiff(): MimeRow {
 	return {
 		mime: 'image/tiff',
 		rule: { enabled: false, min_size_mb: 50 },
+		stored: {},
 		default: { enabled: false, min_size_mb: 50 },
 		renderer: { ...VIPS },
 	}
