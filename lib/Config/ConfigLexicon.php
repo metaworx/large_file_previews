@@ -47,6 +47,8 @@ class ConfigLexicon
 
 	public const TIMEOUT_KILL_AFTER_SECONDS = 'timeout_kill_after_seconds';
 
+	public const FAILURE_RETRY_MINUTES = 'failure_retry_minutes';
+
 	public const PRLIMIT_ENABLED = 'prlimit_enabled';
 
 	public const PRLIMIT_AS_MB = 'prlimit_as_mb';
@@ -139,6 +141,15 @@ class ConfigLexicon
 				'min'        => 1,
 				'max'        => 60,
 				'definition' => 'Seconds timeout(1) waits after SIGTERM before SIGKILL.',
+			],
+			// A file that failed is asked for again on every page that shows
+			// it; an hour spares the server the same failure, and a change to
+			// the file or the settings retries it at once.
+			self::FAILURE_RETRY_MINUTES      => [
+				'default'    => 60,
+				'min'        => 0,
+				'max'        => 10080,
+				'definition' => 'Minutes a file that failed to render is left to Nextcloud\'s other providers before it is tried again; 0 tries it every time. Kept in the memory cache, by the file\'s id and version.',
 			],
 			self::PRLIMIT_ENABLED            => [
 				'default'    => true,
@@ -260,11 +271,13 @@ class ConfigLexicon
 			[],
 			'Per lower-case file extension: enabled, min_size_mb and max_size_mb, each optional; an extension overrides its MIME type field by field.',
 		);
+		// Lazy: read by the setup check and the page, never by a render.
 		$entries[] = self::entry(
 			self::LAST_FAILURE,
 			ValueType::ARRAY,
 			[],
 			'The last failed render: time, MIME type, reason and exit status. Written by the app only, and only on failure.',
+			true,
 		);
 
 		return $entries;
@@ -331,6 +344,7 @@ class ConfigLexicon
 		ValueType             $type,
 		int|bool|string|array $default,
 		string                $definition,
+		bool                  $lazy = false,
 	): Entry
 	{
 		return new Entry(
@@ -338,7 +352,7 @@ class ConfigLexicon
 			type: $type,
 			defaultRaw: $default,
 			definition: $definition,
-			lazy: false,
+			lazy: $lazy,
 			flags: IAppConfig::FLAG_INTERNAL,
 		);
 	}

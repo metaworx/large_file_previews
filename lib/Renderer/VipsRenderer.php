@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
@@ -61,6 +62,9 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * 151 MB, failed under 256 MB, 15000 x 15000 bytes, 365 MB, under 512. One
  * that runs out of memory is re-striped by tiffcp and tried again
  * (restripped()); tiffcp needs about the compressed strip.
+ *
+ * Every run is judged by RunJudge, and the header, the thumbnail and a
+ * re-striped copy share one timeout_seconds (Deadline).
  *
  * A type whose decoder `vips -l` does not list, or lists as untrusted
  * while those are blocked, is unsupported (VipsLoaders); and every type,
@@ -122,9 +126,6 @@ class VipsRenderer
 			'Error creating thread',
 			'No space for data buffer',
 		];
-
-	/** SIGABRT and SIGSEGV: how libvips and libheif end under the cap. */
-	private const CRASH_SIGNALS = [ 6, 11 ];
 
 
 //  constructor
@@ -229,30 +230,33 @@ class VipsRenderer
 
 		try
 		{
-			$environment = $this->environment( dirname( $output ) );
-			$cap         = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
+			$run = new RunOptions(
+				environment: $this->environment( dirname( $output ) ),
+				prlimitAsMb: (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
+				deadline: $this->deadline(),
+			);
 
 			// Not enlarged: a header that cannot be read leaves the box, and the
 			// thumbnail says what is wrong with the file.
-			$run    = $this->runner->run(
+			$read   = $this->runner->run(
 				self::HEADER,
 				[ RunOptions::path( RunOptions::INPUT ) ],
-				new RunOptions( true, $environment, $cap, [ RunOptions::INPUT => $input ] ),
+				self::with( $run, [ RunOptions::INPUT => $input ], keepStdout: true ),
 			);
-			$header = $run->isSuccess() ? self::header( $run->stderr ) : null;
+			$header = $read->isSuccess() ? self::header( $read->stderr ) : null;
 
 			if ( $header !== null && max( $header['width'], $header['height'] ) < $box )
 			{
 				$box = max( $header['width'], $header['height'] );
 			}
 
-			$outcome = $this->thumbnail( RunOptions::INPUT, $input, $box, $output, $format, $environment, $cap );
+			$outcome = $this->thumbnail( RunOptions::INPUT, $input, $box, $output, $format, $run );
 
 			// A TIFF in one strip, or a few large ones, is read a strip at a
 			// time; one that ran out of memory gets a second chance.
 			if ( $outcome->outcome === Outcome::OUT_OF_MEMORY && $header !== null && $header['loader'] === 'tiffload' )
 			{
-				return $this->restripped( $input, $header, $box, $output, $format, $environment, $cap, $outcome );
+				return $this->restripped( $input, $header, $box, $output, $format, $run, $outcome );
 			}
 
 			return $outcome;
@@ -264,8 +268,8 @@ class VipsRenderer
 	}
 
 	/**
-	 * @param resource              $handle      the image, handed on as `$descriptor`
-	 * @param array<string, string> $environment
+	 * @param resource   $handle the image, handed on as `$descriptor`
+	 * @param RunOptions $run    the render's environment, cap and deadline
 	 */
 	private function thumbnail(
 		int           $descriptor,
@@ -273,8 +277,7 @@ class VipsRenderer
 		int           $box,
 		string        $output,
 		PreviewFormat $format,
-		array         $environment,
-		int           $cap,
+		RunOptions    $run,
 	): RenderOutcome
 	{
 		$outcome = $this->runner->run(
@@ -287,10 +290,10 @@ class VipsRenderer
 				'-o',
 				$output . $this->saveOptions( $format ),
 			],
-			new RunOptions( false, $environment, $cap, [ $descriptor => $handle ] ),
+			self::with( $run, [ $descriptor => $handle ] ),
 		);
 
-		return self::judged( $outcome, $output );
+		return RunJudge::judged( $outcome, $output, self::OUT_OF_MEMORY, ConfigLexicon::VIPS_PRLIMIT_AS_MB );
 	}
 
 	/**
@@ -312,11 +315,12 @@ class VipsRenderer
 	 * directory, so the free-space check holds; and tiffcp may not write
 	 * past the copy's size (`prlimit --fsize`), whatever the header said.
 	 * Where the copy cannot be made, the render stays out of memory, with
-	 * the reason.
+	 * the reason; where the fallback fails, its outcome is the render's, and
+	 * its reason follows the first one. The lock is waited for, and the copy
+	 * made, within the render's own time.
 	 *
 	 * @param resource                                                              $input
 	 * @param array{width: int, height: int, bands: int, bytes: int, loader: string} $header
-	 * @param array<string, string>                                                 $environment
 	 */
 	private function restripped(
 		mixed         $input,
@@ -324,14 +328,14 @@ class VipsRenderer
 		int           $box,
 		string        $output,
 		PreviewFormat $format,
-		array         $environment,
-		int           $cap,
+		RunOptions    $run,
 		RenderOutcome $outOfMemory,
 	): RenderOutcome
 	{
 		$bytes   = $header['width'] * $header['height'] * $header['bands'] * $header['bytes'];
 		$maximum = (int) $this->config->getScalar( ConfigLexicon::TIFF_RESTRIP_MAX_MB ) * 1_048_576;
 		$without = static fn( string $why ): RenderOutcome => $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $why );
+		$failed  = static fn( RenderOutcome $fallback ): RenderOutcome => $fallback->as( $fallback->outcome, $outOfMemory->reason . '; the one-strip fallback: ' . $fallback->reason );
 
 		if ( ! $this->binaries->locate( self::RESTRIPPER )->isFound() )
 		{
@@ -345,7 +349,7 @@ class VipsRenderer
 
 		// One copy at a time, so that two cannot each pass the free-space
 		// check and together fill the disc.
-		$lock = $this->scratch->lock( (int) $this->config->getScalar( ConfigLexicon::TIMEOUT_SECONDS ) );
+		$lock = $this->scratch->lock( $run->deadline?->left() ?? 0 );
 
 		if ( $lock === null )
 		{
@@ -378,27 +382,39 @@ class VipsRenderer
 
 			// `,0` is the first image only. The copy may not grow past its
 			// size and the TIFF's own structures, whatever the header said.
-			$copied = $this->runner->run(
-				self::RESTRIPPER,
-				[ '-c', 'none', '-r', '64', RunOptions::path( RunOptions::INPUT ) . ',0', RunOptions::path( RunOptions::COPY ) ],
-				new RunOptions(
-					environment: $environment,
-					prlimitAsMb: $cap,
-					descriptors: [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ],
-					fsizeBytes: $bytes + self::COPY_MARGIN_BYTES,
+			$copied = RunJudge::judged(
+				$this->runner->run(
+					self::RESTRIPPER,
+					[ '-c', 'none', '-r', '64', RunOptions::path( RunOptions::INPUT ) . ',0', RunOptions::path( RunOptions::COPY ) ],
+					new RunOptions(
+						environment: $run->environment,
+						prlimitAsMb: $run->prlimitAsMb,
+						descriptors: [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ],
+						fsizeBytes: $bytes + self::COPY_MARGIN_BYTES,
+						deadline: $run->deadline,
+					),
 				),
+				null,
+				self::OUT_OF_MEMORY,
+				ConfigLexicon::VIPS_PRLIMIT_AS_MB,
+				'the copy\'s size, from the header',
 			);
 
-			if ( ! $copied->isSuccess() || ( fstat( $copy )['size'] ?? 0 ) === 0 )
+			if ( $copied->isSuccess() && ( fstat( $copy )['size'] ?? 0 ) === 0 )
 			{
-				return $copied->as( $copied->isSuccess() ? Outcome::NO_OUTPUT : $copied->outcome, 'the one-strip fallback: tiffcp: ' . $copied->reason );
+				$copied = $copied->as( Outcome::NO_OUTPUT, 'exit status 0, but no copy written' );
 			}
 
-			$outcome = $this->thumbnail( RunOptions::COPY, $copy, $box, $output, $format, $environment, $cap );
+			if ( ! $copied->isSuccess() )
+			{
+				return $failed( $copied->as( $copied->outcome, 'tiffcp: ' . $copied->reason ) );
+			}
+
+			$outcome = $this->thumbnail( RunOptions::COPY, $copy, $box, $output, $format, $run );
 
 			return $outcome->isSuccess()
 				? $outcome
-				: $outcome->as( $outcome->outcome, 'the one-strip fallback: ' . $outcome->reason );
+				: $failed( $outcome );
 		}
 		finally
 		{
@@ -424,12 +440,14 @@ class VipsRenderer
 	 * same cap and environment as a render: a page poppler wrote, where a
 	 * WebP preview is asked for.
 	 *
-	 * @param string $png    an absolute path ending in `.png`
-	 * @param string $output an absolute path ending in `.png`, `.jpg` or `.webp`
+	 * @param string        $png      an absolute path ending in `.png`
+	 * @param string        $output   an absolute path ending in `.png`, `.jpg` or `.webp`
+	 * @param Deadline|null $deadline the render's, of which this is a part
 	 */
 	public function convert(
-		string $png,
-		string $output,
+		string    $png,
+		string    $output,
+		?Deadline $deadline = null,
 	): RenderOutcome
 	{
 		$format = PreviewFormat::ofPath( $output );
@@ -445,10 +463,19 @@ class VipsRenderer
 			new RunOptions(
 				environment: $this->environment( dirname( $output ) ),
 				prlimitAsMb: (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
+				deadline: $deadline ?? $this->deadline(),
 			),
 		);
 
-		return self::judged( $outcome, $output );
+		return RunJudge::judged( $outcome, $output, self::OUT_OF_MEMORY, ConfigLexicon::VIPS_PRLIMIT_AS_MB );
+	}
+
+	/**
+	 * When a render starting now must be done.
+	 */
+	private function deadline(): Deadline
+	{
+		return Deadline::after( (int) $this->config->getScalar( ConfigLexicon::TIMEOUT_SECONDS ) );
 	}
 
 	/**
@@ -532,43 +559,16 @@ class VipsRenderer
 	}
 
 	/**
-	 * Out of memory, where libvips said so, or no output where it said
-	 * nothing.
+	 * The render's options with the descriptors of one run.
+	 *
+	 * @param array<int, resource> $descriptors
 	 */
-	private static function judged(
-		RenderOutcome $outcome,
-		string        $output,
-	): RenderOutcome
+	private static function with(
+		RunOptions $run,
+		array      $descriptors,
+		bool       $keepStdout = false,
+	): RunOptions
 	{
-		if ( ! $outcome->isSuccess() && self::outOfMemory( $outcome->stderr ) )
-		{
-			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (vips_prlimit_as_mb)' );
-		}
-
-		// A crash is not named out of memory: a hostile file can cause one.
-		if ( $outcome->outcome === Outcome::KILLED && in_array( $outcome->signal, self::CRASH_SIGNALS, true ) )
-		{
-			return $outcome->as( Outcome::KILLED, $outcome->reason . '; under the address-space cap, a crash is often memory running out (vips_prlimit_as_mb)' );
-		}
-
-		if ( $outcome->isSuccess() && ! is_file( $output ) )
-		{
-			return $outcome->as( Outcome::NO_OUTPUT, 'exit status 0, but no image written' );
-		}
-
-		return $outcome;
-	}
-
-	private static function outOfMemory( string $stderr ): bool
-	{
-		foreach ( self::OUT_OF_MEMORY as $message )
-		{
-			if ( str_contains( $stderr, $message ) )
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return new RunOptions( $keepStdout, $run->environment, $run->prlimitAsMb, $descriptors, $run->fsizeBytes, $run->deadline );
 	}
 }

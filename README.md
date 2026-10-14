@@ -68,6 +68,14 @@ the administration overview has a check of its own:
 an error while something the app needs is missing,
 and a warning naming the last render that failed, for a day after it did.
 
+A file that failed is not tried again on every page that shows it:
+it is left to the next provider for `failure_retry_minutes`,
+60 by default, where 0 tries it every time,
+and kept in Nextcloud's memory cache by the file's id and version.
+A change to the file, or to a setting, tries it again at once,
+and so does `occ lfp:check --refresh`.
+A failure that is the server's, a program missing for instance, is not kept.
+
 ```bash
 occ lfp:check
 ```
@@ -128,7 +136,8 @@ and why;
 Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
 
 Each render runs under three limits, each switchable:
-a timeout (`timeout_seconds`, 30 by default),
+a timeout (`timeout_seconds`, 30 by default,
+shared by every program one render runs),
 a cap on its address space (`prlimit_as_mb`, 512;
 `vips_prlimit_as_mb`, 1024, for libvips,
 which reads whole strips and runs threads),

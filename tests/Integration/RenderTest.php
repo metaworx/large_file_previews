@@ -17,6 +17,7 @@ use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\SetupCheck\RendererCheck;
+use OCP\ICacheFactory;
 use OCP\IPreview;
 use OCP\Server;
 use OCP\SetupCheck\SetupResult;
@@ -180,6 +181,28 @@ class RenderTest
 		self::assertSame( 'application/pdf', $failure['mime'] ?? null );
 		self::assertSame( 'failed', $failure['outcome'] ?? null );
 		self::assertSame( SetupResult::WARNING, Server::get( RendererCheck::class )->run()->getSeverity() );
+	}
+
+	/**
+	 * A file that failed is left to the other providers for
+	 * failure_retry_minutes, where Nextcloud has a memory cache to keep
+	 * that in; without one, every request tries it again.
+	 */
+	public function testABrokenFileIsNotTriedAgainAtOnce(): void
+	{
+		$caches = Server::get( ICacheFactory::class );
+
+		if ( ! $caches->isAvailable() && ! $caches->isLocalCacheAvailable() )
+		{
+			self::markTestSkipped( 'No memory cache here, so no failure is remembered.' );
+		}
+
+		$file     = $this->file( 'broken-again.pdf', "%PDF-1.4\nnot a pdf at all\n" );
+		$provider = Server::get( LargeFileProvider::class );
+
+		self::assertTrue( $provider->isAvailable( $file ) );
+		self::assertNull( $provider->getThumbnail( $file, 256, 256 ) );
+		self::assertFalse( $provider->isAvailable( $file ) );
 	}
 
 	public function testTheSetupCheckIsGreen(): void

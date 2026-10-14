@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Renderer;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\RunOptions;
 
 /**
@@ -60,16 +61,20 @@ class PageProbe
 	 * The longer side, in pixels, of page 1 at its scan's resolution, or
 	 * null where page 1 is not a scan, cannot be told, or is not asked.
 	 *
-	 * @param resource $input the PDF, open for reading
+	 * @param resource      $input    the PDF, open for reading
+	 * @param Deadline|null $deadline the render's, of which this is a part
 	 */
-	public function scanBox( mixed $input ): ?int
+	public function scanBox(
+		mixed     $input,
+		?Deadline $deadline = null,
+	): ?int
 	{
 		if ( $this->config->getScalar( ConfigLexicon::SCAN_NATIVE_ENABLED ) !== true )
 		{
 			return null;
 		}
 
-		$options = new RunOptions( keepStdout: true, descriptors: [ RunOptions::INPUT => $input ] );
+		$options = new RunOptions( keepStdout: true, descriptors: [ RunOptions::INPUT => $input ], deadline: $deadline );
 		$file    = RunOptions::path( RunOptions::INPUT );
 		$info    = $this->runner->run( self::PDFINFO, [ '-f', '1', '-l', '1', $file ], $options );
 

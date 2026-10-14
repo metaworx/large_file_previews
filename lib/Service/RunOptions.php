@@ -51,13 +51,17 @@ final readonly class RunOptions
 	 *                                           may write, in place of
 	 *                                           prlimit_fsize_mb: the one-strip
 	 *                                           copy's own
+	 * @param Deadline|null         $deadline    the render's: the run's timeout
+	 *                                           is the time left, and it is not
+	 *                                           started once none is
 	 */
 	public function __construct(
-		public bool  $keepStdout = false,
-		public array $environment = [],
-		public ?int  $prlimitAsMb = null,
-		public array $descriptors = [],
-		public ?int  $fsizeBytes = null,
+		public bool      $keepStdout = false,
+		public array     $environment = [],
+		public ?int      $prlimitAsMb = null,
+		public array     $descriptors = [],
+		public ?int      $fsizeBytes = null,
+		public ?Deadline $deadline = null,
 	)
 	{
 	}

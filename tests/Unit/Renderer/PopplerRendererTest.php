@@ -15,9 +15,13 @@ use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
+use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
+use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -25,6 +29,9 @@ class PopplerRendererTest
     extends
     TestCase
 {
+	use EnglishL10n;
+	use MemoryAppConfig;
+
 
 //  private properties
 
@@ -32,6 +39,9 @@ class PopplerRendererTest
 
 	/** A file the renderer opens; the runner is a mock, so it holds anything. */
 	private string $input;
+
+	/** The deadline pdftoppm was run with. */
+	private ?Deadline $runDeadline = null;
 
 
 //  getters / setters / is* / has*
@@ -115,7 +125,7 @@ class PopplerRendererTest
 		     ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) )
 		;
 
-		$renderer = new PopplerRenderer( $runner, $this->probe( null ), $vips );
+		$renderer = new PopplerRenderer( $runner, $this->probe( null ), $vips, $this->settings() );
 
 		self::assertSame( PreviewFormat::WEBP, $renderer->format( PreviewFormat::WEBP ) );
 		self::assertTrue( $renderer->render( $this->input, 4096, $webp )->isSuccess() );
@@ -208,7 +218,78 @@ class PopplerRendererTest
 		     ->method( 'convert' )
 		;
 
-		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ), $vips ) )->render( $this->input, 100, '/tmp/out.webp' ) );
+		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ), $vips, $this->settings() ) )->render( $this->input, 100, '/tmp/out.webp' ) );
+	}
+
+	/**
+	 * Out of memory whatever the exit status, as libvips' runs are judged;
+	 * a crash under the cap says the cap may be why.
+	 */
+	public function testOutOfMemoryAndACrashWhateverTheExitStatus(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'run' )
+		       ->willReturnOnConsecutiveCalls(
+			       new RenderOutcome( Outcome::FAILED, 'exit status 99', 99, null, 'Out of memory' ),
+			       new RenderOutcome( Outcome::KILLED, 'killed by signal 11', null, 11 ),
+		       )
+		;
+		$renderer = $this->poppler( $runner );
+
+		self::assertSame( Outcome::OUT_OF_MEMORY, $renderer->render( $this->input, 100, $this->output )->outcome );
+		self::assertStringEndsWith( 'a crash is often memory running out (prlimit_as_mb)', $renderer->render( $this->input, 100, $this->output )->reason );
+	}
+
+	/**
+	 * The probe, pdftoppm and the conversion share one deadline.
+	 */
+	public function testOneDeadlineForTheRender(): void
+	{
+		$webp     = substr( $this->output, 0, -4 ) . '.webp';
+		$deadline = null;
+		$probe    = $this->createMock( PageProbe::class );
+		$probe->expects( self::once() )
+		      ->method( 'scanBox' )
+		      ->willReturnCallback(
+			      static function(
+				      mixed     $input,
+				      ?Deadline $given,
+			      ) use (
+				      &$deadline,
+			      ): ?int
+			      {
+				      $deadline = $given;
+
+				      return null;
+			      },
+		      )
+		;
+
+		$runner = $this->renders( 4096, [ '-png' ] );
+		$vips   = $this->vips( true );
+		$vips->expects( self::once() )
+		     ->method( 'convert' )
+		     ->with(
+			     $this->output,
+			     $webp,
+			     self::callback(
+				     static function(
+					     ?Deadline $given,
+				     ) use (
+					     &$deadline,
+				     ): bool
+				     {
+					     return $given !== null && $given === $deadline;
+				     },
+			     ),
+		     )
+		     ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) )
+		;
+
+		( new PopplerRenderer( $runner, $probe, $vips, $this->settings() ) )->render( $this->input, 4096, $webp );
+
+		self::assertInstanceOf( Deadline::class, $deadline );
+		self::assertSame( $deadline, $this->runDeadline );
 	}
 
 	/**
@@ -226,7 +307,7 @@ class PopplerRendererTest
 		      ->method( 'scanBox' )
 		;
 
-		$renderer = new PopplerRenderer( $runner, $probe, $this->vips( false ) );
+		$renderer = new PopplerRenderer( $runner, $probe, $this->vips( false ), $this->settings() );
 
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-opw', 100, $this->output )->outcome );
 		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 0, $this->output )->outcome );
@@ -238,7 +319,7 @@ class PopplerRendererTest
 	public function testRenderersFindByType(): void
 	{
 		$vips      = $this->vips( false );
-		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ), $vips );
+		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ), $vips, $this->settings() );
 		$renderers = new Renderers( $poppler, $vips );
 
 		self::assertSame( $poppler, $renderers->for( 'application/pdf' ) );
@@ -251,7 +332,12 @@ class PopplerRendererTest
 		?int          $scanBox = null,
 	): PopplerRenderer
 	{
-		return new PopplerRenderer( $runner, $this->probe( $scanBox ), $this->vips( false ) );
+		return new PopplerRenderer( $runner, $this->probe( $scanBox ), $this->vips( false ), $this->settings() );
+	}
+
+	private function settings(): ConfigurationService
+	{
+		return new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() );
 	}
 
 	/**
@@ -273,7 +359,16 @@ class PopplerRendererTest
 			       'pdftoppm',
 			       // The file as descriptor 4, never by its name.
 			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, ...$format, '-singlefile', '/dev/fd/4', $stem ],
-			       self::callback( static fn( RunOptions $options ): bool => is_resource( $options->descriptors[ RunOptions::INPUT ] ?? null ) ),
+			       self::callback(
+				       function(
+					       RunOptions $options,
+				       ): bool
+				       {
+					       $this->runDeadline = $options->deadline;
+
+					       return is_resource( $options->descriptors[ RunOptions::INPUT ] ?? null );
+				       },
+			       ),
 		       )
 		       ->willReturnCallback(
 			       static function() use (

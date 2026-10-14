@@ -43,6 +43,7 @@ class ConfigLexiconTest
 				'timeout_enabled',
 				'timeout_seconds',
 				'timeout_kill_after_seconds',
+				'failure_retry_minutes',
 				'prlimit_enabled',
 				'prlimit_as_mb',
 				'vips_prlimit_as_mb',
@@ -91,12 +92,16 @@ class ConfigLexiconTest
 		}
 	}
 
-	public function testEveryKeyIsInternalAndEager(): void
+	/**
+	 * Eager, since a render reads them; the last failure only the page and
+	 * the setup check read, so it is lazy.
+	 */
+	public function testEveryKeyIsInternalAndEagerButTheLastFailure(): void
 	{
 		foreach ( ( new ConfigLexicon() )->getAppConfigs() as $entry )
 		{
 			self::assertSame( IAppConfig::FLAG_INTERNAL, $entry->getFlags(), $entry->getKey() );
-			self::assertFalse( $entry->isLazy(), $entry->getKey() );
+			self::assertSame( $entry->getKey() === ConfigLexicon::LAST_FAILURE, $entry->isLazy(), $entry->getKey() );
 		}
 	}
 

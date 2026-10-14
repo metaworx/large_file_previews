@@ -15,7 +15,9 @@ use OCP\ICacheFactory;
 
 /**
  * What was found out about the server's programs - their paths, their
- * versions - kept so that it is not found out on every request.
+ * versions - kept so that it is not found out on every request; and which
+ * files failed to render with them (FailedFiles), forgotten with the rest
+ * when the programs are found again.
  *
  * Nextcloud's memory cache, never app config: app config can be written over
  * the provisioning API, and a path an administrator without shell access
@@ -56,12 +58,16 @@ class DetectionCache
 		return is_string( $value ) ? $value : null;
 	}
 
+	/**
+	 * @param int $ttl seconds it is kept
+	 */
 	public function set(
 		string $key,
 		string $value,
+		int    $ttl = self::TTL,
 	): void
 	{
-		$this->cache()->set( $key, $value, self::TTL );
+		$this->cache()->set( $key, $value, $ttl );
 	}
 
 	/**

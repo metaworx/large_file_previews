@@ -23,6 +23,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\FailedFiles;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\TypePolicy;
@@ -231,6 +232,45 @@ class LargeFileProviderTest
 		);
 	}
 
+	/**
+	 * A file that failed is left to the other providers for
+	 * failure_retry_minutes; changed, or under other settings, it is tried
+	 * again at once.
+	 */
+	public function testAFailedFileIsLeftAloneForAWhile(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::OUT_OF_MEMORY, 'out of memory', 1 ) );
+		$file = $this->file( 'application/pdf', 'a.pdf' );
+
+		$this->provider()->getThumbnail( $file, 100, 100 );
+
+		self::assertFalse( $this->provider()->isAvailable( $file ) );
+		self::assertTrue( $this->provider()->isAvailable( $this->file( 'application/pdf', 'a.pdf', etag: 'etag-2' ) ) );
+
+		$this->appValues[ ConfigLexicon::PRLIMIT_AS_MB ] = 1024;
+
+		self::assertTrue( $this->provider()->isAvailable( $file ) );
+
+		$this->provider()->getThumbnail( $file, 100, 100 );
+		$this->appValues[ ConfigLexicon::FAILURE_RETRY_MINUTES ] = 0;
+
+		self::assertTrue( $this->provider()->isAvailable( $file ) );
+	}
+
+	/**
+	 * A failure that is the server's, not the file's, is not kept: the
+	 * next request may not meet it.
+	 */
+	public function testAServerFailureIsNotRemembered(): void
+	{
+		$file = $this->file( 'application/pdf', 'a.pdf', localPath: false );
+
+		$this->provider()->getThumbnail( $file, 100, 100 );
+
+		self::assertTrue( $this->provider()->isAvailable( $file ) );
+		self::assertSame( [], $this->cacheValues );
+	}
+
 	public function testASuccessWritesNoRecord(): void
 	{
 		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) );
@@ -353,7 +393,7 @@ class LargeFileProviderTest
 			new TypePolicy( $config ),
 			// A probe that finds no scan: the box is what was asked for.
 			new Renderers(
-				new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ), $vips ),
+				new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ), $vips, $config ),
 				$vips,
 			),
 			$this->images,
@@ -361,6 +401,7 @@ class LargeFileProviderTest
 			$config,
 			$time,
 			$this->logger,
+			new FailedFiles( $this->detectionCache(), $config ),
 		);
 	}
 
@@ -372,6 +413,7 @@ class LargeFileProviderTest
 		bool         $encrypted = false,
 		// A file that is there: the renderer opens it; the runner is a mock.
 		string|false $localPath = __FILE__,
+		string       $etag = 'etag-1',
 	): File&MockObject
 	{
 		$storage = $this->createMock( IStorage::class );
@@ -400,6 +442,12 @@ class LargeFileProviderTest
 		;
 		$file->method( 'getInternalPath' )
 		     ->willReturn( 'files/doc.pdf' )
+		;
+		$file->method( 'getId' )
+		     ->willReturn( 42 )
+		;
+		$file->method( 'getEtag' )
+		     ->willReturn( $etag )
 		;
 
 		return $file;

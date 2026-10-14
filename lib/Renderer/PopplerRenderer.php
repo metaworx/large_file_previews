@@ -9,8 +9,11 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Renderer;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
@@ -35,6 +38,9 @@ use OCA\LargeFilePreviews\Service\RunOptions;
  *
  * pdftoppm writes no WebP: its PNG is converted by libvips, and without
  * libvips a WebP preview is a JPEG (format()).
+ *
+ * The run is judged as libvips' are (RunJudge), and the probe, pdftoppm and
+ * a conversion share one timeout_seconds (Deadline).
  */
 class PopplerRenderer
     implements
@@ -45,13 +51,21 @@ class PopplerRenderer
 
 	public const PROGRAM = 'pdftoppm';
 
+	/**
+	 * What poppler prints when the cap stops it, whatever its exit status:
+	 * measured with poppler 24.02, which exits 0 and leaves a PNG of a few
+	 * bytes.
+	 */
+	private const OUT_OF_MEMORY = [ 'Out of memory' ];
+
 
 //  constructor
 
 	public function __construct(
-		private readonly CommandRunner $runner,
-		private readonly PageProbe     $probe,
-		private readonly VipsRenderer  $vips,
+		private readonly CommandRunner        $runner,
+		private readonly PageProbe            $probe,
+		private readonly VipsRenderer         $vips,
+		private readonly ConfigurationService $config,
 	)
 	{
 	}
@@ -114,11 +128,14 @@ class PopplerRenderer
 			return new RenderOutcome( Outcome::START_FAILED, 'the file could not be opened' );
 		}
 
+		// The probe, pdftoppm and a conversion share the render's time.
+		$deadline = Deadline::after( (int) $this->config->getScalar( ConfigLexicon::TIMEOUT_SECONDS ) );
+
 		try
 		{
 			// A scanned page at its own resolution, where that is smaller: an
 			// enlarged scan is a larger preview with no more detail.
-			$scan = $this->probe->scanBox( $input );
+			$scan = $this->probe->scanBox( $input, $deadline );
 
 			if ( $scan !== null && $scan > 0 && $scan < $box )
 			{
@@ -141,7 +158,7 @@ class PopplerRenderer
 					RunOptions::path( RunOptions::INPUT ),
 					$stem,
 				],
-				new RunOptions( descriptors: [ RunOptions::INPUT => $input ] ),
+				new RunOptions( descriptors: [ RunOptions::INPUT => $input ], deadline: $deadline ),
 			);
 		}
 		finally
@@ -151,24 +168,13 @@ class PopplerRenderer
 
 		// pdftoppm's own file: the preview, or the page to convert.
 		$written = $format === PreviewFormat::JPEG ? $output : $stem . '.png';
-
-		// Under the address-space cap, poppler says so on stderr and still
-		// exits 0, leaving a PNG of a few bytes: measured with poppler 24.02.
-		if ( $outcome->isSuccess() && str_contains( $outcome->stderr, 'Out of memory' ) )
-		{
-			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (prlimit_as_mb)' );
-		}
-
-		if ( $outcome->isSuccess() && ! is_file( $written ) )
-		{
-			return $outcome->as( Outcome::NO_OUTPUT, 'exit status 0, but no image written' );
-		}
+		$outcome = RunJudge::judged( $outcome, $written, self::OUT_OF_MEMORY, ConfigLexicon::PRLIMIT_AS_MB );
 
 		if ( ! $outcome->isSuccess() || $written === $output )
 		{
 			return $outcome;
 		}
 
-		return $this->vips->convert( $written, $output );
+		return $this->vips->convert( $written, $output, $deadline );
 	}
 }

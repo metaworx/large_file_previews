@@ -120,7 +120,19 @@ class CommandRunner
 			);
 		}
 
-		$prefix = $this->prefix( $this->config->limits()->withRun( $options->prlimitAsMb, $options->fsizeBytes ) );
+		$limits = $this->config->limits();
+		$left   = $options->deadline?->left();
+
+		// Without timeout(1) nothing stops a run anyway.
+		if ( $left === 0 && $limits->timeoutEnabled )
+		{
+			return new RenderOutcome(
+				Outcome::TIMED_OUT,
+				sprintf( 'the render\'s time (timeout_seconds) ran out before %s', $program ),
+			);
+		}
+
+		$prefix = $this->prefix( $limits->withRun( $options->prlimitAsMb, $options->fsizeBytes, $left ) );
 
 		if ( $prefix instanceof RenderOutcome )
 		{
@@ -191,7 +203,7 @@ class CommandRunner
 	}
 
 	/**
-	 * Runs a program by name with no limits around it, its stdout kept with
+	 * Runs a program by name under the timeout alone, its stdout kept with
 	 * its stderr: for a version, which some programs print to one and some
 	 * to the other, or a listing. Not for rendering.
 	 *
@@ -211,12 +223,19 @@ class CommandRunner
 			return new RenderOutcome( Outcome::PROGRAM_MISSING, sprintf( '%s not found', $program ) );
 		}
 
+		$prefix = $this->prefix( $this->config->limits()->timeoutOnly() );
+
+		if ( $prefix instanceof RenderOutcome )
+		{
+			return $prefix;
+		}
+
 		if ( ! self::canStartProcesses() )
 		{
 			return new RenderOutcome( Outcome::PROC_OPEN_UNAVAILABLE, 'proc_open() is disabled' );
 		}
 
-		return $this->execute( [ (string) $location->path, ...$arguments ], new RunOptions( keepStdout: true ), $limit );
+		return $this->execute( [ ...$prefix, (string) $location->path, ...$arguments ], new RunOptions( keepStdout: true ), $limit );
 	}
 
 	/**

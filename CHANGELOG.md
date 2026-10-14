@@ -27,6 +27,9 @@ the first stable release.
   render, and `occ lfp:check`, listing what the app needs, and the
   package for it per distribution; `--refresh` to find programs again.
 
+- `README.md`, *When previews fail*: a file that failed is left to the
+  next provider for `failure_retry_minutes`.
+
 - `README.md`, *Configuration*: files taken by type, extension and
   size, images from `preview_max_filesize_image`; scans; each render's
   limits; libvips' untrusted decoders, blocked by default, and threads.

@@ -271,7 +271,7 @@ class SettingsControllerTest
 			$config,
 			new TypePolicy( $config ),
 			new Renderers(
-				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ), $vips ),
+				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ), $vips, $config ),
 				$vips,
 			),
 			$prerequisites,

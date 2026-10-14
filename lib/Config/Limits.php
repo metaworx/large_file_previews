@@ -36,23 +36,43 @@ final readonly class Limits
 //  other non-static methods
 
 	/**
-	 * The same limits with a run's own address-space cap, and its own
-	 * file-size cap: a renderer's, or the one-strip copy's.
+	 * The same limits with a run's own address-space cap, its own
+	 * file-size cap, a renderer's or the one-strip copy's, and the time its
+	 * render has left.
 	 */
 	public function withRun(
 		?int $prlimitAsMb,
 		?int $prlimitFsizeBytes = null,
+		?int $timeoutSeconds = null,
 	): self
 	{
 		return new self(
 			$this->timeoutEnabled,
-			$this->timeoutSeconds,
+			$timeoutSeconds === null ? $this->timeoutSeconds : min( $this->timeoutSeconds, $timeoutSeconds ),
 			$this->timeoutKillAfterSeconds,
 			$this->prlimitEnabled,
 			$prlimitAsMb ?? $this->prlimitAsMb,
 			$this->choomEnabled,
 			$this->choomAdjust,
 			$prlimitFsizeBytes ?? $this->prlimitFsizeBytes,
+		);
+	}
+
+	/**
+	 * The timeout alone: for asking a program its version or its loaders,
+	 * which need no cap, but must not hang a request.
+	 */
+	public function timeoutOnly(): self
+	{
+		return new self(
+			$this->timeoutEnabled,
+			$this->timeoutSeconds,
+			$this->timeoutKillAfterSeconds,
+			false,
+			$this->prlimitAsMb,
+			false,
+			$this->choomAdjust,
+			$this->prlimitFsizeBytes,
 		);
 	}
 }

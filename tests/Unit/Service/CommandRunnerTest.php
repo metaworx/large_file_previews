@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Config\Limits;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
@@ -136,6 +137,35 @@ class CommandRunnerTest
 		$this->appValues = self::only( '' );
 
 		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( prlimitAsMb: 1024 ) ) );
+	}
+
+	/**
+	 * A run is given the time its render has left, never more than
+	 * timeout_seconds; once none is left it is not started. Without
+	 * timeout(1) there is nothing to give.
+	 */
+	public function testARunGetsTheTimeItsRenderHasLeft(): void
+	{
+		$programs        = [ 'timeout' => '/t', 'pdftoppm' => '/usr/bin/pdftoppm' ];
+		$this->appValues = self::only( ConfigLexicon::TIMEOUT_ENABLED ) + [ ConfigLexicon::TIMEOUT_SECONDS => 30 ];
+
+		self::assertSame(
+			[ '/t', '--kill-after=5s', '10s', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( deadline: Deadline::after( 10 ) ) ),
+		);
+		self::assertSame(
+			[ '/t', '--kill-after=5s', '30s', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( deadline: Deadline::after( 600 ) ) ),
+		);
+
+		$late = $this->runner( $programs )->run( 'pdftoppm', [], new RunOptions( deadline: Deadline::after( 0 ) ) );
+
+		self::assertSame( Outcome::TIMED_OUT, $late->outcome );
+		self::assertSame( 'the render\'s time (timeout_seconds) ran out before pdftoppm', $late->reason );
+
+		$this->appValues = self::only( '' );
+
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [], new RunOptions( deadline: Deadline::after( 0 ) ) ) );
 	}
 
 	/**
@@ -277,17 +307,24 @@ class CommandRunnerTest
 	}
 
 	/**
-	 * For a version: no limits, so none missing stops it, and stdout kept.
+	 * For a version: under the timeout alone, so a missing cap does not stop
+	 * it, and a hanging program does not hang the request; stdout kept.
 	 */
-	public function testABareRunHasNoLimitsAndKeepsStdout(): void
+	public function testABareRunHasTheTimeoutOnlyAndKeepsStdout(): void
 	{
 		$this->requirePrograms( 'timeout' );
 
-		$outcome = $this->runner( [ 'version' => (string) self::which( 'timeout' ) ] )->runBare( 'version', [ '--version' ] );
+		$timeout = (string) self::which( 'timeout' );
+		$outcome = $this->runner( [ 'version' => $timeout, 'timeout' => $timeout ] )->runBare( 'version', [ '--version' ] );
 
 		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
 		self::assertStringContainsString( 'timeout', $outcome->stderr );
 		self::assertSame( Outcome::PROGRAM_MISSING, $this->runner( [] )->runBare( 'pdftoppm', [ '-v' ] )->outcome );
+
+		$this->appValues = [ ConfigLexicon::TIMEOUT_ENABLED => true, ConfigLexicon::TIMEOUT_SECONDS => 1 ];
+		$sleep           = $this->runner( [ 'sleep' => (string) self::which( 'sleep' ), 'timeout' => $timeout ] )->runBare( 'sleep', [ '5' ] );
+
+		self::assertSame( Outcome::TIMED_OUT, $sleep->outcome );
 	}
 
 	/**

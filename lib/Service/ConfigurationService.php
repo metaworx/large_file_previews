@@ -478,7 +478,7 @@ class ConfigurationService
 	 */
 	public function lastFailure(): ?array
 	{
-		$stored = $this->storedMap( ConfigLexicon::LAST_FAILURE );
+		$stored = $this->appConfig->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE, [], true );
 
 		if ( ! is_int( $stored['time'] ?? null ) || ! is_string( $stored['reason'] ?? null ) )
 		{
@@ -517,7 +517,31 @@ class ConfigurationService
 				'reason'      => $outcome->reason,
 				'exit_status' => $outcome->exitStatus,
 			],
+			true,
 		);
+	}
+
+	/**
+	 * What a render's outcome depends on besides the file: every setting,
+	 * and what system config says of untrusted decoders, the scratch
+	 * directory and the programs' paths. A failure is remembered under it
+	 * (FailedFiles), so that a change to any of them tries the file again.
+	 */
+	public function fingerprint(): string
+	{
+		$values = [];
+
+		foreach ( array_keys( ConfigLexicon::SCALARS ) as $key )
+		{
+			$values[ $key ] = $this->getScalar( $key );
+		}
+
+		foreach ( [ ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, ScratchDirectory::SYSTEM_KEY, BinaryLocator::SYSTEM_KEY ] as $key )
+		{
+			$values[ $key ] = $this->system->getSystemValue( $key, null );
+		}
+
+		return md5( (string) json_encode( $values ) );
 	}
 
 	private function getInt( string $key ): int

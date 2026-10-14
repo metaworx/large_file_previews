@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Preview;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\FailedFiles;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\TypePolicy;
@@ -34,7 +35,8 @@ use Throwable;
  *
  * `isAvailable()` runs for every preview of every type in the regex, every
  * image included: it does no I/O, only the type, the name, the size the file
- * cache holds and the configuration. `getThumbnail()` is asked for the
+ * cache holds, the configuration, and, for a file it would take, whether
+ * that file failed lately (FailedFiles). `getThumbnail()` is asked for the
  * largest preview only; Nextcloud makes every smaller size from it.
  */
 class LargeFileProvider
@@ -52,6 +54,7 @@ class LargeFileProvider
 		private readonly ConfigurationService $config,
 		private readonly ITimeFactory         $time,
 		private readonly LoggerInterface      $logger,
+		private readonly FailedFiles          $failures,
 	)
 	{
 	}
@@ -86,11 +89,12 @@ class LargeFileProvider
 			// provider, which may well read it.
 			$reason = match ( true )
 			{
-				! $verdict->isTaken()            => $verdict->describe(),
-				$renderer === null               => 'no renderer for this type',
-				$file->isEncrypted()             => 'encrypted',
-				! $file->getStorage()->isLocal() => 'not on local storage',
-				default                          => $renderer->unsupported( (string) $resolution->mime )?->describe(),
+				! $verdict->isTaken()               => $verdict->describe(),
+				$renderer === null                  => 'no renderer for this type',
+				$file->isEncrypted()                => 'encrypted',
+				! $file->getStorage()->isLocal()    => 'not on local storage',
+				$this->failures->remembers( $file ) => 'it failed to render within failure_retry_minutes, under the same settings',
+				default                             => $renderer->unsupported( (string) $resolution->mime )?->describe(),
 			};
 
 			if ( $reason !== null )
@@ -237,10 +241,12 @@ class LargeFileProvider
 			],
 		);
 
-		// For the setup check: a log line alone goes unread.
+		// For the setup check: a log line alone goes unread. And left to the
+		// other providers for a while, rather than failing on every request.
 		try
 		{
 			$this->config->recordFailure( $this->time->getTime(), $file->getMimetype(), $outcome );
+			$this->failures->remember( $file, $outcome );
 		}
 		catch ( Throwable $e )
 		{

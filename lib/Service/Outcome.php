@@ -83,4 +83,26 @@ enum Outcome: string
 	{
 		return $this === self::SUCCEEDED;
 	}
+
+
+//  other non-static methods
+
+	/**
+	 * Whether the failure is the file's, and would come again: not a
+	 * program or a function missing, nor a start that failed, which the
+	 * server's next request may well not repeat.
+	 */
+	public function concernsTheFile(): bool
+	{
+		return match ( $this )
+		{
+			self::NO_OUTPUT,
+			self::INVALID_OUTPUT,
+			self::TIMED_OUT,
+			self::KILLED,
+			self::FAILED,
+			self::OUT_OF_MEMORY => true,
+			default             => false,
+		};
+	}
 }

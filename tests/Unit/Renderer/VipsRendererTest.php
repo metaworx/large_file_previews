@@ -18,6 +18,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
@@ -43,6 +44,9 @@ class VipsRendererTest
 
 	/** @var list<array{program: string, arguments: list<string>, keepStdout: bool, environment: array<string, string>, cap: ?int, descriptors: list<int>, fsize: ?int}> */
 	private array $runs = [];
+
+	/** @var list<Deadline|null> each run's, in order */
+	private array $deadlines = [];
 
 
 //  getters / setters / is* / has*
@@ -468,6 +472,47 @@ class VipsRendererTest
 	}
 
 	/**
+	 * The header, both thumbnails and tiffcp share the render's deadline.
+	 */
+	public function testOneDeadlineForTheRender(): void
+	{
+		$this->renderer( $this->outOfMemoryOnce( '/dev/fd/4: 15000x15000 uchar, 3 bands, srgb, tiffload' ), scratch: $this->scratch( null ) )
+		     ->render( $this->input, 4096, $this->output )
+		;
+
+		self::assertCount( 4, $this->deadlines );
+		self::assertInstanceOf( Deadline::class, $this->deadlines[0] );
+
+		foreach ( $this->deadlines as $deadline )
+		{
+			self::assertSame( $this->deadlines[0], $deadline );
+		}
+	}
+
+	/**
+	 * Where the fallback fails, its outcome is the render's, and its reason
+	 * follows the first; a copy stopped by its file-size cap says which.
+	 */
+	public function testAFailedFallbackKeepsBothReasons(): void
+	{
+		$tiff    = '/dev/fd/4: 15000x15000 uchar, 3 bands, srgb, tiffload';
+		$outcome = $this->renderer( $this->outOfMemoryOnce( $tiff, new RenderOutcome( Outcome::FAILED, 'exit status 1', 1 ) ), scratch: $this->scratch( null ) )
+		                ->render( $this->input, 4096, $this->output )
+		;
+
+		self::assertSame( Outcome::FAILED, $outcome->outcome );
+		self::assertSame( 'out of memory under the address-space cap (vips_prlimit_as_mb); the one-strip fallback: tiffcp: exit status 1', $outcome->reason );
+
+		$this->runs = [];
+		$outcome    = $this->renderer( $this->outOfMemoryOnce( $tiff, new RenderOutcome( Outcome::KILLED, 'killed by signal 25', null, 25 ) ), scratch: $this->scratch( null ) )
+		                ->render( $this->input, 4096, $this->output )
+		;
+
+		self::assertSame( Outcome::KILLED, $outcome->outcome );
+		self::assertStringEndsWith( 'tiffcp: a write went past the file-size cap (the copy\'s size, from the header): killed by signal 25', $outcome->reason );
+	}
+
+	/**
 	 * @param array<string, bool>|null $loaders what `vips -l` answers
 	 */
 	private function renderer(
@@ -539,9 +584,12 @@ class VipsRendererTest
 
 	/**
 	 * A runner whose first thumbnail runs out of memory, as libvips 8.15
-	 * says it, and whose tiffcp writes its copy.
+	 * says it, and whose tiffcp writes its copy, or ends as given.
 	 */
-	private function outOfMemoryOnce( string $header ): CommandRunner
+	private function outOfMemoryOnce(
+		string         $header,
+		?RenderOutcome $tiffcp = null,
+	): CommandRunner
 	{
 		$runner = $this->createMock( CommandRunner::class );
 		$runner->method( 'run' )
@@ -552,6 +600,7 @@ class VipsRendererTest
 				       RunOptions $options,
 			       ) use (
 				       $header,
+				       $tiffcp,
 			       ): RenderOutcome
 			       {
 				       /** @var list<string> $arguments */
@@ -562,9 +611,10 @@ class VipsRendererTest
 
 				       return match ( true )
 				       {
-					       $program === VipsRenderer::HEADER => new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, $header ),
-					       $first                            => new RenderOutcome( Outcome::FAILED, 'exit status 255', 255, null, 'vips_tracked: out of memory --- size == 1MB' ),
-					       default                           => self::written( $arguments, $options ),
+					       $program === VipsRenderer::HEADER                         => new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, $header ),
+					       $first                                                    => new RenderOutcome( Outcome::FAILED, 'exit status 255', 255, null, 'vips_tracked: out of memory --- size == 1MB' ),
+					       $program === VipsRenderer::RESTRIPPER && $tiffcp !== null => $tiffcp,
+					       default                                                   => self::written( $arguments, $options ),
 				       };
 			       },
 		       )
@@ -591,6 +641,8 @@ class VipsRendererTest
 			'descriptors' => array_keys( $options->descriptors ),
 			'fsize'       => $options->fsizeBytes,
 		];
+
+		$this->deadlines[] = $options->deadline;
 	}
 
 
