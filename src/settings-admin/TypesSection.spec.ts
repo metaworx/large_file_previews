@@ -46,14 +46,14 @@ describe('TypesSection', () => {
 			mime: 'image/tiff',
 			extension: 'tif',
 			processing: 'enabled',
-			renderer: { program: 'libvips', available: false },
+			renderer: { program: 'vipsthumbnail', available: false },
 			min_size_mb: { value: 200, source: 'ext' },
 			max_size_mb: { value: -1, source: 'default' },
 		})
 		const rows = section(state).findAll('.lfp-active tbody tr')
 
 		expect(rows[0].find('.lfp-badge').exists()).toBe(false)
-		expect(rows[1].text()).toContain('libvips')
+		expect(rows[1].text()).toContain('vipsthumbnail')
 		expect(rows[1].find('.lfp-badge').text()).toBe('not available')
 	})
 
@@ -93,7 +93,7 @@ describe('TypesSection', () => {
 	it('shows a type without a usable renderer, and does not let it change', () => {
 		const tiff = row(section(), '[data-mime="image/tiff"]')
 
-		expect(tiff.text()).toContain('No suitable renderer (libvips)')
+		expect(tiff.text()).toContain('No suitable renderer (vipsthumbnail)')
 		expect(tiff.findComponent({ name: 'NcCheckboxRadioSwitch' }).props('disabled')).toBe(true)
 		for (const field of tiff.findAllComponents({ name: 'NumberField' })) {
 			expect(field.props('disabled')).toBe(true)
@@ -142,7 +142,7 @@ describe('TypesSection', () => {
 		const row7z = row(section(state), '[data-extension="7z"]')
 
 		expect(row7z.text()).toContain('Not a type this app handles')
-		expect(row7z.text()).not.toContain('libvips')
+		expect(row7z.text()).not.toContain('vipsthumbnail')
 	})
 
 	it('marks an extension that changes nothing', () => {

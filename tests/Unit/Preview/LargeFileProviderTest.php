@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Preview\LargeFileProvider;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
@@ -97,11 +98,15 @@ class LargeFileProviderTest
 		self::assertFalse( $this->provider()->isAvailable( $this->file( 'image/png', 'a.png' ) ) );
 	}
 
-	public function testAnEnabledTypeWithoutARendererIsDeclined(): void
+	/**
+	 * An image switched on goes to libvips, from its minimum up.
+	 */
+	public function testAnEnabledImageTypeIsTaken(): void
 	{
-		$this->appValues[ ConfigLexicon::MIMETYPES ] = [ 'image/tiff' => [ 'enabled' => true ] ];
+		$this->appValues[ ConfigLexicon::MIMETYPES ] = [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 50 ] ];
 
 		self::assertFalse( $this->provider()->isAvailable( $this->file( 'image/tiff', 'a.tif' ) ) );
+		self::assertTrue( $this->provider()->isAvailable( $this->file( 'image/tiff', 'a.tif', 60 * 1_048_576 ) ) );
 	}
 
 	public function testOutsideTheSizeWindowIsDeclined(): void
@@ -283,7 +288,10 @@ class LargeFileProviderTest
 		return new LargeFileProvider(
 			new TypePolicy( $config ),
 			// A probe that finds no scan: the box is what was asked for.
-			new Renderers( new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ) ) ),
+			new Renderers(
+				new PopplerRenderer( $this->runner, $this->createMock( PageProbe::class ) ),
+				new VipsRenderer( $this->runner, $config ),
+			),
 			$this->images,
 			$tempManager,
 			$config,

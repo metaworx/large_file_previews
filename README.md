@@ -7,7 +7,7 @@ so the file is never loaded into PHP, copied, or sent to another service.
 
 > **Status:**
 > in development, not yet released.
-> PDF and Illustrator previews are rendered.
+> PDF and Illustrator previews are rendered, and images once switched on.
 
 ## What it does
 
@@ -18,8 +18,11 @@ so the file is never loaded into PHP, copied, or sent to another service.
   so a file of several gigabytes renders in under a second.
   A page that is one scan is rendered at the scan's own resolution where that is smaller,
   not enlarged: a 300 dpi A4 scan gives a preview 3508 pixels tall, not 4096.
-- **Large images** through libvips are planned.
-  Their types are known to the app from the start, and switched off.
+- **Large images** through `vipsthumbnail` from libvips:
+  TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF, AVIF and more,
+  each type switched off until it is switched on.
+  The image is read in strips or from a pyramid's nearest level, never whole,
+  and never enlarged: one smaller than the preview keeps its own size.
 
 ## What it does not do
 
@@ -35,6 +38,7 @@ so the file is never loaded into PHP, copied, or sent to another service.
 
 - Nextcloud 33 to 35, PHP 8.2 or later.
 - `pdftoppm`, from `poppler-utils` on Debian and Ubuntu.
+- For images: `vipsthumbnail` and `vipsheader`, from `libvips-tools`.
 - For the limits around each render, each optional:
   `timeout` (coreutils), `prlimit` and `choom` (util-linux).
 

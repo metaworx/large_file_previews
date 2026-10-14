@@ -188,28 +188,20 @@ class SettingsController
 	}
 
 	/**
-	 * Which program renders a MIME type, and whether it is there. A type
-	 * with no renderer yet names the one planned for it.
+	 * Which program renders a MIME type, and whether it is there.
 	 *
 	 * @return array{program: ?string, available: bool} no program where the provider never sees the type
 	 */
 	private function renderer( ?string $mime ): array
 	{
-		// A type the provider never sees has no renderer, nor a planned one.
-		if ( $mime === null || ! SupportedTypes::matches( $mime ) )
-		{
-			return [
-				'program'   => null,
-				'available' => false,
-			];
-		}
-
-		$renderer = $this->renderers->for( $mime );
+		$renderer = $mime === null || ! SupportedTypes::matches( $mime )
+			? null
+			: $this->renderers->for( $mime );
 
 		if ( $renderer === null )
 		{
 			return [
-				'program'   => SupportedTypes::PLANNED_IMAGE_RENDERER,
+				'program'   => null,
 				'available' => false,
 			];
 		}

@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Controller\SettingsController;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -83,7 +84,7 @@ class SettingsControllerTest
 		self::assertCount( 16, $data['mimetypes'] );
 		self::assertSame( 'application/pdf', $data['mimetypes'][0]['mime'] );
 		self::assertSame( [ 'program' => 'pdftoppm', 'available' => true ], $data['mimetypes'][0]['renderer'] );
-		self::assertSame( [ 'program' => 'libvips', 'available' => false ], $data['mimetypes'][2]['renderer'] );
+		self::assertSame( [ 'program' => 'vipsthumbnail', 'available' => false ], $data['mimetypes'][2]['renderer'] );
 		self::assertSame( 'large_file_previews.binaries', $data['overrideKey'] );
 	}
 
@@ -116,7 +117,7 @@ class SettingsControllerTest
 	 */
 	/**
 	 * A rule from before for a type the provider never sees names no
-	 * renderer at all, not a planned one.
+	 * renderer at all.
 	 */
 	public function testAnUnhandledTypeHasNoRenderer(): void
 	{
@@ -227,7 +228,10 @@ class SettingsControllerTest
 			$this->createMock( IRequest::class ),
 			$config,
 			new TypePolicy( $config ),
-			new Renderers( new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ) ),
+			new Renderers(
+				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ),
+				new VipsRenderer( $this->createMock( CommandRunner::class ), $config ),
+			),
 			$prerequisites,
 			$binaries,
 			$this->markingL10n(),

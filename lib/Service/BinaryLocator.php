@@ -48,6 +48,8 @@ class BinaryLocator
 			'pdftoppm',
 			'pdfinfo',
 			'pdfimages',
+			'vipsthumbnail',
+			'vipsheader',
 			'timeout',
 			'prlimit',
 			'choom',

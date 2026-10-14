@@ -83,7 +83,7 @@ class LargeFileProvider
 			$reason = match ( true )
 			{
 				! $verdict->isTaken()                                        => $verdict->describe(),
-				$this->renderers->for( (string) $resolution->mime ) === null => 'no renderer for this type yet',
+				$this->renderers->for( (string) $resolution->mime ) === null => 'no renderer for this type',
 				$file->isEncrypted()                                         => 'encrypted',
 				! $file->getStorage()->isLocal()                             => 'not on local storage',
 				default                                                      => null,

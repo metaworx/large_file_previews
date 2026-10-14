@@ -7,7 +7,7 @@
 import type { ActiveRow, MimeRow, Renderer, Scalar, SettingsState } from './types'
 
 const POPPLER: Renderer = { program: 'pdftoppm', available: true }
-const VIPS: Renderer = { program: 'libvips', available: false }
+const VIPS: Renderer = { program: 'vipsthumbnail', available: false }
 
 function scalar(value: number | boolean, min: number | null = null, max: number | null = null): Scalar {
 	return { value, default: value, min, max, stored: false }

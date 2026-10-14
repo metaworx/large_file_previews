@@ -10,10 +10,8 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Renderer;
 
 /**
- * Which renderer handles a MIME type, if any does.
- *
- * A type can be in the provider's regex and switched on with no renderer
- * for it - an image type, until one ships - and is then declined.
+ * Which renderer handles a MIME type, if any does: poppler for documents,
+ * libvips for images.
  */
 class Renderers
 {
@@ -25,9 +23,10 @@ class Renderers
 
 	public function __construct(
 		PopplerRenderer $poppler,
+		VipsRenderer    $vips,
 	)
 	{
-		$this->renderers = [ $poppler ];
+		$this->renderers = [ $poppler, $vips ];
 	}
 
 
