@@ -45,17 +45,27 @@ async function copy(): Promise<void> {
 </template>
 
 <style scoped>
+/* A long command wraps between its arguments, never inside one, unless a
+   single argument - a path - is wider than the line; the copy button stays
+   beside its first line. */
 .lfp-occ {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: var(--default-grid-baseline);
 	color: var(--color-text-maxcontrast);
 	font-size: var(--font-size-small, 13px);
 }
 
 .lfp-occ__command {
+	min-width: 0;
+	padding-block-start: 0.5em;
 	font-family: var(--font-face-monospace, monospace);
-	overflow-wrap: anywhere;
+	white-space: normal;
+	overflow-wrap: break-word;
 	user-select: all;
+}
+
+.lfp-occ__copy {
+	flex: 0 0 auto;
 }
 </style>
