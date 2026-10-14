@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Command;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
+use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -33,6 +34,7 @@ class ConfigSet
 
 	public function __construct(
 		private readonly ConfigurationService $config,
+		private readonly BinaryLocator        $binaries,
 	)
 	{
 		parent::__construct();
@@ -58,6 +60,7 @@ class ConfigSet
 				     "\n",
 				     [
 					     'A setting:          config:set timeout_seconds 60',
+					     'A program\'s path:   config:set binaries.pdftoppm /opt/poppler/bin/pdftoppm   (system config)',
 					     'A MIME type\'s rule: config:set --mime image/tiff --enabled=yes --min=100',
 					     'An extension\'s:     config:set --ext tif --max=2048',
 					     '',
@@ -120,6 +123,15 @@ class ConfigSet
 				$output->writeln( '<error>Give a setting and its value, or --mime or --ext with the fields to set.</error>' );
 
 				return self::INVALID;
+			}
+
+			// A program's path goes to system config, never to app config.
+			if ( str_starts_with( $key, self::BINARIES ) )
+			{
+				$this->binaries->setOverride( substr( $key, strlen( self::BINARIES ) ), $value );
+				$output->writeln( sprintf( '%s: %s (system config)', $key, $value ) );
+
+				return self::SUCCESS;
 			}
 
 			$this->config->setScalar( $key, $value );

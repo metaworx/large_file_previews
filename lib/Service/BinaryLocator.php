@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Service;
 
+use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
 use Psr\Log\LoggerInterface;
@@ -20,7 +21,9 @@ use Psr\Log\LoggerInterface;
  *
  *     'large_file_previews.binaries' => ['pdftoppm' => '/opt/poppler/bin/pdftoppm'],
  *
- * in config.php, or with `occ config:system:set`. Never in app config: an
+ * in config.php, with `occ large-file-previews:config:set binaries.<program>`
+ * (setOverride()), or in a file of its own, `config/*.config.php`, which
+ * Nextcloud merges into its system config. Never in app config: an
  * administrator can write that over the provisioning API without shell
  * access, and a path there would be code execution as the web server's
  * user. Whoever can write config.php can run code already.
@@ -179,5 +182,96 @@ class BinaryLocator
 	{
 		$this->located = [];
 		$this->cache->clear();
+	}
+
+
+//  getters / setters / is* / has*
+
+	/**
+	 * Sets a program's path in system config, after checking that it is an
+	 * executable file. From occ only: the shell is the right that writing
+	 * system config takes, and no page offers it.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function setOverride(
+		string $program,
+		string $path,
+	): void
+	{
+		self::refuseUnknown( $program );
+
+		$problem = match ( true )
+		{
+			! str_starts_with( $path, '/' ) => 'is not an absolute path',
+			! is_file( $path )              => 'does not exist',
+			! is_executable( $path )        => 'is not executable',
+			default                         => null,
+		};
+
+		if ( $problem !== null )
+		{
+			$message = sprintf( '%s %s.', $path, $problem );
+
+			throw new ConfigurationException( $message, $message );
+		}
+
+		$overrides             = $this->overrides();
+		$overrides[ $program ] = $path;
+		ksort( $overrides );
+
+		$this->config->setSystemValue( self::SYSTEM_KEY, $overrides );
+		unset( $this->located[ $program ] );
+	}
+
+	/**
+	 * Removes a program's override; the finder answers for it again.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function unsetOverride( string $program ): void
+	{
+		self::refuseUnknown( $program );
+
+		$overrides = $this->overrides();
+		unset( $overrides[ $program ] );
+
+		$overrides === []
+			? $this->config->deleteSystemValue( self::SYSTEM_KEY )
+			: $this->config->setSystemValue( self::SYSTEM_KEY, $overrides );
+
+		unset( $this->located[ $program ] );
+	}
+
+	/**
+	 * The overrides set, the ones that are paths.
+	 *
+	 * @return array<string, string>
+	 */
+	public function overrides(): array
+	{
+		$stored = $this->config->getSystemValue( self::SYSTEM_KEY, [] );
+
+		return is_array( $stored )
+			? array_filter( $stored, is_string( ... ) )
+			: [];
+	}
+
+
+//  static methods
+
+	/**
+	 * @throws ConfigurationException
+	 */
+	private static function refuseUnknown( string $program ): void
+	{
+		if ( in_array( $program, self::PROGRAMS, true ) )
+		{
+			return;
+		}
+
+		$message = sprintf( '%s is not a program this app runs; the programs are %s.', $program, implode( ', ', self::PROGRAMS ) );
+
+		throw new ConfigurationException( $message, $message );
 	}
 }

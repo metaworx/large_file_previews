@@ -35,5 +35,5 @@ the first stable release.
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes.
 
-- `large_file_previews.binaries` in `config.php`: a program's path,
-  overriding the one Nextcloud finds.
+- `occ lfp:config:set binaries.<program>`: a program's path in system
+  config, overriding the one Nextcloud finds.

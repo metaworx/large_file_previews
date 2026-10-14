@@ -131,15 +131,29 @@ to at least `scan_coverage_percent` (90 by default);
 `scan_native_enabled` switches the scan sizing off,
 and every page then fills the preview size.
 
-A program's path can be overridden, in `config.php` only:
+A program's path can be overridden, in system config only:
 
 ```bash
-occ config:system:set large_file_previews.binaries pdftoppm --value=/opt/poppler/bin/pdftoppm
+occ lfp:config:set binaries.pdftoppm /opt/poppler/bin/pdftoppm
 ```
 
+```bash
+occ lfp:config:unset binaries.pdftoppm
+```
+
+The path must be an executable file; it is kept in `config.php`,
+under `large_file_previews.binaries`.
 App config is no place for a path:
 an administrator can write it over the provisioning API without shell access,
 and a path is code the web server runs.
+
+A file of its own works too, kept by hand or by a deployment tool:
+Nextcloud reads every `config/*.config.php`,
+so `config/large_file_previews.config.php` may hold
+`'large_file_previews.binaries' => ['pdftoppm' => '/opt/poppler/bin/pdftoppm']`.
+Nextcloud copies what it reads there into `config.php` whenever it next writes its config,
+so remove a path from both:
+with `occ lfp:config:unset`, and then from the file.
 
 ## License
 

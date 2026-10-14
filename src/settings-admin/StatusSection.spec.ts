@@ -32,6 +32,6 @@ describe('StatusSection', () => {
 
 	it('says where a program\'s path is set, and that it is not here', () => {
 		expect(mount(StatusSection, { props: { state: testState() } }).text())
-			.toContain('occ config:system:set large_file_previews.binaries pdftoppm')
+			.toContain('occ lfp:config:set binaries.pdftoppm')
 	})
 })

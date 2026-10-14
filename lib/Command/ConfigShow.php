@@ -119,7 +119,7 @@ class ConfigShow
 		}
 
 		$table->render();
-		$output->writeln( sprintf( 'Paths are overridden in system config only: occ config:system:set %s <program> --value=<path>', BinaryLocator::SYSTEM_KEY ) );
+		$output->writeln( sprintf( 'A path is overridden in system config (%s) only: occ lfp:config:set binaries.<program> <path>', BinaryLocator::SYSTEM_KEY ) );
 
 		$output->writeln( '' );
 		$output->writeln( '<info>Resolved</info> (value, and the level it came from: default, mime or ext)' );

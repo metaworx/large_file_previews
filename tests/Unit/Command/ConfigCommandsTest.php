@@ -49,6 +49,11 @@ class ConfigCommandsTest
 
 	private ConfigurationService $config;
 
+	private BinaryLocator $binaries;
+
+	/** @var array<string, mixed> system config, as the commands leave it */
+	private array $systemValues = [];
+
 
 //  getters / setters / is* / has*
 
@@ -57,14 +62,85 @@ class ConfigCommandsTest
 		parent::setUp();
 
 		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() );
+
+		$values = &$this->systemValues;
+		$system = $this->createMock( IConfig::class );
+		$system->method( 'getSystemValue' )
+		       ->willReturnCallback(
+			       static function(
+				       string $key,
+				       mixed  $default = '',
+			       ) use (
+				       &$values,
+			       ): mixed
+			       {
+				       return $values[ $key ] ?? $default;
+			       },
+		       )
+		;
+		$system->method( 'setSystemValue' )
+		       ->willReturnCallback(
+			       static function(
+				       string $key,
+				       mixed  $value,
+			       ) use (
+				       &$values,
+			       ): void
+			       {
+				       $values[ $key ] = $value;
+			       },
+		       )
+		;
+		$system->method( 'deleteSystemValue' )
+		       ->willReturnCallback(
+			       static function(
+				       string $key,
+			       ) use (
+				       &$values,
+			       ): void
+			       {
+				       unset( $values[ $key ] );
+			       },
+		       )
+		;
+
+		$this->binaries = new BinaryLocator(
+			$system,
+			$this->createMock( IBinaryFinder::class ),
+			$this->detectionCache(),
+			$this->createMock( LoggerInterface::class ),
+		);
 	}
 
 
 //  other non-static methods
 
+	/**
+	 * A path goes to system config, after being checked; never to app
+	 * config.
+	 */
+	public function testAProgramsPathIsSetInSystemConfigAndUnset(): void
+	{
+		$set = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
+
+		self::assertSame( Command::SUCCESS, $set->execute( [ 'key' => 'binaries.pdftoppm', 'value' => PHP_BINARY ] ) );
+		self::assertSame( [ 'large_file_previews.binaries' => [ 'pdftoppm' => PHP_BINARY ] ], $this->systemValues );
+		self::assertSame( [], $this->appValues );
+
+		self::assertSame( Command::FAILURE, $set->execute( [ 'key' => 'binaries.pdftoppm', 'value' => 'bin/pdftoppm' ] ) );
+		self::assertStringContainsString( 'is not an absolute path', $set->getDisplay() );
+		self::assertSame( Command::FAILURE, $set->execute( [ 'key' => 'binaries.bash', 'value' => '/bin/bash' ] ) );
+		self::assertStringContainsString( 'bash is not a program this app runs', $set->getDisplay() );
+
+		$unset = new CommandTester( new ConfigUnset( $this->config, $this->binaries ) );
+
+		self::assertSame( Command::SUCCESS, $unset->execute( [ 'key' => 'binaries.pdftoppm' ] ) );
+		self::assertSame( [], $this->systemValues );
+	}
+
 	public function testNamesAndAliases(): void
 	{
-		$set = new ConfigSet( $this->config );
+		$set = new ConfigSet( $this->config, $this->binaries );
 
 		self::assertSame( 'large-file-previews:config:set', $set->getName() );
 		self::assertSame( [ 'lfp:config:set' ], $set->getAliases() );
@@ -72,7 +148,7 @@ class ConfigCommandsTest
 
 	public function testSetAScalar(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ 'key' => 'timeout_seconds', 'value' => '45' ] ) );
 		self::assertSame( 45, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
@@ -81,7 +157,7 @@ class ConfigCommandsTest
 
 	public function testSetARuleAndARefusal(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--ext' => 'tif', '--enabled' => 'yes', '--min' => '200' ] ) );
 		self::assertSame( [ 'tif' => [ 'enabled' => true, 'min_size_mb' => 200 ] ], $this->appValues[ ConfigLexicon::EXTENSIONS ] );
@@ -95,7 +171,7 @@ class ConfigCommandsTest
 
 	public function testSetNeedsSomethingToSet(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
 
 		self::assertSame( Command::INVALID, $tester->execute( [ '--mime' => 'image/png' ] ) );
 		self::assertSame( Command::INVALID, $tester->execute( [ '--mime' => 'image/png', '--ext' => 'png', '--min' => '1' ] ) );
@@ -107,7 +183,7 @@ class ConfigCommandsTest
 	{
 		$this->config->setScalar( ConfigLexicon::CHOOM_ADJUST, 500 );
 		$this->config->setExtensionRule( 'tif', new TypeRule( true ) );
-		$tester = new CommandTester( new ConfigUnset( $this->config ) );
+		$tester = new CommandTester( new ConfigUnset( $this->config, $this->binaries ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ 'key' => 'choom_adjust' ] ) );
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--ext' => 'tif' ] ) );

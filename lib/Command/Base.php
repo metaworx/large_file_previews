@@ -33,6 +33,12 @@ abstract class Base
 
 	protected const ALIAS_PREFIX = 'lfp:';
 
+	/**
+	 * The key a program's path is set under: `binaries.pdftoppm`. It goes to
+	 * system config, never to app config.
+	 */
+	protected const BINARIES = 'binaries.';
+
 	private const FORMATS
 		 = [
 			'plain',
