@@ -13,6 +13,27 @@ function row(wrapper: ReturnType<typeof section>, selector: string) {
 }
 
 describe('TypesSection', () => {
+	it('switches the scan sizing off, and sets its coverage', async () => {
+		const wrapper = section()
+		const scan = row(wrapper, '[data-setting="scan"]')
+
+		await scan.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', false)
+		await scan.findComponent({ name: 'NumberField' }).vm.$emit('save', 95)
+
+		expect(wrapper.emitted('save')).toEqual([
+			[{ scalars: { scan_native_enabled: false } }],
+			[{ scalars: { scan_coverage_percent: 95 } }],
+		])
+		expect(scan.findComponent({ name: 'NumberField' }).props('max')).toBe(100)
+	})
+
+	it('leaves the coverage alone while the scan sizing is off', () => {
+		const state = testState()
+		state.scalars.scan_native_enabled.value = false
+
+		expect(row(section(state), '[data-setting="scan"]').findComponent({ name: 'NumberField' }).props('disabled')).toBe(true)
+	})
+
 	it('switches a MIME type on, that field alone', async () => {
 		const wrapper = section()
 

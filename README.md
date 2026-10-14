@@ -103,6 +103,11 @@ and an out-of-memory score that has the kernel kill it before a web server worke
 (`choom_adjust`, 1000).
 A limit switched on whose program is missing declines the file rather than run without it.
 
+A page counts as scanned where one image covers it, each way,
+to at least `scan_coverage_percent` (90 by default);
+`scan_native_enabled` switches the scan sizing off,
+and every page then fills the preview size.
+
 A program's path can be overridden, in `config.php` only:
 
 ```bash

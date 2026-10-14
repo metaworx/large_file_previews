@@ -24,7 +24,8 @@ the first stable release.
   render, and `occ lfp:check`, listing what the app needs.
 
 - `README.md`, *Configuration*: which files are taken, per MIME type and
-  extension, by size; and the timeout, memory cap and OOM score of each.
+  extension, by size; how a scan is told; and the timeout, memory cap
+  and OOM score of each render.
 
 - *Administration settings → Additional settings*: the status, which
   files are taken, and the limits, validated as `occ` validates them.

@@ -47,6 +47,8 @@ class ConfigLexiconTest
 				'prlimit_as_mb',
 				'choom_enabled',
 				'choom_adjust',
+				'scan_native_enabled',
+				'scan_coverage_percent',
 				'mimetypes',
 				'extensions',
 				'last_failure',

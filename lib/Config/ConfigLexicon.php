@@ -55,6 +55,10 @@ class ConfigLexicon
 
 	public const CHOOM_ADJUST = 'choom_adjust';
 
+	public const SCAN_NATIVE_ENABLED = 'scan_native_enabled';
+
+	public const SCAN_COVERAGE_PERCENT = 'scan_coverage_percent';
+
 	public const LAST_FAILURE = 'last_failure';
 
 	/**
@@ -119,6 +123,16 @@ class ConfigLexicon
 				'min'        => 0,
 				'max'        => 1000,
 				'definition' => 'The OOM score adjustment of a render; an unprivileged process may raise it only.',
+			],
+			self::SCAN_NATIVE_ENABLED        => [
+				'default'    => true,
+				'definition' => 'Whether a page that is one scan is rendered at the scan\'s own resolution where that is smaller than the preview, rather than enlarged.',
+			],
+			self::SCAN_COVERAGE_PERCENT      => [
+				'default'    => 90,
+				'min'        => 50,
+				'max'        => 100,
+				'definition' => 'How much of the page, in percent each way, its one image must cover for the page to count as a scan.',
 			],
 		];
 

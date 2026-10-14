@@ -9,10 +9,14 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
+use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -20,6 +24,9 @@ class PageProbeTest
     extends
     TestCase
 {
+	use EnglishL10n;
+	use MemoryAppConfig;
+
 
 //  constants
 
@@ -85,7 +92,7 @@ class PageProbeTest
 		       )
 		;
 
-		self::assertSame( 3508, ( new PageProbe( $runner ) )->scanBox( '/data/scan.pdf' ) );
+		self::assertSame( 3508, $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
 	}
 
 	public function testAFailedProbeMeansNoScan(): void
@@ -96,7 +103,59 @@ class PageProbeTest
 		       ->willReturn( new RenderOutcome( Outcome::PROGRAM_MISSING, 'pdfinfo not found' ) )
 		;
 
-		self::assertNull( ( new PageProbe( $runner ) )->scanBox( '/data/scan.pdf' ) );
+		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+	}
+
+	/**
+	 * Switched off, no program runs and every page keeps the full box.
+	 */
+	public function testSwitchedOffNothingRuns(): void
+	{
+		$this->appValues[ ConfigLexicon::SCAN_NATIVE_ENABLED ] = false;
+
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->expects( self::never() )
+		       ->method( 'run' )
+		;
+
+		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+	}
+
+	/**
+	 * A scan with a margin covers 93 % of A4's width: a scan at 90 %, not
+	 * at 95 %.
+	 */
+	public function testTheCoverageIsASetting(): void
+	{
+		$margin = [ [ 'width' => 2300, 'height' => 3300, 'xPpi' => 300, 'yPpi' => 300 ] ];
+
+		self::assertSame( 3508, PageProbe::box( self::A4, $margin, 0.90 ) );
+		self::assertNull( PageProbe::box( self::A4, $margin, 0.95 ) );
+
+		$this->appValues[ ConfigLexicon::SCAN_COVERAGE_PERCENT ] = 95;
+		$runner                                                  = $this->createMock( CommandRunner::class );
+		$runner->method( 'run' )
+		       ->willReturnCallback(
+			       static fn(
+				       string $program,
+			       ): RenderOutcome => new RenderOutcome(
+				       Outcome::SUCCEEDED,
+				       '',
+				       0,
+				       null,
+				       $program === 'pdfinfo'
+					       ? "Page    1 size:  595.276 x 841.89 pts (A4)\n"
+					       : self::HEADER . "   1     0 image    2300  3300  gray    1   1  ccitt  no         4  0   300   300 54.2K 5.1%\n",
+			       ),
+		       )
+		;
+
+		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+	}
+
+	private function probe( CommandRunner $runner ): PageProbe
+	{
+		return new PageProbe( $runner, new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() ) );
 	}
 
 

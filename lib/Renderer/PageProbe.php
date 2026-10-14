@@ -9,7 +9,9 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Renderer;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
 
 /**
  * Whether page 1 of a PDF is a scan, and if so its size in pixels at the
@@ -17,9 +19,11 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
  *
  * Rendering a 300 dpi A4 scan into a 4096 pixel box enlarges it: a larger
  * preview, no more detail. A page is a scan where it holds exactly one image
- * (masks aside) that covers at least 90 % of the page each way; a vector
- * page, text with a logo, or several images are not. Two programs from
- * poppler-utils answer, each reading page 1 only:
+ * (masks aside) that covers the page each way to the share
+ * `scan_coverage_percent` sets, 90 % by default; a vector page, text with a
+ * logo, or several images are not. `scan_native_enabled` switches the whole
+ * question off. Two programs from poppler-utils answer, each reading page 1
+ * only:
  *
  *     pdfinfo -f 1 -l 1 <input>          Page    1 size:  595.276 x 841.89 pts (A4)
  *     pdfimages -list -f 1 -l 1 <input>  ... image 2480 3508 gray ... 300 300 ...
@@ -36,14 +40,12 @@ class PageProbe
 
 	public const PDFIMAGES = 'pdfimages';
 
-	/** How much of the page, each way, an image must cover to be a scan. */
-	public const COVERAGE = 0.9;
-
 
 //  constructor
 
 	public function __construct(
-		private readonly CommandRunner $runner,
+		private readonly CommandRunner        $runner,
+		private readonly ConfigurationService $config,
 	)
 	{
 	}
@@ -53,10 +55,15 @@ class PageProbe
 
 	/**
 	 * The longer side, in pixels, of page 1 at its scan's resolution, or
-	 * null where page 1 is not a scan or cannot be told.
+	 * null where page 1 is not a scan, cannot be told, or is not asked.
 	 */
 	public function scanBox( string $localPath ): ?int
 	{
+		if ( $this->config->getScalar( ConfigLexicon::SCAN_NATIVE_ENABLED ) !== true )
+		{
+			return null;
+		}
+
 		$info = $this->runner->run( self::PDFINFO, [ '-f', '1', '-l', '1', $localPath ], true );
 
 		if ( ! $info->isSuccess() )
@@ -78,7 +85,11 @@ class PageProbe
 			return null;
 		}
 
-		return self::box( $page, self::images( $images->stderr ) );
+		return self::box(
+			$page,
+			self::images( $images->stderr ),
+			(float) $this->config->getScalar( ConfigLexicon::SCAN_COVERAGE_PERCENT ) / 100.0,
+		);
 	}
 
 
@@ -167,10 +178,12 @@ class PageProbe
 	 *
 	 * @param array{float, float}                                              $page
 	 * @param list<array{width: int, height: int, xPpi: int, yPpi: int}>|null $images
+	 * @param float                                                            $coverage the share of the page, each way, the image must cover
 	 */
 	public static function box(
 		array  $page,
 		?array $images,
+		float  $coverage = 0.9,
 	): ?int
 	{
 		if ( $images === null || count( $images ) !== 1 )
@@ -194,7 +207,7 @@ class PageProbe
 		$covers = static fn(
 			float $w,
 			float $h,
-		): bool => $w >= $pageWidth * self::COVERAGE && $h >= $pageHeight * self::COVERAGE;
+		): bool => $w >= $pageWidth * $coverage && $h >= $pageHeight * $coverage;
 
 		if ( ! $covers( $width, $height ) && ! $covers( $height, $width ) )
 		{

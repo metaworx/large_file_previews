@@ -89,6 +89,26 @@ function addExtension(): void {
 				@save="emit('save', { scalars: { max_size_mb: $event } })" />
 		</div>
 
+		<h3>{{ t('large_file_previews', 'Scanned pages') }}</h3>
+		<div class="lfp-scan" data-setting="scan">
+			<NcCheckboxRadioSwitch type="switch"
+				:model-value="state.scalars.scan_native_enabled.value as boolean"
+				:disabled="saving"
+				@update:model-value="emit('save', { scalars: { scan_native_enabled: $event as boolean } })">
+				{{ t('large_file_previews', 'Render a scanned page at its own resolution, not enlarged') }}
+			</NcCheckboxRadioSwitch>
+			<p class="lfp-hint">
+				{{ t('large_file_previews', 'A page counts as scanned where one image covers it, each way, to at least the share set here. A 300 dpi A4 scan then gives a preview 3508 pixels tall rather than the full preview size.') }}
+			</p>
+			<NumberField id="lfp-scan-coverage"
+				:label="t('large_file_previews', 'Coverage, percent')"
+				:value="state.scalars.scan_coverage_percent.value as number"
+				:min="state.scalars.scan_coverage_percent.min"
+				:max="state.scalars.scan_coverage_percent.max"
+				:disabled="saving || !state.scalars.scan_native_enabled.value"
+				@save="emit('save', { scalars: { scan_coverage_percent: $event } })" />
+		</div>
+
 		<h3>{{ t('large_file_previews', 'MIME types') }}</h3>
 		<table class="lfp-table">
 			<thead>

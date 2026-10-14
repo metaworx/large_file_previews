@@ -53,6 +53,8 @@ export function testState(): SettingsState {
 			prlimit_as_mb: scalar(2048, 256, 65536),
 			choom_enabled: scalar(true),
 			choom_adjust: scalar(1000, 0, 1000),
+			scan_native_enabled: scalar(true),
+			scan_coverage_percent: scalar(90, 50, 100),
 		},
 		mimetypes: [pdf(), tiff()],
 		extensions: [],
