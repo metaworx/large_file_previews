@@ -10,16 +10,17 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
-use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
@@ -37,7 +38,10 @@ class VipsRendererTest
 
 	private string $output;
 
-	/** @var list<array{program: string, arguments: list<string>, keepStdout: bool, environment: array<string, string>, cap: ?int}> */
+	/** The image the renderer opens: the runner is a mock, so it holds anything. */
+	private string $input;
+
+	/** @var list<array{program: string, arguments: list<string>, keepStdout: bool, environment: array<string, string>, cap: ?int, descriptors: list<int>}> */
 	private array $runs = [];
 
 
@@ -47,7 +51,13 @@ class VipsRendererTest
 	{
 		parent::setUp();
 
-		$this->output = sys_get_temp_dir() . '/lfp-vips-' . bin2hex( random_bytes( 4 ) ) . '/preview.png';
+		$folder       = sys_get_temp_dir() . '/lfp-vips-' . bin2hex( random_bytes( 4 ) );
+		$this->output = $folder . '/preview.png';
+		// A name libvips would have misread, were it given the name.
+		$this->input = $folder . '-in/a, out of memory [1]';
+		mkdir( $folder );
+		mkdir( dirname( $this->input ) );
+		file_put_contents( $this->input, 'II*' );
 	}
 
 
@@ -55,8 +65,11 @@ class VipsRendererTest
 
 	protected function tearDown(): void
 	{
-		array_map( unlink( ... ), glob( dirname( $this->output ) . '/*' ) ?: [] );
-		@rmdir( dirname( $this->output ) );
+		foreach ( [ dirname( $this->output ), dirname( $this->input ) ] as $folder )
+		{
+			array_map( unlink( ... ), glob( $folder . '/*' ) ?: [] );
+			@rmdir( $folder );
+		}
 
 		parent::tearDown();
 	}
@@ -73,15 +86,16 @@ class VipsRendererTest
 	}
 
 	/**
-	 * The header, then the thumbnail: each with libvips' cap, two arenas,
-	 * untrusted decoders blocked and the spill in the render folder.
+	 * The header, then the thumbnail: each reading the file as descriptor 4,
+	 * with libvips' cap, two arenas, untrusted decoders blocked and the
+	 * spill in the render folder.
 	 */
 	public function testTheCommands(): void
 	{
 		$this->appValues = [ ConfigLexicon::VIPS_PRLIMIT_AS_MB => 2048 ];
 
-		$outcome = $this->renderer( $this->runner( '/data/a b.tif: 22040x12059 uchar, 3 bands, srgb, tiffload' ) )
-		                ->render( '/data/a b.tif', 4096, $this->output )
+		$outcome = $this->renderer( $this->runner( '/dev/fd/4: 22040x12059 uchar, 3 bands, srgb, tiffload' ) )
+		                ->render( $this->input, 4096, $this->output )
 		;
 
 		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
@@ -96,17 +110,19 @@ class VipsRendererTest
 			[
 				[
 					'program'     => 'vipsheader',
-					'arguments'   => [ '/data/a b.tif' ],
+					'arguments'   => [ '/dev/fd/4' ],
 					'keepStdout'  => true,
 					'environment' => $environment,
 					'cap'         => 2048,
+					'descriptors' => [ RunOptions::INPUT ],
 				],
 				[
 					'program'     => 'vipsthumbnail',
-					'arguments'   => [ '/data/a b.tif', '--size', '4096', '--vips-concurrency=1', '-o', $this->output ],
+					'arguments'   => [ '/dev/fd/4', '--size', '4096', '--vips-concurrency=1', '-o', $this->output ],
 					'keepStdout'  => false,
 					'environment' => $environment,
 					'cap'         => 2048,
+					'descriptors' => [ RunOptions::INPUT ],
 				],
 			],
 			$this->runs,
@@ -121,12 +137,12 @@ class VipsRendererTest
 	{
 		$stem = substr( $this->output, 0, -4 );
 
-		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.jpg' );
-		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.webp' );
+		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.jpg' );
+		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.webp' );
 
 		$this->appValues = [ ConfigLexicon::PREVIEW_BACKGROUND => 'black' ];
 
-		$this->renderer( $this->runner( '' ) )->render( '/data/a.tif', 1024, $stem . '.jpg' );
+		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.jpg' );
 
 		self::assertSame( $stem . '.jpg[Q=95,background=255]', $this->runs[1]['arguments'][5] );
 		self::assertSame( $stem . '.webp[Q=95]', $this->runs[3]['arguments'][5] );
@@ -166,7 +182,7 @@ class VipsRendererTest
 		];
 
 		$this->renderer( $this->runner( '' ) )
-		     ->render( '/data/a.tif', 1024, $this->output )
+		     ->render( $this->input, 1024, $this->output )
 		;
 
 		self::assertArrayNotHasKey( 'VIPS_BLOCK_UNTRUSTED', $this->runs[0]['environment'] );
@@ -200,8 +216,8 @@ class VipsRendererTest
 	 */
 	public function testASmallerImageIsNotEnlarged(): void
 	{
-		$this->renderer( $this->runner( '/data/a.jpg: 1200x3000 uchar, 3 bands, srgb, jpegload' ) )
-		     ->render( '/data/a.jpg', 4096, $this->output )
+		$this->renderer( $this->runner( '/dev/fd/4: 1200x3000 uchar, 3 bands, srgb, jpegload' ) )
+		     ->render( $this->input, 4096, $this->output )
 		;
 
 		self::assertSame( '3000', $this->runs[1]['arguments'][2] );
@@ -213,26 +229,27 @@ class VipsRendererTest
 	 */
 	public function testAnUnreadableHeaderLeavesTheBox(): void
 	{
-		$this->renderer( $this->runner( 'vipsheader: VipsForeignLoad: "/data/a.tif" is not a known file format', Outcome::FAILED ) )
-		     ->render( '/data/a.tif', 1024, $this->output )
+		$this->renderer( $this->runner( 'vipsheader: VipsForeignLoad: "/dev/fd/4" is not a known file format', Outcome::FAILED ) )
+		     ->render( $this->input, 1024, $this->output )
 		;
 
 		self::assertSame( '1024', $this->runs[1]['arguments'][2] );
 	}
 
 	/**
-	 * As found with libvips 8.15: a name ending in `]` cannot be opened,
-	 * and `%%` in the output is not unescaped. Neither is run; brackets
-	 * inside a name are.
+	 * The file's name never reaches libvips, so a name ending in `]` is
+	 * read as any other; `%` in the output is a format to vipsthumbnail,
+	 * not unescaped, and not run.
 	 */
 	public function testWhatLibvipsWouldMisreadIsNotRun(): void
 	{
 		$renderer = $this->renderer( $this->runner( '' ) );
 
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/data/b[x]', 1024, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/data/a.tif', 1024, '/tmp/out%s/preview.png' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 1024, '/tmp/out%s/preview.png' )->outcome );
 		self::assertSame( [], $this->runs );
-		self::assertTrue( $renderer->render( '/data/a [1].tif', 1024, $this->output )->isSuccess() );
+		self::assertTrue( $renderer->render( $this->input, 1024, $this->output )->isSuccess() );
+		self::assertStringEndsWith( ']', $this->input );
+		self::assertSame( '/dev/fd/4', $this->runs[0]['arguments'][0] );
 	}
 
 	/**
@@ -258,7 +275,7 @@ class VipsRendererTest
 			       )
 			;
 
-			$outcome = $this->renderer( $runner )->render( '/data/a.tif', 1024, $this->output );
+			$outcome = $this->renderer( $runner )->render( $this->input, 1024, $this->output );
 
 			self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome, $stderr );
 			self::assertSame( 'out of memory under the address-space cap (vips_prlimit_as_mb)', $outcome->reason );
@@ -274,12 +291,12 @@ class VipsRendererTest
 		$runner = $this->createMock( CommandRunner::class );
 		$runner->method( 'run' )
 		       ->willReturnOnConsecutiveCalls(
-			       new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, '/data/a.heic: 8000x6000 uchar, 3 bands, srgb, heifload' ),
+			       new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, '/dev/fd/4: 8000x6000 uchar, 3 bands, srgb, heifload' ),
 			       new RenderOutcome( Outcome::KILLED, 'killed by signal 11', null, 11 ),
 		       )
 		;
 
-		$outcome = $this->renderer( $runner )->render( '/data/a.heic', 1024, $this->output );
+		$outcome = $this->renderer( $runner )->render( $this->input, 1024, $this->output );
 
 		self::assertSame( Outcome::KILLED, $outcome->outcome );
 		self::assertSame( 'killed by signal 11; under the address-space cap, a crash is often memory running out (vips_prlimit_as_mb)', $outcome->reason );
@@ -292,23 +309,23 @@ class VipsRendererTest
 		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ) )
 		;
 
-		self::assertSame( Outcome::NO_OUTPUT, $this->renderer( $runner )->render( '/data/a.tif', 1024, $this->output )->outcome );
+		self::assertSame( Outcome::NO_OUTPUT, $this->renderer( $runner )->render( $this->input, 1024, $this->output )->outcome );
 	}
 
 	public function testAFailurePassesThrough(): void
 	{
-		$failed = new RenderOutcome( Outcome::FAILED, 'exit status 1', 1, null, 'VipsForeignLoad: "/data/a.jp2" is not a known file format' );
+		$failed = new RenderOutcome( Outcome::FAILED, 'exit status 1', 1, null, 'VipsForeignLoad: "/dev/fd/4" is not a known file format' );
 		$runner = $this->createMock( CommandRunner::class );
 		$runner->method( 'run' )
 		       ->willReturn( $failed )
 		;
 
-		self::assertSame( $failed, $this->renderer( $runner )->render( '/data/a.jp2', 1024, $this->output ) );
+		self::assertSame( $failed, $this->renderer( $runner )->render( $this->input, 1024, $this->output ) );
 	}
 
 	/**
-	 * A relative path could be read as an option, and a relative output
-	 * would land beside the input.
+	 * A relative path is refused, and a relative output would land beside
+	 * the program; a file that cannot be opened runs nothing.
 	 */
 	public function testARelativePathIsNotRun(): void
 	{
@@ -320,54 +337,52 @@ class VipsRendererTest
 		$renderer = $this->renderer( $runner );
 
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-o', 100, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 0, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, 'out.png' )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, '/tmp/out.gif' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 0, $this->output )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 100, 'out.png' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 100, '/tmp/out.gif' )->outcome );
+		self::assertSame( 'the file could not be opened', $renderer->render( '/nonexistent/a.tif', 100, $this->output )->reason );
 	}
 
 	public function testTheHeaderParsed(): void
 	{
 		self::assertSame(
 			[ 'width' => 22040, 'height' => 12059, 'bands' => 3, 'bytes' => 1, 'loader' => 'tiffload' ],
-			VipsRenderer::header( '/a/b.tif: 22040x12059 uchar, 3 bands, srgb, tiffload' ),
+			VipsRenderer::header( '/dev/fd/4: 22040x12059 uchar, 3 bands, srgb, tiffload' ),
 		);
 		self::assertSame(
 			[ 'width' => 300, 'height' => 600, 'bands' => 1, 'bytes' => 2, 'loader' => 'pngload' ],
-			VipsRenderer::header( "warning\n/a/b.png: 300x600 ushort, 1 band, grey16, pngload\n" ),
+			VipsRenderer::header( "warning\n/dev/fd/4: 300x600 ushort, 1 band, grey16, pngload\n" ),
 		);
-		// The path may look like a header; the last field on the line counts.
-		self::assertSame( 20, VipsRenderer::header( '/a/b: 9x9 x, 3 bands, c.tif: 10x20 float, 3 bands, scrgb, tiffload' )['height'] ?? null );
-		self::assertSame( 4, VipsRenderer::header( '/a.tif: 1x1 float, 3 bands, scrgb, tiffload' )['bytes'] ?? null );
+		self::assertSame( 20, VipsRenderer::header( '/dev/fd/4: 10x20 float, 3 bands, scrgb, tiffload' )['height'] ?? null );
+		self::assertSame( 4, VipsRenderer::header( '/dev/fd/4: 1x1 float, 3 bands, scrgb, tiffload' )['bytes'] ?? null );
 		self::assertSame(
 			[ 'width' => 6000, 'height' => 6000, 'bands' => 1, 'bytes' => 4, 'loader' => 'tiffload' ],
-			VipsRenderer::header( '/tmp/n.tif: 6000x6000 float, 1 band, b-w, tiffload' ),
+			VipsRenderer::header( '/dev/fd/4: 6000x6000 float, 1 band, b-w, tiffload' ),
 		);
-		self::assertNull( VipsRenderer::header( 'vipsheader: VipsForeignLoad: "/a.tif" is not a known file format' ) );
-		self::assertNull( VipsRenderer::header( '/a.tif: 0x0 uchar, 3 bands, srgb, tiffload' ) );
+		self::assertNull( VipsRenderer::header( 'vipsheader: VipsForeignLoad: "/dev/fd/4" is not a known file format' ) );
+		self::assertNull( VipsRenderer::header( '/dev/fd/4: 0x0 uchar, 3 bands, srgb, tiffload' ) );
 	}
 
 	/**
-	 * A TIFF out of memory is re-striped into an uncompressed copy in the
-	 * scratch directory, under libvips' cap, and rendered from it; the copy
-	 * is gone afterwards.
+	 * A TIFF out of memory is re-striped into an uncompressed copy, a file
+	 * in the scratch directory unlinked at once and handed on as descriptor
+	 * 3, and rendered from it; nothing is left afterwards.
 	 */
 	public function testATiffOutOfMemoryIsRestripped(): void
 	{
-		$runner = $this->outOfMemoryOnce( '/data/a.tif: 15000x15000 uchar, 3 bands, srgb, tiffload' );
+		$runner = $this->outOfMemoryOnce( '/dev/fd/4: 15000x15000 uchar, 3 bands, srgb, tiffload' );
 
-		$outcome = $this->renderer( $runner, scratch: $this->scratch( null ) )->render( '/data/a.tif', 4096, $this->output );
+		$outcome = $this->renderer( $runner, scratch: $this->scratch( null ) )->render( $this->input, 4096, $this->output );
 
 		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
 		self::assertSame( [ 'vipsheader', 'vipsthumbnail', 'tiffcp', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
-
-		$copy = $this->runs[2]['arguments'][5];
-
-		self::assertSame( [ '-c', 'none', '-r', '64', dirname( $copy ) . '/input.tif,0', $copy ], $this->runs[2]['arguments'] );
-		self::assertStringStartsWith( dirname( $this->output ) . '/lfp-restrip-', $copy );
+		self::assertSame( [ '-c', 'none', '-r', '64', '/dev/fd/4,0', '/dev/fd/3' ], $this->runs[2]['arguments'] );
+		self::assertSame( [ RunOptions::INPUT, RunOptions::COPY ], $this->runs[2]['descriptors'] );
 		self::assertSame( 1024, $this->runs[2]['cap'] );
-		self::assertSame( $copy, $this->runs[3]['arguments'][0] );
+		self::assertSame( '/dev/fd/3', $this->runs[3]['arguments'][0] );
+		self::assertSame( [ RunOptions::COPY ], $this->runs[3]['descriptors'] );
 		self::assertSame( '4096', $this->runs[3]['arguments'][2] );
-		self::assertDirectoryDoesNotExist( dirname( $copy ) );
+		self::assertSame( [], glob( dirname( $this->output ) . '/lfp-restrip-*' ) ?: [] );
 	}
 
 	/**
@@ -377,23 +392,23 @@ class VipsRendererTest
 	 */
 	public function testNoFallbackWhereItCannotHelp(): void
 	{
-		$tiff = '/data/a.tif: 15000x15000 uchar, 3 bands, srgb, tiffload';
+		$tiff = '/dev/fd/4: 15000x15000 uchar, 3 bands, srgb, tiffload';
 
 		$outcome = $this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( 'the scratch directory /tmp is on tmpfs, in memory' ) )
-		                ->render( '/data/a.tif', 4096, $this->output )
+		                ->render( $this->input, 4096, $this->output )
 		;
 
 		self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome );
 		self::assertStringEndsWith( '; no one-strip fallback: the scratch directory /tmp is on tmpfs, in memory', $outcome->reason );
 
 		$this->runs = [];
-		$this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( null ), tiffcp: false )->render( '/data/a.tif', 4096, $this->output );
+		$this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( null ), tiffcp: false )->render( $this->input, 4096, $this->output );
 
 		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
 
 		$this->runs = [];
-		$this->renderer( $this->outOfMemoryOnce( '/data/a.heic: 8000x6000 uchar, 3 bands, srgb, heifload' ), scratch: $this->scratch( null ) )
-		     ->render( '/data/a.heic', 4096, $this->output )
+		$this->renderer( $this->outOfMemoryOnce( '/dev/fd/4: 8000x6000 uchar, 3 bands, srgb, heifload' ), scratch: $this->scratch( null ) )
+		     ->render( $this->input, 4096, $this->output )
 		;
 
 		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
@@ -447,8 +462,6 @@ class VipsRendererTest
 	 */
 	private function scratch( ?string $problem ): ScratchDirectory
 	{
-		@mkdir( dirname( $this->output ) );
-
 		$scratch = $this->createMock( ScratchDirectory::class );
 		$scratch->method( 'path' )
 		        ->willReturn( dirname( $this->output ) )
@@ -470,34 +483,24 @@ class VipsRendererTest
 		$runner->method( 'run' )
 		       ->willReturnCallback(
 			       function(
-				       string $program,
-				       array  $arguments,
-				       bool   $keepStdout = false,
-				       array  $environment = [],
-				       ?int   $cap = null,
+				       string     $program,
+				       array      $arguments,
+				       RunOptions $options,
 			       ) use (
 				       $header,
 			       ): RenderOutcome
 			       {
 				       /** @var list<string> $arguments */
-				       /** @var array<string, string> $environment */
-				       $this->runs[] = [
-					       'program'     => $program,
-					       'arguments'   => $arguments,
-					       'keepStdout'  => $keepStdout,
-					       'environment' => $environment,
-					       'cap'         => $cap,
-				       ];
+				       $this->record( $program, $arguments, $options );
 
 				       $thumbnails = count( array_filter( $this->runs, static fn( array $run ): bool => $run['program'] === VipsRenderer::PROGRAM ) );
-
-				       $first = $program === VipsRenderer::PROGRAM && $thumbnails === 1;
+				       $first      = $program === VipsRenderer::PROGRAM && $thumbnails === 1;
 
 				       return match ( true )
 				       {
 					       $program === VipsRenderer::HEADER => new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, $header ),
 					       $first                            => new RenderOutcome( Outcome::FAILED, 'exit status 255', 255, null, 'vips_tracked: out of memory --- size == 1MB' ),
-					       default                           => $this->written( (string) end( $arguments ) ),
+					       default                           => self::written( $arguments, $options ),
 				       };
 			       },
 		       )
@@ -507,16 +510,22 @@ class VipsRendererTest
 	}
 
 	/**
-	 * Success, with the file a program was given last written, its save
-	 * options cut.
+	 * @param list<string> $arguments
 	 */
-	private function written( string $last ): RenderOutcome
+	private function record(
+		string     $program,
+		array      $arguments,
+		RunOptions $options,
+	): void
 	{
-		$target = (string) preg_replace( '/\[[^]]*]$/', '', $last );
-		@mkdir( dirname( $target ) );
-		touch( $target );
-
-		return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
+		$this->runs[] = [
+			'program'     => $program,
+			'arguments'   => $arguments,
+			'keepStdout'  => $options->keepStdout,
+			'environment' => $options->environment,
+			'cap'         => $options->prlimitAsMb,
+			'descriptors' => array_keys( $options->descriptors ),
+		];
 	}
 
 
@@ -535,41 +544,52 @@ class VipsRendererTest
 		$runner->method( 'run' )
 		       ->willReturnCallback(
 			       function(
-				       string $program,
-				       array  $arguments,
-				       bool   $keepStdout = false,
-				       array  $environment = [],
-				       ?int   $cap = null,
+				       string     $program,
+				       array      $arguments,
+				       RunOptions $options,
 			       ) use (
 				       $header,
 				       $headerOutcome,
 			       ): RenderOutcome
 			       {
 				       /** @var list<string> $arguments */
-				       /** @var array<string, string> $environment */
-				       $this->runs[] = [
-					       'program'     => $program,
-					       'arguments'   => $arguments,
-					       'keepStdout'  => $keepStdout,
-					       'environment' => $environment,
-					       'cap'         => $cap,
-				       ];
+				       $this->record( $program, $arguments, $options );
 
-				       if ( $program === VipsRenderer::HEADER )
-				       {
-					       return new RenderOutcome( $headerOutcome, 'header', 0, null, $header );
-				       }
-
-				       // The output is the last argument, its save options cut.
-				       $target = (string) preg_replace( '/\[[^]]*]$/', '', (string) end( $arguments ) );
-				       @mkdir( dirname( $target ) );
-				       touch( $target );
-
-				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
+				       return $program === VipsRenderer::HEADER
+					       ? new RenderOutcome( $headerOutcome, 'header', 0, null, $header )
+					       : self::written( $arguments, $options );
 			       },
 		       )
 		;
 
 		return $runner;
+	}
+
+
+//  static methods
+
+	/**
+	 * Success, with what a program was given to write written: the copy's
+	 * descriptor, or the file named last, its save options cut.
+	 *
+	 * @param list<string> $arguments
+	 */
+	private static function written(
+		array      $arguments,
+		RunOptions $options,
+	): RenderOutcome
+	{
+		$last = (string) end( $arguments );
+
+		if ( $last === RunOptions::path( RunOptions::COPY ) )
+		{
+			fwrite( $options->descriptors[ RunOptions::COPY ], 'copy' );
+		}
+		else
+		{
+			touch( (string) preg_replace( '/\[[^]]*]$/', '', $last ) );
+		}
+
+		return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
 	}
 }

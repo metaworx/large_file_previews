@@ -15,6 +15,7 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -70,29 +71,40 @@ class PageProbeTest
 
 	public function testScanBoxRunsBothProgramsOnPageOne(): void
 	{
+		$input  = self::input();
 		$runner = $this->createMock( CommandRunner::class );
 		$runner->expects( self::exactly( 2 ) )
 		       ->method( 'run' )
 		       ->willReturnCallback(
-			       static fn(
-				       string $program,
-				       array  $arguments,
-				       bool   $keepStdout,
-			       ): RenderOutcome => match ( $program )
+			       static function(
+				       string     $program,
+				       array      $arguments,
+				       RunOptions $options,
+			       ) use (
+				       $input,
+			       ): RenderOutcome
 			       {
-				       'pdfinfo'   => new RenderOutcome( Outcome::SUCCEEDED, '', 0, null, "Page    1 size:  595.276 x 841.89 pts (A4)\n" ),
-				       'pdfimages' => new RenderOutcome(
-					       Outcome::SUCCEEDED,
-					       '',
-					       0,
-					       null,
-					       self::HEADER . "   1     0 image    2480  3508  gray    1   1  ccitt  no         4  0   300   300 54.2K 5.1%\n",
-				       ),
+				       // The file as descriptor 4, never by its name; stdout kept.
+				       self::assertSame( '/dev/fd/4', end( $arguments ) );
+				       self::assertSame( [ RunOptions::INPUT => $input ], $options->descriptors );
+				       self::assertTrue( $options->keepStdout );
+
+				       return match ( $program )
+				       {
+					       'pdfinfo'   => new RenderOutcome( Outcome::SUCCEEDED, '', 0, null, "Page    1 size:  595.276 x 841.89 pts (A4)\n" ),
+					       'pdfimages' => new RenderOutcome(
+						       Outcome::SUCCEEDED,
+						       '',
+						       0,
+						       null,
+						       self::HEADER . "   1     0 image    2480  3508  gray    1   1  ccitt  no         4  0   300   300 54.2K 5.1%\n",
+					       ),
+				       };
 			       },
 		       )
 		;
 
-		self::assertSame( 3508, $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+		self::assertSame( 3508, $this->probe( $runner )->scanBox( $input ) );
 	}
 
 	public function testAFailedProbeMeansNoScan(): void
@@ -103,7 +115,7 @@ class PageProbeTest
 		       ->willReturn( new RenderOutcome( Outcome::PROGRAM_MISSING, 'pdfinfo not found' ) )
 		;
 
-		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+		self::assertNull( $this->probe( $runner )->scanBox( self::input() ) );
 	}
 
 	/**
@@ -118,7 +130,7 @@ class PageProbeTest
 		       ->method( 'run' )
 		;
 
-		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+		self::assertNull( $this->probe( $runner )->scanBox( self::input() ) );
 	}
 
 	/**
@@ -150,7 +162,7 @@ class PageProbeTest
 		       )
 		;
 
-		self::assertNull( $this->probe( $runner )->scanBox( '/data/scan.pdf' ) );
+		self::assertNull( $this->probe( $runner )->scanBox( self::input() ) );
 	}
 
 	private function probe( CommandRunner $runner ): PageProbe
@@ -160,6 +172,19 @@ class PageProbeTest
 
 
 //  static methods
+
+	/**
+	 * An open file; the runner is a mock, so what it holds does not matter.
+	 *
+	 * @return resource
+	 */
+	private static function input(): mixed
+	{
+		$input = fopen( 'php://memory', 'rb' );
+		self::assertIsResource( $input );
+
+		return $input;
+	}
 
 	/**
 	 * @return array<string, array{list<array{width: int, height: int, xPpi: int, yPpi: int}>|null, ?int}>

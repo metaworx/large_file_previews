@@ -370,7 +370,8 @@ class LargeFileProviderTest
 		int          $size = 1000,
 		bool         $local = true,
 		bool         $encrypted = false,
-		string|false $localPath = '/data/alice/files/doc.pdf',
+		// A file that is there: the renderer opens it; the runner is a mock.
+		string|false $localPath = __FILE__,
 	): File&MockObject
 	{
 		$storage = $this->createMock( IStorage::class );

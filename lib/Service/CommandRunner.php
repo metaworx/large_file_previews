@@ -69,28 +69,15 @@ class CommandRunner
 	/**
 	 * Runs a program by name, under the configured limits.
 	 *
-	 * @param list<string>          $arguments
-	 * @param bool                  $keepStdout  for a program that answers on
-	 *                                           stdout: kept with stderr, in the
-	 *                                           outcome's `stderr`, cut short
-	 *                                           as it is
-	 * @param array<string, string> $environment variables the program needs,
-	 *                                           besides the C locale it always
-	 *                                           runs in
-	 * @param int|null              $prlimitAsMb a renderer's own address-space
-	 *                                           cap, in place of the configured
-	 *                                           one; `prlimit_enabled` still
-	 *                                           decides whether there is a cap
+	 * @param list<string> $arguments
 	 */
 	public function run(
-		string $program,
-		array  $arguments,
-		bool   $keepStdout = false,
-		array  $environment = [],
-		?int   $prlimitAsMb = null,
+		string     $program,
+		array      $arguments,
+		RunOptions $options = new RunOptions(),
 	): RenderOutcome
 	{
-		$command = $this->command( $program, $arguments, $prlimitAsMb );
+		$command = $this->command( $program, $arguments, $options->prlimitAsMb );
 
 		if ( $command instanceof RenderOutcome )
 		{
@@ -105,7 +92,7 @@ class CommandRunner
 			);
 		}
 
-		return $this->execute( $command, $keepStdout, $environment );
+		return $this->execute( $command, $options );
 	}
 
 
@@ -233,20 +220,31 @@ class CommandRunner
 			return new RenderOutcome( Outcome::PROC_OPEN_UNAVAILABLE, 'proc_open() is disabled' );
 		}
 
-		return $this->execute( [ (string) $location->path, ...$arguments ], true, [], $limit );
+		return $this->execute( [ (string) $location->path, ...$arguments ], new RunOptions( keepStdout: true ), $limit );
 	}
 
 	/**
-	 * @param list<string>          $command
-	 * @param array<string, string> $environment
+	 * @param list<string> $command
 	 */
 	private function execute(
-		array $command,
-		bool  $keepStdout = false,
-		array $environment = [],
-		int   $limit = self::STDERR_LIMIT,
+		array      $command,
+		RunOptions $options,
+		int        $limit = self::STDERR_LIMIT,
 	): RenderOutcome
 	{
+		$descriptors = [];
+
+		foreach ( $options->descriptors as $number => $handle )
+		{
+			// stdin, stdout and stderr are the runner's.
+			if ( $number < 3 || ! is_resource( $handle ) )
+			{
+				return new RenderOutcome( Outcome::START_FAILED, sprintf( 'descriptor %d is not one to hand on', $number ) );
+			}
+
+			$descriptors[ $number ] = $handle;
+		}
+
 		$stderrFile = $this->tempManager->getTemporaryFile( '.stderr' );
 
 		if ( $stderrFile === false )
@@ -260,16 +258,16 @@ class CommandRunner
 				$command,
 				[
 					0 => [ 'file', '/dev/null', 'r' ],
-					1 => $keepStdout
+					1 => $options->keepStdout
 						? [ 'file', $stderrFile, 'a' ]
 						: [ 'file', '/dev/null', 'w' ],
 					2 => [ 'file', $stderrFile, 'a' ],
-				],
+				] + $descriptors,
 				$pipes,
 				null,
 				// The C locale, for messages the log can be searched for;
 				// a renderer cannot change it.
-				[ ...$environment, 'LC_ALL' => 'C' ],
+				[ ...$options->environment, 'LC_ALL' => 'C' ],
 			);
 
 			if ( ! is_resource( $process ) )

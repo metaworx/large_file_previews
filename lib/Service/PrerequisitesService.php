@@ -162,6 +162,15 @@ class PrerequisitesService
 			);
 		}
 
+		// A file is handed to a program as /dev/fd/<n> (RunOptions).
+		$items[] = new Prerequisite(
+			Prerequisite::GROUP_PERMISSION,
+			'/dev/fd',
+			is_dir( '/dev/fd' ) ? Prerequisite::OK : Prerequisite::MISSING,
+			'handing the file to a program without its name',
+			is_dir( '/dev/fd' ) ? '' : 'no /dev/fd: /proc is not mounted',
+		);
+
 		$temp    = (string) $this->tempManager->getTempBaseDir();
 		$items[] = new Prerequisite(
 			Prerequisite::GROUP_PERMISSION,

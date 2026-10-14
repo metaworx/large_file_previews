@@ -13,17 +13,20 @@ use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 
 /**
  * PDF and Illustrator (9 and later, which is PDF inside) through pdftoppm:
  *
- *     pdftoppm -f 1 -l 1 -scale-to <N> -png -singlefile <input> <outstem>
- *     pdftoppm -f 1 -l 1 -scale-to <N> -jpeg -jpegopt quality=95 -singlefile <input> <outstem>
+ *     pdftoppm -f 1 -l 1 -scale-to <N> -png -singlefile /dev/fd/4 <outstem>
+ *     pdftoppm -f 1 -l 1 -scale-to <N> -jpeg -jpegopt quality=95 -singlefile /dev/fd/4 <outstem>
  *
- * pdftoppm reads the cross-reference table at the end of the file and
- * follows the page tree to page 1, loading that page's objects only, so a
- * file of gigabytes renders in under a second; it needs to seek, which is
- * why it is given the path and never a pipe. `-scale-to` fits the page into
+ * The file is opened here and handed on as descriptor 4 (RunOptions), so
+ * its name never reaches pdftoppm. pdftoppm reads the cross-reference table
+ * at the end of the file and follows the page tree to page 1, loading that
+ * page's objects only, so a file of gigabytes renders in under a second; it
+ * needs to seek, which `/dev/fd/4`, the file itself reopened, allows and a
+ * pipe would not. `-scale-to` fits the page into
  * an N x N box, and `-singlefile` writes exactly `<outstem>.png` or `.jpg`.
  * Many real files print warnings and still exit 0: success is the exit
  * status and the file, never an empty stderr. A page that is one scan is
@@ -103,37 +106,51 @@ class PopplerRenderer
 			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute input path, an absolute .png, .jpg or .webp output and a box' );
 		}
 
-		$stem = substr( $output, 0, -strlen( $format->extension() ) - 1 );
+		$stem  = substr( $output, 0, -strlen( $format->extension() ) - 1 );
+		$input = @fopen( $localPath, 'rb' );
 
-		// A scanned page at its own resolution, where that is smaller: an
-		// enlarged scan is a larger preview with no more detail.
-		$scan = $this->probe->scanBox( $localPath );
-
-		if ( $scan !== null && $scan > 0 && $scan < $box )
+		if ( $input === false )
 		{
-			$box = $scan;
+			return new RenderOutcome( Outcome::START_FAILED, 'the file could not be opened' );
+		}
+
+		try
+		{
+			// A scanned page at its own resolution, where that is smaller: an
+			// enlarged scan is a larger preview with no more detail.
+			$scan = $this->probe->scanBox( $input );
+
+			if ( $scan !== null && $scan > 0 && $scan < $box )
+			{
+				$box = $scan;
+			}
+
+			$outcome = $this->runner->run(
+				self::PROGRAM,
+				[
+					'-f',
+					'1',
+					'-l',
+					'1',
+					'-scale-to',
+					(string) $box,
+					...( $format === PreviewFormat::JPEG
+						? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d', VipsRenderer::QUALITY ) ]
+						: [ '-png' ] ),
+					'-singlefile',
+					RunOptions::path( RunOptions::INPUT ),
+					$stem,
+				],
+				new RunOptions( descriptors: [ RunOptions::INPUT => $input ] ),
+			);
+		}
+		finally
+		{
+			fclose( $input );
 		}
 
 		// pdftoppm's own file: the preview, or the page to convert.
 		$written = $format === PreviewFormat::JPEG ? $output : $stem . '.png';
-
-		$outcome = $this->runner->run(
-			self::PROGRAM,
-			[
-				'-f',
-				'1',
-				'-l',
-				'1',
-				'-scale-to',
-				(string) $box,
-				...( $format === PreviewFormat::JPEG
-					? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d', VipsRenderer::QUALITY ) ]
-					: [ '-png' ] ),
-				'-singlefile',
-				$localPath,
-				$stem,
-			],
-		);
 
 		// Under the address-space cap, poppler says so on stderr and still
 		// exits 0, leaving a PNG of a few bytes: measured with poppler 24.02.

@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Renderer;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\RunOptions;
 
 /**
  * Whether page 1 of a PDF is a scan, and if so its size in pixels at the
@@ -25,8 +26,10 @@ use OCA\LargeFilePreviews\Service\ConfigurationService;
  * question off. Two programs from poppler-utils answer, each reading page 1
  * only:
  *
- *     pdfinfo -f 1 -l 1 <input>          Page    1 size:  595.276 x 841.89 pts (A4)
- *     pdfimages -list -f 1 -l 1 <input>  ... image 2480 3508 gray ... 300 300 ...
+ *     pdfinfo -f 1 -l 1 /dev/fd/4          Page    1 size:  595.276 x 841.89 pts (A4)
+ *     pdfimages -list -f 1 -l 1 /dev/fd/4  ... image 2480 3508 gray ... 300 300 ...
+ *
+ * The file is the renderer's open handle, handed on as descriptor 4.
  *
  * Any doubt - a probe that fails, a program that is missing, output that is
  * not as expected - answers null, and the page keeps the full box.
@@ -56,15 +59,19 @@ class PageProbe
 	/**
 	 * The longer side, in pixels, of page 1 at its scan's resolution, or
 	 * null where page 1 is not a scan, cannot be told, or is not asked.
+	 *
+	 * @param resource $input the PDF, open for reading
 	 */
-	public function scanBox( string $localPath ): ?int
+	public function scanBox( mixed $input ): ?int
 	{
 		if ( $this->config->getScalar( ConfigLexicon::SCAN_NATIVE_ENABLED ) !== true )
 		{
 			return null;
 		}
 
-		$info = $this->runner->run( self::PDFINFO, [ '-f', '1', '-l', '1', $localPath ], true );
+		$options = new RunOptions( keepStdout: true, descriptors: [ RunOptions::INPUT => $input ] );
+		$file    = RunOptions::path( RunOptions::INPUT );
+		$info    = $this->runner->run( self::PDFINFO, [ '-f', '1', '-l', '1', $file ], $options );
 
 		if ( ! $info->isSuccess() )
 		{
@@ -78,7 +85,7 @@ class PageProbe
 			return null;
 		}
 
-		$images = $this->runner->run( self::PDFIMAGES, [ '-list', '-f', '1', '-l', '1', $localPath ], true );
+		$images = $this->runner->run( self::PDFIMAGES, [ '-list', '-f', '1', '-l', '1', $file ], $options );
 
 		if ( ! $images->isSuccess() )
 		{

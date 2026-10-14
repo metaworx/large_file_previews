@@ -1,0 +1,3 @@
+#!/bin/sh
+# Says on stderr what it reads from the file handed on as descriptor 4.
+cat /dev/fd/4 >&2

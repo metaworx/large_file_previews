@@ -19,9 +19,9 @@ the first stable release.
 - `img/app.svg` and `img/app-dark.svg`: the app's icon, a picture with
   an arrow enlarging it.
 
-- `README.md`, *What it does*: previews of PDF and Illustrator files by
-  `pdftoppm`, a scan at its own resolution, and of images by
-  `vipsthumbnail`, from local, unencrypted storage only.
+- `README.md`, *What it does*: previews of PDFs by `pdftoppm` and of
+  images by `vipsthumbnail`, from local, unencrypted storage only, the
+  file handed on as a descriptor, never by its name.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
   render, and `occ lfp:check`, listing what the app needs, and the
@@ -35,7 +35,7 @@ the first stable release.
   by default as Nextcloud's `preview_format` says; `preview_background`.
 
 - `README.md`, *Configuration*: a TIFF in one large strip out of memory,
-  re-striped by `tiffcp` into a copy in `scratch_directory`, on disk.
+  re-striped by `tiffcp` into an unlinked copy in `scratch_directory`.
 
 - *Administration settings → Additional settings*: status, files
   processed, preview format, limits, libvips, programs with versions;

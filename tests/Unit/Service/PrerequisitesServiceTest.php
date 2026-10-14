@@ -42,7 +42,7 @@ class PrerequisitesServiceTest
 		$items   = $service->check();
 
 		self::assertSame(
-			[ 'proc_open', 'proc_get_status', 'proc_close', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'pdfinfo', 'pdfimages', 'vipsthumbnail', 'vipsheader', 'vips', 'tiffcp', 'timeout', 'prlimit', 'choom' ],
+			[ 'proc_open', 'proc_get_status', 'proc_close', '/dev/fd', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'pdfinfo', 'pdfimages', 'vipsthumbnail', 'vipsheader', 'vips', 'tiffcp', 'timeout', 'prlimit', 'choom' ],
 			array_map(
 				static fn(
 					Prerequisite $item,

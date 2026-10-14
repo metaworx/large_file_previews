@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\IBinaryFinder;
@@ -133,11 +134,30 @@ class CommandRunnerTest
 		$outcome = $this->unlimited()->run(
 			'environment',
 			[],
-			environment: [ 'LFP_TEST' => 'given', 'LC_ALL' => 'de_CH.UTF-8' ],
+			new RunOptions( environment: [ 'LFP_TEST' => 'given', 'LC_ALL' => 'de_CH.UTF-8' ] ),
 		);
 
 		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
 		self::assertSame( 'C given', $outcome->stderr );
+	}
+
+	/**
+	 * A file handed on as a descriptor is what the program reads at
+	 * /dev/fd/<n>; stdin, stdout and stderr are not to be handed.
+	 */
+	public function testAFileIsHandedOnAsADescriptor(): void
+	{
+		$file              = (string) tempnam( sys_get_temp_dir(), 'lfp-' );
+		$this->temporary[] = $file;
+		file_put_contents( $file, 'the content, not the name' );
+		$handle = fopen( $file, 'rb' );
+
+		$outcome = $this->unlimited()->run( 'read-input', [], new RunOptions( descriptors: [ RunOptions::INPUT => $handle ] ) );
+
+		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
+		self::assertSame( 'the content, not the name', $outcome->stderr );
+		self::assertSame( Outcome::START_FAILED, $this->unlimited()->run( 'read-input', [], new RunOptions( descriptors: [ 1 => $handle ] ) )->outcome );
+		self::assertSame( '/dev/fd/4', RunOptions::path( RunOptions::INPUT ) );
 	}
 
 	public function testAMissingProgramDoesNotRun(): void
@@ -221,7 +241,7 @@ class CommandRunnerTest
 		$this->requirePrograms( 'prlimit', 'php' );
 		$this->appValues = self::only( ConfigLexicon::PRLIMIT_ENABLED ) + [ ConfigLexicon::PRLIMIT_AS_MB => 4096 ];
 
-		$outcome = $this->runner( self::system( 'prlimit' ) )->run( 'allocate', [], prlimitAsMb: 256 );
+		$outcome = $this->runner( self::system( 'prlimit' ) )->run( 'allocate', [], new RunOptions( prlimitAsMb: 256 ) );
 
 		self::assertSame( Outcome::FAILED, $outcome->outcome );
 		self::assertStringContainsString( 'memory', strtolower( $outcome->stderr ) );

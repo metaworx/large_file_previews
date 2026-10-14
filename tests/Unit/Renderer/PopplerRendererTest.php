@@ -17,6 +17,7 @@ use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -29,6 +30,9 @@ class PopplerRendererTest
 
 	private string $output;
 
+	/** A file the renderer opens; the runner is a mock, so it holds anything. */
+	private string $input;
+
 
 //  getters / setters / is* / has*
 
@@ -37,6 +41,8 @@ class PopplerRendererTest
 		parent::setUp();
 
 		$this->output = sys_get_temp_dir() . '/lfp-poppler-' . bin2hex( random_bytes( 4 ) ) . '.png';
+		$this->input  = sys_get_temp_dir() . '/lfp-poppler-in ' . bin2hex( random_bytes( 4 ) ) . '.pdf';
+		file_put_contents( $this->input, '%PDF-1.4' );
 	}
 
 
@@ -48,6 +54,8 @@ class PopplerRendererTest
 		{
 			@unlink( substr( $this->output, 0, (int) strrpos( $this->output, '.' ) ) . $extension );
 		}
+
+		@unlink( $this->input );
 
 		parent::tearDown();
 	}
@@ -72,7 +80,7 @@ class PopplerRendererTest
 
 		self::assertTrue(
 			$this->poppler( $runner )
-			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->render( $this->input, 4096, $this->output )
 			     ->isSuccess(),
 		);
 	}
@@ -87,7 +95,7 @@ class PopplerRendererTest
 
 		self::assertTrue(
 			$this->poppler( $runner )
-			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->render( $this->input, 4096, $this->output )
 			     ->isSuccess(),
 		);
 	}
@@ -110,7 +118,7 @@ class PopplerRendererTest
 		$renderer = new PopplerRenderer( $runner, $this->probe( null ), $vips );
 
 		self::assertSame( PreviewFormat::WEBP, $renderer->format( PreviewFormat::WEBP ) );
-		self::assertTrue( $renderer->render( '/data/alice/files/a b.pdf', 4096, $webp )->isSuccess() );
+		self::assertTrue( $renderer->render( $this->input, 4096, $webp )->isSuccess() );
 
 		$without = $this->poppler( $this->createMock( CommandRunner::class ) );
 
@@ -127,7 +135,7 @@ class PopplerRendererTest
 
 		self::assertTrue(
 			$this->poppler( $runner, 3508 )
-			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->render( $this->input, 4096, $this->output )
 			     ->isSuccess(),
 		);
 	}
@@ -141,7 +149,7 @@ class PopplerRendererTest
 
 		self::assertTrue(
 			$this->poppler( $runner, 7016 )
-			     ->render( '/data/alice/files/a b.pdf', 4096, $this->output )
+			     ->render( $this->input, 4096, $this->output )
 			     ->isSuccess(),
 		);
 	}
@@ -164,7 +172,7 @@ class PopplerRendererTest
 		       )
 		;
 
-		$outcome = $this->poppler( $runner )->render( '/in.pdf', 4096, $this->output );
+		$outcome = $this->poppler( $runner )->render( $this->input, 4096, $this->output );
 
 		self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome );
 		self::assertSame( 'out of memory under the address-space cap (prlimit_as_mb)', $outcome->reason );
@@ -178,7 +186,7 @@ class PopplerRendererTest
 		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'Syntax Warning: x' ) )
 		;
 
-		$outcome = $this->poppler( $runner )->render( '/in.pdf', 100, $this->output );
+		$outcome = $this->poppler( $runner )->render( $this->input, 100, $this->output );
 
 		self::assertSame( Outcome::NO_OUTPUT, $outcome->outcome );
 		self::assertSame( 0, $outcome->exitStatus );
@@ -200,7 +208,7 @@ class PopplerRendererTest
 		     ->method( 'convert' )
 		;
 
-		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ), $vips ) )->render( '/in.pdf', 100, '/tmp/out.webp' ) );
+		self::assertSame( $failed, ( new PopplerRenderer( $runner, $this->probe( null ), $vips ) )->render( $this->input, 100, '/tmp/out.webp' ) );
 	}
 
 	/**
@@ -221,9 +229,10 @@ class PopplerRendererTest
 		$renderer = new PopplerRenderer( $runner, $probe, $this->vips( false ) );
 
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '-opw', 100, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 0, $this->output )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 100, '/tmp/out.gif' )->outcome );
-		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.pdf', 100, 'out.png' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 0, $this->output )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 100, '/tmp/out.gif' )->outcome );
+		self::assertSame( Outcome::START_FAILED, $renderer->render( $this->input, 100, 'out.png' )->outcome );
+		self::assertSame( 'the file could not be opened', $renderer->render( '/nonexistent/a.pdf', 100, $this->output )->reason );
 	}
 
 	public function testRenderersFindByType(): void
@@ -262,7 +271,9 @@ class PopplerRendererTest
 		       ->method( 'run' )
 		       ->with(
 			       'pdftoppm',
-			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, ...$format, '-singlefile', '/data/alice/files/a b.pdf', $stem ],
+			       // The file as descriptor 4, never by its name.
+			       [ '-f', '1', '-l', '1', '-scale-to', (string) $box, ...$format, '-singlefile', '/dev/fd/4', $stem ],
+			       self::callback( static fn( RunOptions $options ): bool => is_resource( $options->descriptors[ RunOptions::INPUT ] ?? null ) ),
 		       )
 		       ->willReturnCallback(
 			       static function() use (

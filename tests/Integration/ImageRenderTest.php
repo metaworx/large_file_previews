@@ -72,6 +72,25 @@ class ImageRenderTest
 	}
 
 	/**
+	 * The file reaches libvips as a descriptor, so a name libvips would
+	 * misread - load options in brackets, a comma, "out of memory" - is
+	 * rendered as any other.
+	 */
+	public function testANameIsNeverReadByLibvips(): void
+	{
+		$this->settings()->setMimeRule( 'image/png', new TypeRule( true, 0 ) );
+
+		$image = Server::get( LargeFileProvider::class )->getThumbnail(
+			$this->file( 'out of memory, 1x1 uchar, 1 band, b-w, tiffload [page=9].png', self::gd( 300, 150, static fn( \GdImage $image ): bool => imagepng( $image ) ) ),
+			128,
+			128,
+		);
+
+		self::assertNotNull( $image, json_encode( $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE ) ) ?: '' );
+		self::assertSame( 128, $image->width() );
+	}
+
+	/**
 	 * An image smaller than the preview keeps its own size.
 	 */
 	public function testASmallImageIsNotEnlarged(): void

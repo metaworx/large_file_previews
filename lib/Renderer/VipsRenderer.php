@@ -16,13 +16,19 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\RunOptions;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 
 /**
  * Images through libvips:
  *
- *     vipsheader <input>
- *     vipsthumbnail <input> --size <N> --vips-concurrency=<C> -o <output>[<save options>]
+ *     vipsheader /dev/fd/4
+ *     vipsthumbnail /dev/fd/4 --size <N> --vips-concurrency=<C> -o <output>[<save options>]
+ *
+ * The file is opened here and handed on as descriptor 4 (RunOptions): its
+ * name never reaches libvips, nor what libvips prints, so no name can be
+ * read as a header line or as "out of memory", and one ending in `]` is not
+ * read as load options.
  *
  * The output is a PNG, a JPEG at quality 95 laid on preview_background, or a
  * WebP at quality 95; Nextcloud keeps the type and re-encodes at its own
@@ -37,11 +43,9 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * a pyramid TIFF's smallest level. No `[page=0]`: JPEG and PNG have no such
  * option, and page 0 is the default.
  *
- * libvips reads a trailing `[...]` of a file name as load options, and
- * cannot open a file whose name ends in `]`, options appended or not
- * (libvips 8.15); such a file is not run. The output is a format string,
- * its `%s` the input's name, and `%%` not unescaped, so an output path
- * holding `%` is not run either; the provider's never does.
+ * The output is a format string, its `%s` the input's name, and `%%` not
+ * unescaped, so an output path holding `%` is not run; the provider's never
+ * does.
  *
  * Each run has libvips' own address-space cap (vips_prlimit_as_mb), two
  * malloc arenas, with which a HEIC and a WebP passed at 640 MB rather than
@@ -189,46 +193,61 @@ class VipsRenderer
 			return new RenderOutcome( Outcome::START_FAILED, 'not an absolute input path, an absolute .png, .jpg or .webp output and a box' );
 		}
 
-		if ( str_ends_with( $localPath, ']' ) )
-		{
-			return new RenderOutcome( Outcome::START_FAILED, 'libvips cannot open a file whose name ends in "]"' );
-		}
-
 		if ( str_contains( $output, '%' ) )
 		{
 			return new RenderOutcome( Outcome::START_FAILED, 'an output path holding "%" is a format to vipsthumbnail' );
 		}
 
-		$environment = $this->environment( dirname( $output ) );
-		$cap         = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
+		$input = @fopen( $localPath, 'rb' );
 
-		// Not enlarged: a header that cannot be read leaves the box, and the
-		// thumbnail says what is wrong with the file.
-		$run    = $this->runner->run( self::HEADER, [ $localPath ], true, $environment, $cap );
-		$header = $run->isSuccess() ? self::header( $run->stderr ) : null;
-
-		if ( $header !== null && max( $header['width'], $header['height'] ) < $box )
+		if ( $input === false )
 		{
-			$box = max( $header['width'], $header['height'] );
+			return new RenderOutcome( Outcome::START_FAILED, 'the file could not be opened' );
 		}
 
-		$outcome = $this->thumbnail( $localPath, $box, $output, $format, $environment, $cap );
-
-		// A TIFF in one strip, or a few large ones, is read a strip at a
-		// time; one that ran out of memory gets a second chance.
-		if ( $outcome->outcome === Outcome::OUT_OF_MEMORY && $header !== null && $header['loader'] === 'tiffload' )
+		try
 		{
-			return $this->restripped( $localPath, $header, $box, $output, $format, $environment, $cap, $outcome );
-		}
+			$environment = $this->environment( dirname( $output ) );
+			$cap         = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
 
-		return $outcome;
+			// Not enlarged: a header that cannot be read leaves the box, and the
+			// thumbnail says what is wrong with the file.
+			$run    = $this->runner->run(
+				self::HEADER,
+				[ RunOptions::path( RunOptions::INPUT ) ],
+				new RunOptions( true, $environment, $cap, [ RunOptions::INPUT => $input ] ),
+			);
+			$header = $run->isSuccess() ? self::header( $run->stderr ) : null;
+
+			if ( $header !== null && max( $header['width'], $header['height'] ) < $box )
+			{
+				$box = max( $header['width'], $header['height'] );
+			}
+
+			$outcome = $this->thumbnail( RunOptions::INPUT, $input, $box, $output, $format, $environment, $cap );
+
+			// A TIFF in one strip, or a few large ones, is read a strip at a
+			// time; one that ran out of memory gets a second chance.
+			if ( $outcome->outcome === Outcome::OUT_OF_MEMORY && $header !== null && $header['loader'] === 'tiffload' )
+			{
+				return $this->restripped( $input, $header, $box, $output, $format, $environment, $cap, $outcome );
+			}
+
+			return $outcome;
+		}
+		finally
+		{
+			fclose( $input );
+		}
 	}
 
 	/**
+	 * @param resource              $handle      the image, handed on as `$descriptor`
 	 * @param array<string, string> $environment
 	 */
 	private function thumbnail(
-		string        $input,
+		int           $descriptor,
+		mixed         $handle,
 		int           $box,
 		string        $output,
 		PreviewFormat $format,
@@ -239,16 +258,14 @@ class VipsRenderer
 		$outcome = $this->runner->run(
 			self::PROGRAM,
 			[
-				$input,
+				RunOptions::path( $descriptor ),
 				'--size',
 				(string) $box,
 				sprintf( '--vips-concurrency=%d', (int) $this->config->getScalar( ConfigLexicon::VIPS_CONCURRENCY ) ),
 				'-o',
 				$output . $this->saveOptions( $format ),
 			],
-			false,
-			$environment,
-			$cap,
+			new RunOptions( false, $environment, $cap, [ $descriptor => $handle ] ),
 		);
 
 		return self::judged( $outcome, $output );
@@ -256,23 +273,26 @@ class VipsRenderer
 
 	/**
 	 * The one-strip fallback: the TIFF's first image re-striped by tiffcp
-	 * into an uncompressed copy of 64 rows a strip, in the scratch
-	 * directory, which libvips then reads a few rows at a time.
+	 * into an uncompressed copy of 64 rows a strip, which libvips then reads
+	 * a few rows at a time.
 	 *
-	 *     tiffcp -c none -r 64 <scratch>/lfp-restrip-<random>/input.tif,0 <same>/copy.tif
+	 *     tiffcp -c none -r 64 /dev/fd/4,0 /dev/fd/3
 	 *
-	 * tiffcp holds the compressed strip, not the decoded one: measured with
-	 * libtiff 4.5, a 348 MB one-strip LZW TIFF passed under 384 MB of
-	 * address space, so it runs under libvips' cap. It reads `<path>,<image>`
-	 * up to the first comma, so the file is given as a link without one.
-	 * The copy and the link are removed whatever happens. Where the copy
-	 * cannot be made, the render stays out of memory, with the reason.
+	 * The copy is a file in the scratch directory, unlinked as soon as it is
+	 * opened, and handed to tiffcp and then to vipsthumbnail as descriptor 3:
+	 * its space goes with the last descriptor, whatever ends the worker, and
+	 * no copy can be left behind. tiffcp holds the compressed strip, not the
+	 * decoded one: measured with libtiff 4.5, a 348 MB one-strip LZW TIFF
+	 * passed under 384 MB of address space, so it runs under libvips' cap.
+	 * Where the copy cannot be made, the render stays out of memory, with
+	 * the reason.
 	 *
+	 * @param resource                                                              $input
 	 * @param array{width: int, height: int, bands: int, bytes: int, loader: string} $header
 	 * @param array<string, string>                                                 $environment
 	 */
 	private function restripped(
-		string        $localPath,
+		mixed         $input,
 		array         $header,
 		int           $box,
 		string        $output,
@@ -294,39 +314,32 @@ class VipsRenderer
 			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $problem );
 		}
 
-		$folder = $this->scratch->path() . '/lfp-restrip-' . bin2hex( random_bytes( 8 ) );
+		$path = $this->scratch->path() . '/lfp-restrip-' . bin2hex( random_bytes( 8 ) ) . '.tif';
+		$copy = @fopen( $path, 'x+b' );
 
-		// tiffcp reads `<path>,<image>` up to the first comma.
-		if ( str_contains( $folder, ',' ) )
+		if ( $copy === false )
 		{
-			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: tiffcp cannot read from a scratch directory whose path holds ","' );
+			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $path . ' could not be made' );
 		}
 
-		if ( ! @mkdir( $folder, 0700 ) )
-		{
-			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $folder . ' could not be made' );
-		}
-
-		$input = $folder . '/input.tif';
-		$copy  = $folder . '/copy.tif';
+		// Unlinked at once: the descriptor is all that is left of it.
+		@unlink( $path );
 
 		try
 		{
-			// The file by a name without a comma, whatever its own.
-			if ( ! @symlink( $localPath, $input ) )
-			{
-				return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: no link to the file in ' . $folder );
-			}
-
 			// `,0` is the first image only.
-			$copied = $this->runner->run( self::RESTRIPPER, [ '-c', 'none', '-r', '64', $input . ',0', $copy ], false, $environment, $cap );
+			$copied = $this->runner->run(
+				self::RESTRIPPER,
+				[ '-c', 'none', '-r', '64', RunOptions::path( RunOptions::INPUT ) . ',0', RunOptions::path( RunOptions::COPY ) ],
+				new RunOptions( false, $environment, $cap, [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ] ),
+			);
 
-			if ( ! $copied->isSuccess() || ! is_file( $copy ) )
+			if ( ! $copied->isSuccess() || ( fstat( $copy )['size'] ?? 0 ) === 0 )
 			{
 				return $copied->as( $copied->isSuccess() ? Outcome::NO_OUTPUT : $copied->outcome, 'the one-strip fallback: tiffcp: ' . $copied->reason );
 			}
 
-			$outcome = $this->thumbnail( $copy, $box, $output, $format, $environment, $cap );
+			$outcome = $this->thumbnail( RunOptions::COPY, $copy, $box, $output, $format, $environment, $cap );
 
 			return $outcome->isSuccess()
 				? $outcome
@@ -334,9 +347,7 @@ class VipsRenderer
 		}
 		finally
 		{
-			@unlink( $copy );
-			@unlink( $input );
-			@rmdir( $folder );
+			fclose( $copy );
 		}
 	}
 
@@ -371,9 +382,10 @@ class VipsRenderer
 		$outcome = $this->runner->run(
 			self::CONVERTER,
 			[ 'copy', $png, $output . $this->saveOptions( $format ) ],
-			false,
-			$this->environment( dirname( $output ) ),
-			(int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
+			new RunOptions(
+				environment: $this->environment( dirname( $output ) ),
+				prlimitAsMb: (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
+			),
 		);
 
 		return self::judged( $outcome, $output );
