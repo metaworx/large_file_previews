@@ -80,13 +80,17 @@ class LargeFileProvider
 				return false;
 			}
 
+			$renderer = $this->renderers->for( (string) $resolution->mime );
+
+			// A type whose decoder is missing or blocked goes to the next
+			// provider, which may well read it.
 			$reason = match ( true )
 			{
-				! $verdict->isTaken()                                        => $verdict->describe(),
-				$this->renderers->for( (string) $resolution->mime ) === null => 'no renderer for this type',
-				$file->isEncrypted()                                         => 'encrypted',
-				! $file->getStorage()->isLocal()                             => 'not on local storage',
-				default                                                      => null,
+				! $verdict->isTaken()            => $verdict->describe(),
+				$renderer === null               => 'no renderer for this type',
+				$file->isEncrypted()             => 'encrypted',
+				! $file->getStorage()->isLocal() => 'not on local storage',
+				default                          => $renderer->unsupported( (string) $resolution->mime )?->describe(),
 			};
 
 			if ( $reason !== null )

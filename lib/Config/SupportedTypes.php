@@ -59,6 +59,31 @@ final class SupportedTypes
 			'image/x-portable-pixmap',
 		];
 
+	/**
+	 * The libvips loader that decodes each image type. HEIC and AVIF need
+	 * libheif's decoder plugins besides, which `vips -l` cannot tell; BMP
+	 * has no loader of its own and goes through ImageMagick.
+	 *
+	 * @var array<string, string>
+	 */
+	public const DECODERS
+		 = [
+			'image/tiff'               => 'tiffload',
+			'image/jpeg'               => 'jpegload',
+			'image/png'                => 'pngload',
+			'image/webp'               => 'webpload',
+			'image/gif'                => 'gifload',
+			'image/heic'               => 'heifload',
+			'image/heif'               => 'heifload',
+			'image/avif'               => 'heifload',
+			'image/jp2'                => 'jp2kload',
+			'image/jxl'                => 'jxlload',
+			'image/bmp'                => 'magickload',
+			'image/x-portable-bitmap'  => 'ppmload',
+			'image/x-portable-graymap' => 'ppmload',
+			'image/x-portable-pixmap'  => 'ppmload',
+		];
+
 
 //  static methods
 

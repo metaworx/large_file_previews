@@ -6,8 +6,8 @@
  */
 import type { ActiveRow, MimeRow, Renderer, Scalar, SettingsState } from './types'
 
-const POPPLER: Renderer = { program: 'pdftoppm', available: true }
-const VIPS: Renderer = { program: 'vipsthumbnail', available: false }
+const POPPLER: Renderer = { program: 'pdftoppm', available: true, unsupported: null }
+const VIPS: Renderer = { program: 'vipsthumbnail', available: false, unsupported: null }
 
 function scalar(value: number | boolean, min: number | null = null, max: number | null = null): Scalar {
 	return { value, default: value, min, max, stored: false }
@@ -57,6 +57,8 @@ export function testState(): SettingsState {
 			choom_adjust: scalar(1000, 0, 1000),
 			scan_native_enabled: scalar(true),
 			scan_coverage_percent: scalar(90, 50, 100),
+			vips_block_untrusted: scalar(true),
+			vips_concurrency: scalar(1, 1, 64),
 		},
 		active: [activePdf()],
 		mimetypes: [pdf(), tiff()],

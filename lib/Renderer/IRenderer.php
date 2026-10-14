@@ -31,6 +31,12 @@ interface IRenderer
 	public function program(): string;
 
 	/**
+	 * Why it cannot decode files of a type it supports on this server, or
+	 * null where nothing says it cannot.
+	 */
+	public function unsupported( string $mime ): ?Unsupported;
+
+	/**
 	 * Renders the file's first page or frame into `$outputPng`, its longer
 	 * side `$box` pixels or less.
 	 *

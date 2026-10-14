@@ -50,6 +50,7 @@ class BinaryLocator
 			'pdfimages',
 			'vipsthumbnail',
 			'vipsheader',
+			'vips',
 			'timeout',
 			'prlimit',
 			'choom',

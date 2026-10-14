@@ -50,6 +50,8 @@ class ConfigLexiconTest
 				'choom_adjust',
 				'scan_native_enabled',
 				'scan_coverage_percent',
+				'vips_block_untrusted',
+				'vips_concurrency',
 				'mimetypes',
 				'extensions',
 				'last_failure',

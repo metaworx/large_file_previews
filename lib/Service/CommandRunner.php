@@ -210,13 +210,15 @@ class CommandRunner
 	/**
 	 * Runs a program by name with no limits around it, its stdout kept with
 	 * its stderr: for a version, which some programs print to one and some
-	 * to the other. Not for rendering.
+	 * to the other, or a listing. Not for rendering.
 	 *
 	 * @param list<string> $arguments
+	 * @param int          $limit     how much of the output is read
 	 */
 	public function runBare(
 		string $program,
 		array  $arguments,
+		int    $limit = self::STDERR_LIMIT,
 	): RenderOutcome
 	{
 		$location = $this->binaries->locate( $program );
@@ -231,7 +233,7 @@ class CommandRunner
 			return new RenderOutcome( Outcome::PROC_OPEN_UNAVAILABLE, 'proc_open() is disabled' );
 		}
 
-		return $this->execute( [ (string) $location->path, ...$arguments ], true );
+		return $this->execute( [ (string) $location->path, ...$arguments ], true, [], $limit );
 	}
 
 	/**
@@ -242,6 +244,7 @@ class CommandRunner
 		array $command,
 		bool  $keepStdout = false,
 		array $environment = [],
+		int   $limit = self::STDERR_LIMIT,
 	): RenderOutcome
 	{
 		$stderrFile = $this->tempManager->getTemporaryFile( '.stderr' );
@@ -275,7 +278,7 @@ class CommandRunner
 			}
 
 			[ $exitStatus, $signal ] = self::wait( $process );
-			$stderr                  = self::readStart( $stderrFile );
+			$stderr                  = self::readStart( $stderrFile, $limit );
 		}
 		finally
 		{
@@ -382,9 +385,12 @@ class CommandRunner
 		return [ $status['exitcode'] >= 0 ? $status['exitcode'] : null, null ];
 	}
 
-	private static function readStart( string $file ): string
+	private static function readStart(
+		string $file,
+		int    $limit,
+	): string
 	{
-		$text = @file_get_contents( $file, false, null, 0, self::STDERR_LIMIT );
+		$text = @file_get_contents( $file, false, null, 0, max( 1, $limit ) );
 
 		return is_string( $text )
 			? trim( $text )

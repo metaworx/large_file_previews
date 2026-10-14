@@ -188,9 +188,10 @@ class SettingsController
 	}
 
 	/**
-	 * Which program renders a MIME type, and whether it is there.
+	 * Which program renders a MIME type, whether it is there, and whether
+	 * it can decode the type.
 	 *
-	 * @return array{program: ?string, available: bool} no program where the provider never sees the type
+	 * @return array{program: ?string, available: bool, unsupported: array{decoder: string, problem: string}|null} no program where the provider never sees the type
 	 */
 	private function renderer( ?string $mime ): array
 	{
@@ -198,17 +199,21 @@ class SettingsController
 			? null
 			: $this->renderers->for( $mime );
 
-		if ( $renderer === null )
+		if ( $mime === null || $renderer === null )
 		{
 			return [
-				'program'   => null,
-				'available' => false,
+				'program'     => null,
+				'available'   => false,
+				'unsupported' => null,
 			];
 		}
 
+		$unsupported = $renderer->unsupported( $mime );
+
 		return [
-			'program'   => $renderer->program(),
-			'available' => $this->binaries->locate( $renderer->program() )->isFound(),
+			'program'     => $renderer->program(),
+			'available'   => $unsupported === null && $this->binaries->locate( $renderer->program() )->isFound(),
+			'unsupported' => $unsupported?->toArray(),
 		];
 	}
 
@@ -313,7 +318,7 @@ class SettingsController
 	 * One row of what the configuration resolves to: processing, renderer,
 	 * and each size with the level it came from.
 	 *
-	 * @param array{program: ?string, available: bool} $renderer
+	 * @param array{program: ?string, available: bool, unsupported: array{decoder: string, problem: string}|null} $renderer
 	 * @return array<string, mixed>
 	 */
 	private static function activeRow(

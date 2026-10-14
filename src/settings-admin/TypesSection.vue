@@ -32,9 +32,16 @@ const emit = defineEmits<{
 const newExtension = ref('')
 
 function noRenderer(renderer: Renderer): string {
-	return renderer.program === null
-		? t('large_file_previews', 'Not a type this app handles')
-		: t('large_file_previews', 'No suitable renderer ({program})', { program: renderer.program })
+	if (renderer.program === null) {
+		return t('large_file_previews', 'Not a type this app handles')
+	}
+	if (renderer.unsupported?.problem === 'untrusted') {
+		return t('large_file_previews', 'Its decoder, {decoder}, is untrusted, and untrusted decoders are blocked', { decoder: renderer.unsupported.decoder })
+	}
+	if (renderer.unsupported?.problem === 'missing') {
+		return t('large_file_previews', 'libvips here has no decoder for it ({decoder})', { decoder: renderer.unsupported.decoder })
+	}
+	return t('large_file_previews', 'No suitable renderer ({program})', { program: renderer.program })
 }
 
 function differs(rule: Rule, shipped: Rule): boolean {

@@ -20,7 +20,7 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
  * Images through libvips:
  *
  *     vipsheader <input>
- *     vipsthumbnail <input> --size <N> --vips-concurrency=1 -o <output>
+ *     vipsthumbnail <input> --size <N> --vips-concurrency=<C> -o <output>
  *
  * vipsthumbnail decodes only what the thumbnail needs: a pyramid TIFF from
  * its nearest level, a JPEG shrunk while it is decoded, anything else in
@@ -37,9 +37,13 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
  *
  * Each run has libvips' own address-space cap (vips_prlimit_as_mb), two
  * malloc arenas, which a HEIC needed to pass under 512 MB, untrusted
- * decoders blocked, and its spill to disc in the render folder, which the
- * provider removes. Under the cap libvips says "out of memory", fails to
- * start a thread or aborts; any of these is a render out of memory.
+ * decoders blocked while vips_block_untrusted is on, and its spill to disc
+ * in the render folder, which the provider removes. Under the cap libvips
+ * says "out of memory", fails to start a thread or aborts; any of these is
+ * a render out of memory.
+ *
+ * A type whose decoder `vips -l` does not list, or lists as untrusted
+ * while those are blocked, is unsupported (VipsLoaders).
  */
 class VipsRenderer
     implements
@@ -69,6 +73,7 @@ class VipsRenderer
 	public function __construct(
 		private readonly CommandRunner        $runner,
 		private readonly ConfigurationService $config,
+		private readonly VipsLoaders          $loaders,
 	)
 	{
 	}
@@ -86,6 +91,28 @@ class VipsRenderer
 	public function supports( string $mime ): bool
 	{
 		return in_array( $mime, SupportedTypes::IMAGE_TYPES, true );
+	}
+
+	/**
+	 * Unknown where `vips -l` cannot be asked: then the render says.
+	 */
+	#[\Override]
+	public function unsupported( string $mime ): ?Unsupported
+	{
+		$decoder = SupportedTypes::DECODERS[ $mime ] ?? null;
+		$loaders = $this->loaders->loaders();
+
+		if ( $decoder === null || $loaders === null )
+		{
+			return null;
+		}
+
+		return match ( true )
+		{
+			! array_key_exists( $decoder, $loaders )                                                => new Unsupported( $decoder, Unsupported::MISSING ),
+			$loaders[ $decoder ] && $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) => new Unsupported( $decoder, Unsupported::UNTRUSTED ),
+			default                                                                                 => null,
+		};
 	}
 
 	#[\Override]
@@ -112,11 +139,17 @@ class VipsRenderer
 		}
 
 		$environment = [
-			'VIPS_BLOCK_UNTRUSTED' => '1',
-			'MALLOC_ARENA_MAX'     => '2',
-			'TMPDIR'               => dirname( $outputPng ),
+			'MALLOC_ARENA_MAX' => '2',
+			'TMPDIR'           => dirname( $outputPng ),
 		];
-		$cap         = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
+
+		// libvips blocks where the variable is set at all, whatever its value.
+		if ( $this->config->getScalar( ConfigLexicon::VIPS_BLOCK_UNTRUSTED ) )
+		{
+			$environment['VIPS_BLOCK_UNTRUSTED'] = '1';
+		}
+
+		$cap = (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB );
 
 		// Not enlarged: a header that cannot be read leaves the box, and the
 		// thumbnail says what is wrong with the file.
@@ -134,7 +167,7 @@ class VipsRenderer
 				$localPath,
 				'--size',
 				(string) $box,
-				'--vips-concurrency=1',
+				sprintf( '--vips-concurrency=%d', (int) $this->config->getScalar( ConfigLexicon::VIPS_CONCURRENCY ) ),
 				'-o',
 				$outputPng,
 			],

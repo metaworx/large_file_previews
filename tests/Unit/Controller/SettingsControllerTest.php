@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Controller\SettingsController;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
@@ -83,8 +84,12 @@ class SettingsControllerTest
 		self::assertSame( 600, $data['scalars']['timeout_seconds']['max'] );
 		self::assertCount( 16, $data['mimetypes'] );
 		self::assertSame( 'application/pdf', $data['mimetypes'][0]['mime'] );
-		self::assertSame( [ 'program' => 'pdftoppm', 'available' => true ], $data['mimetypes'][0]['renderer'] );
-		self::assertSame( [ 'program' => 'vipsthumbnail', 'available' => false ], $data['mimetypes'][2]['renderer'] );
+		self::assertSame( [ 'program' => 'pdftoppm', 'available' => true, 'unsupported' => null ], $data['mimetypes'][0]['renderer'] );
+		self::assertSame( [ 'program' => 'vipsthumbnail', 'available' => false, 'unsupported' => null ], $data['mimetypes'][2]['renderer'] );
+		self::assertSame(
+			[ 'program' => 'vipsthumbnail', 'available' => false, 'unsupported' => [ 'decoder' => 'jp2kload', 'problem' => 'untrusted' ] ],
+			$data['mimetypes'][10]['renderer'],
+		);
 		self::assertSame( 'large_file_previews.binaries', $data['overrideKey'] );
 	}
 
@@ -102,7 +107,7 @@ class SettingsControllerTest
 				'mime'        => 'application/pdf',
 				'extension'   => null,
 				'processing'  => 'enabled',
-				'renderer'    => [ 'program' => 'pdftoppm', 'available' => true ],
+				'renderer'    => [ 'program' => 'pdftoppm', 'available' => true, 'unsupported' => null ],
 				'min_size_mb' => [ 'value' => 0, 'source' => 'default' ],
 				'max_size_mb' => [ 'value' => -1, 'source' => 'default' ],
 			],
@@ -125,7 +130,7 @@ class SettingsControllerTest
 
 		$extensions = $this->controller( '' )->get()->getData()['extensions'];
 
-		self::assertSame( [ 'program' => null, 'available' => false ], $extensions[0]['renderer'] );
+		self::assertSame( [ 'program' => null, 'available' => false, 'unsupported' => null ], $extensions[0]['renderer'] );
 		self::assertSame( 'application/x-7z-compressed', $extensions[0]['mime'] );
 	}
 
@@ -223,6 +228,12 @@ class SettingsControllerTest
 		;
 		$binaries = new BinaryLocator( $systemConfig, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) );
 
+		// libvips, where it were there, with TIFF and an untrusted JPEG 2000.
+		$loaders = $this->createMock( VipsLoaders::class );
+		$loaders->method( 'loaders' )
+		        ->willReturn( [ 'tiffload' => false, 'jp2kload' => true ] )
+		;
+
 		return new class (
 			$body,
 			$this->createMock( IRequest::class ),
@@ -230,7 +241,7 @@ class SettingsControllerTest
 			new TypePolicy( $config ),
 			new Renderers(
 				new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ),
-				new VipsRenderer( $this->createMock( CommandRunner::class ), $config ),
+				new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders ),
 			),
 			$prerequisites,
 			$binaries,

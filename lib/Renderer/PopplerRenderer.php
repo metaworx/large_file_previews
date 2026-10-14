@@ -62,6 +62,15 @@ class PopplerRenderer
 		return in_array( $mime, SupportedTypes::DOCUMENT_TYPES, true );
 	}
 
+	/**
+	 * poppler decodes PDF itself.
+	 */
+	#[\Override]
+	public function unsupported( string $mime ): ?Unsupported
+	{
+		return null;
+	}
+
 	#[\Override]
 	public function render(
 		string $localPath,

@@ -17,7 +17,7 @@ function tif(extra: Partial<ExtensionRow> = {}): ExtensionRow {
 		extension: 'tif',
 		mime: 'image/tiff',
 		rule: { enabled: true, min_size_mb: 200 },
-		renderer: { program: 'pdftoppm', available: true },
+		renderer: { program: 'pdftoppm', available: true, unsupported: null },
 		noEffect: false,
 		...extra,
 	}
@@ -46,7 +46,7 @@ describe('TypesSection', () => {
 			mime: 'image/tiff',
 			extension: 'tif',
 			processing: 'enabled',
-			renderer: { program: 'vipsthumbnail', available: false },
+			renderer: { program: 'vipsthumbnail', available: false, unsupported: null },
 			min_size_mb: { value: 200, source: 'ext' },
 			max_size_mb: { value: -1, source: 'default' },
 		})
@@ -100,6 +100,23 @@ describe('TypesSection', () => {
 		}
 	})
 
+	it('says why libvips cannot decode a type, in its row and in the active table', () => {
+		const state = testState()
+		state.mimetypes[1].renderer = { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'untrusted' } }
+		state.active.push({
+			mime: 'image/tiff',
+			extension: null,
+			processing: 'enabled',
+			renderer: { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'missing' } },
+			min_size_mb: { value: 50, source: 'mime' },
+			max_size_mb: { value: -1, source: 'default' },
+		})
+		const wrapper = section(state)
+
+		expect(row(wrapper, '[data-mime="image/tiff"]').text()).toContain('Its decoder, tiffload, is untrusted, and untrusted decoders are blocked')
+		expect(wrapper.findAll('.lfp-active tbody tr')[1].find('.lfp-badge').text()).toBe('no decoder')
+	})
+
 	it('offers a reset only where a type differs from what it ships with', async () => {
 		const state = testState()
 		state.mimetypes[0].rule = { enabled: true, max_size_mb: 900 }
@@ -137,7 +154,7 @@ describe('TypesSection', () => {
 
 	it('says a type the app never handles is not one, not that it lacks a renderer', () => {
 		const state = testState()
-		state.extensions = [tif({ extension: '7z', mime: 'application/x-7z-compressed', renderer: { program: null, available: false } })]
+		state.extensions = [tif({ extension: '7z', mime: 'application/x-7z-compressed', renderer: { program: null, available: false, unsupported: null } })]
 
 		const row7z = row(section(state), '[data-extension="7z"]')
 

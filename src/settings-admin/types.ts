@@ -26,12 +26,23 @@ export type RuleChange = {
 }
 
 /**
- * The program that renders a type, and whether the server has it; no
- * program where the type is not one this app handles at all.
+ * Why a renderer cannot decode a type here: its decoder is missing, or
+ * untrusted and blocked.
+ */
+export interface Unsupported {
+	decoder: string
+	problem: 'missing' | 'untrusted'
+}
+
+/**
+ * The program that renders a type, whether the server has it and it can
+ * decode the type; no program where the type is not one this app handles
+ * at all.
  */
 export interface Renderer {
 	program: string | null
 	available: boolean
+	unsupported: Unsupported | null
 }
 
 export interface Sourced<T> {

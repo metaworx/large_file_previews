@@ -10,6 +10,8 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Renderer\Unsupported;
+use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -81,9 +83,9 @@ class VipsRendererTest
 		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
 
 		$environment = [
-			'VIPS_BLOCK_UNTRUSTED' => '1',
 			'MALLOC_ARENA_MAX'     => '2',
 			'TMPDIR'               => dirname( $this->output ),
+			'VIPS_BLOCK_UNTRUSTED' => '1',
 		];
 
 		self::assertSame(
@@ -105,6 +107,46 @@ class VipsRendererTest
 			],
 			$this->runs,
 		);
+	}
+
+	/**
+	 * Switched off, the variable is not set at all: libvips blocks where it
+	 * is set, whatever its value. The threads are a setting.
+	 */
+	public function testTheUntrustedSwitchAndTheThreads(): void
+	{
+		$this->appValues = [
+			ConfigLexicon::VIPS_BLOCK_UNTRUSTED => false,
+			ConfigLexicon::VIPS_CONCURRENCY     => 4,
+		];
+
+		$this->renderer( $this->runner( '' ) )
+		     ->render( '/data/a.tif', 1024, $this->output )
+		;
+
+		self::assertArrayNotHasKey( 'VIPS_BLOCK_UNTRUSTED', $this->runs[0]['environment'] );
+		self::assertArrayNotHasKey( 'VIPS_BLOCK_UNTRUSTED', $this->runs[1]['environment'] );
+		self::assertSame( '--vips-concurrency=4', $this->runs[1]['arguments'][3] );
+	}
+
+	/**
+	 * A decoder `vips -l` does not list is missing; an untrusted one is
+	 * blocked while the switch is on; nothing is known where `vips` did not
+	 * answer.
+	 */
+	public function testWhichTypesLibvipsCannotDecode(): void
+	{
+		$loaders  = [ 'tiffload' => false, 'jp2kload' => true ];
+		$renderer = $this->renderer( $this->createMock( CommandRunner::class ), $loaders );
+
+		self::assertNull( $renderer->unsupported( 'image/tiff' ) );
+		self::assertEquals( new Unsupported( 'jp2kload', Unsupported::UNTRUSTED ), $renderer->unsupported( 'image/jp2' ) );
+		self::assertEquals( new Unsupported( 'heifload', Unsupported::MISSING ), $renderer->unsupported( 'image/heic' ) );
+
+		$this->appValues = [ ConfigLexicon::VIPS_BLOCK_UNTRUSTED => false ];
+
+		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ), $loaders )->unsupported( 'image/jp2' ) );
+		self::assertNull( $this->renderer( $this->createMock( CommandRunner::class ) )->unsupported( 'image/heic' ) );
 	}
 
 	/**
@@ -227,11 +269,23 @@ class VipsRendererTest
 		self::assertNull( VipsRenderer::longerSide( '/a.tif: 0x0 uchar, 3 bands, srgb, tiffload' ) );
 	}
 
-	private function renderer( CommandRunner $runner ): VipsRenderer
+	/**
+	 * @param array<string, bool>|null $loaders what `vips -l` answers
+	 */
+	private function renderer(
+		CommandRunner $runner,
+		?array        $loaders = null,
+	): VipsRenderer
 	{
+		$listed = $this->createMock( VipsLoaders::class );
+		$listed->method( 'loaders' )
+		       ->willReturn( $loaders )
+		;
+
 		return new VipsRenderer(
 			$runner,
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() ),
+			$listed,
 		);
 	}
 

@@ -115,6 +115,13 @@ A limit switched on whose program is missing declines the file rather than run w
 A render that runs into the address-space cap is a failure,
 recorded as out of memory, and the preview is left to the next provider.
 
+libvips' untrusted decoders are blocked (`vips_block_untrusted`, on by default):
+JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.
+A type whose decoder is blocked, or missing from the server's libvips,
+is left to the next provider, and the settings page says why;
+`occ lfp:check --refresh` asks libvips again.
+`vips_concurrency` is the threads one render may use, 1 by default.
+
 ## Measured
 
 On a production server (Nextcloud 33.0.5, PHP 8.4, poppler 24.02),

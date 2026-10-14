@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
+use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -175,7 +176,7 @@ class PopplerRendererTest
 	public function testRenderersFindByType(): void
 	{
 		$poppler   = new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->probe( null ) );
-		$vips      = new VipsRenderer( $this->createMock( CommandRunner::class ), $this->createMock( ConfigurationService::class ) );
+		$vips      = new VipsRenderer( $this->createMock( CommandRunner::class ), $this->createMock( ConfigurationService::class ), $this->createMock( VipsLoaders::class ) );
 		$renderers = new Renderers( $poppler, $vips );
 
 		self::assertSame( $poppler, $renderers->for( 'application/pdf' ) );

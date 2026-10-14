@@ -38,6 +38,8 @@ class PrerequisitesService
 			'vipsthumbnail' => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering images' ],
 			// Without it an image smaller than the preview is enlarged.
 			'vipsheader'    => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering an image at its own size where that is smaller' ],
+			// Without it, which image types libvips reads is found out by rendering them.
+			'vips'          => [ 'version' => '--version', 'limit' => false, 'for' => 'telling which image types libvips reads' ],
 			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render' ],
 			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space cap of each render' ],
 			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render' ],

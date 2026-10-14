@@ -61,6 +61,10 @@ class ConfigLexicon
 
 	public const SCAN_COVERAGE_PERCENT = 'scan_coverage_percent';
 
+	public const VIPS_BLOCK_UNTRUSTED = 'vips_block_untrusted';
+
+	public const VIPS_CONCURRENCY = 'vips_concurrency';
+
 	public const LAST_FAILURE = 'last_failure';
 
 	/**
@@ -147,6 +151,18 @@ class ConfigLexicon
 				'min'        => 50,
 				'max'        => 100,
 				'definition' => 'How much of the page, in percent each way, its one image must cover for the page to count as a scan.',
+			],
+			self::VIPS_BLOCK_UNTRUSTED       => [
+				'default'    => true,
+				'definition' => 'Whether libvips runs with its untrusted decoders blocked (VIPS_BLOCK_UNTRUSTED): JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.',
+			],
+			// One thread was fastest for a thumbnail, measured with libvips
+			// 8.15; each thread reserves memory under the cap besides.
+			self::VIPS_CONCURRENCY           => [
+				'default'    => 1,
+				'min'        => 1,
+				'max'        => 64,
+				'definition' => 'Threads libvips may use for one render (--vips-concurrency).',
 			],
 		];
 
