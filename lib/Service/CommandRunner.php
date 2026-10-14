@@ -395,7 +395,10 @@ class CommandRunner
 	): string
 	{
 		$limit = max( 2, $limit );
-		$size  = (int) @filesize( $file );
+
+		// The program wrote it after PHP may have looked at it.
+		clearstatcache( true, $file );
+		$size = (int) @filesize( $file );
 
 		if ( $size <= $limit )
 		{
