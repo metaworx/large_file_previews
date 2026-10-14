@@ -16,6 +16,9 @@ the first stable release.
 - `appinfo/info.xml`: the app, `large_file_previews`, for Nextcloud 33
   to 35 and PHP 8.2 and later.
 
+- `img/app.svg` and `img/app-dark.svg`: the app's icon, a picture with
+  an arrow enlarging it.
+
 - `README.md`, *What it does*: previews of PDF and Illustrator files by
   `pdftoppm`, a scan at its own resolution, and of images by
   `vipsthumbnail`, from local, unencrypted storage only.
