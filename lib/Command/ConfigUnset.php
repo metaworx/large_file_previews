@@ -12,6 +12,7 @@ namespace OCA\LargeFilePreviews\Command;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -32,6 +33,7 @@ class ConfigUnset
 	public function __construct(
 		private readonly ConfigurationService $config,
 		private readonly BinaryLocator        $binaries,
+		private readonly ScratchDirectory     $scratch,
 	)
 	{
 		parent::__construct();
@@ -60,6 +62,7 @@ class ConfigUnset
 				     [
 					     'A setting:          config:unset timeout_seconds',
 					     'A program\'s path:   config:unset binaries.pdftoppm',
+					     'Scratch directory:  config:unset scratch_directory',
 					     'A MIME type\'s rule: config:unset --mime image/tiff',
 					     'One field of it:    config:unset --mime image/tiff --field min_size_mb',
 					     '',
@@ -113,6 +116,14 @@ class ConfigUnset
 				$output->writeln( '<error>Give a setting, or --mime or --ext.</error>' );
 
 				return self::INVALID;
+			}
+
+			if ( $key === self::SCRATCH )
+			{
+				$this->scratch->unset();
+				$output->writeln( sprintf( '%s: Nextcloud\'s temporary directory again, %s', $key, $this->scratch->path() ) );
+
+				return self::SUCCESS;
 			}
 
 			if ( str_starts_with( $key, self::BINARIES ) )

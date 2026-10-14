@@ -38,7 +38,8 @@ so the file is never loaded into PHP, copied, or sent to another service.
 
 - Nextcloud 33 to 35, PHP 8.2 or later.
 - `pdftoppm`, from `poppler-utils` on Debian and Ubuntu.
-- For images: `vipsthumbnail` and `vipsheader`, from `libvips-tools`.
+- For images: `vipsthumbnail` and `vipsheader`, from `libvips-tools`;
+  optionally `tiffcp`, from `libtiff-tools`, for a TIFF in one large strip.
 - For the limits around each render, each optional:
   `timeout` (coreutils), `prlimit` and `choom` (util-linux).
 
@@ -116,6 +117,22 @@ and an out-of-memory score that has the kernel kill it before a web server worke
 A limit switched on whose program is missing declines the file rather than run without it.
 A render that runs into the address-space cap is a failure,
 recorded as out of memory, and the preview is left to the next provider.
+
+A TIFF is decoded a strip at a time,
+so one stored in a single strip needs the whole image in memory.
+One that runs out of memory gets a second chance where `tiffcp` is installed:
+its first image is copied, uncompressed, in strips of 64 rows,
+and libvips renders the copy, which is removed afterwards.
+On a 15000 x 15000 TIFF in one LZW strip that failed under 512 MB,
+the copy took 2.5 s and rendered in 1 s within 98 MB.
+The copy goes to the scratch directory,
+Nextcloud's temporary directory unless set,
+and needs the image's uncompressed size there, and 256 MB more, on disk:
+a directory on tmpfs or ramfs is refused, since the copy would sit in memory.
+
+```bash
+occ lfp:config:set scratch_directory /var/cache/large_file_previews
+```
 
 libvips' untrusted decoders are blocked (`vips_block_untrusted`, on by default):
 JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs.

@@ -13,6 +13,7 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCP\Files\IMimeTypeDetector;
 use Symfony\Component\Console\Helper\Table;
@@ -37,6 +38,7 @@ class ConfigShow
 		private readonly TypePolicy           $policy,
 		private readonly BinaryLocator        $binaries,
 		private readonly IMimeTypeDetector    $mimeTypes,
+		private readonly ScratchDirectory     $scratch,
 	)
 	{
 		parent::__construct();
@@ -69,6 +71,10 @@ class ConfigShow
 
 		$stored   = $this->stored();
 		$programs = $this->programs();
+		$scratch  = [
+			'path'   => $this->scratch->path(),
+			'source' => $this->scratch->override() === null ? 'temporary directory' : 'system config',
+		];
 		$resolved = $this->resolved();
 		$problems = [ ...$this->config->problems(), ...$this->binaries->problems() ];
 
@@ -78,6 +84,7 @@ class ConfigShow
 			[
 				'stored'   => $stored,
 				'programs' => $programs,
+				'scratch'  => $scratch,
 				'resolved' => $resolved,
 				'problems' => $problems,
 			],
@@ -120,6 +127,7 @@ class ConfigShow
 
 		$table->render();
 		$output->writeln( sprintf( 'A path is overridden in system config (%s) only: occ lfp:config:set binaries.<program> <path>', BinaryLocator::SYSTEM_KEY ) );
+		$output->writeln( sprintf( 'Scratch directory: %s (%s); occ lfp:config:set scratch_directory <path>', $scratch['path'], $scratch['source'] ) );
 
 		$output->writeln( '' );
 		$output->writeln( '<info>Resolved</info> (value, and the level it came from: default, mime or ext)' );

@@ -41,6 +41,8 @@ class PrerequisitesService
 			// Without it, which image types libvips reads is found out by
 			// rendering them, and a PDF previewed as WebP is a JPEG.
 			'vips'          => [ 'version' => '--version', 'limit' => false, 'for' => 'telling which image types libvips reads, and WebP previews of PDFs' ],
+			// Without it, a TIFF in one large strip that runs out of memory stays a failure.
+			'tiffcp'        => [ 'version' => '-h', 'limit' => false, 'for' => 'a second chance for a TIFF in one strip that runs out of memory' ],
 			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render' ],
 			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space cap of each render' ],
 			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render' ],

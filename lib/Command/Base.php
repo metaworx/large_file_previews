@@ -39,6 +39,11 @@ abstract class Base
 	 */
 	protected const BINARIES = 'binaries.';
 
+	/**
+	 * The key the scratch directory is set under; system config too.
+	 */
+	protected const SCRATCH = 'scratch_directory';
+
 	private const FORMATS
 		 = [
 			'plain',

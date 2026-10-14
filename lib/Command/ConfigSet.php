@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -35,6 +36,7 @@ class ConfigSet
 	public function __construct(
 		private readonly ConfigurationService $config,
 		private readonly BinaryLocator        $binaries,
+		private readonly ScratchDirectory     $scratch,
 	)
 	{
 		parent::__construct();
@@ -61,6 +63,7 @@ class ConfigSet
 				     [
 					     'A setting:          config:set timeout_seconds 60',
 					     'A program\'s path:   config:set binaries.pdftoppm /opt/poppler/bin/pdftoppm   (system config)',
+					     'Scratch directory:  config:set scratch_directory /var/cache/large_file_previews   (system config)',
 					     'A MIME type\'s rule: config:set --mime image/tiff --enabled=yes --min=100',
 					     'An extension\'s:     config:set --ext tif --max=2048',
 					     '',
@@ -125,7 +128,15 @@ class ConfigSet
 				return self::INVALID;
 			}
 
-			// A program's path goes to system config, never to app config.
+			// A path goes to system config, never to app config.
+			if ( $key === self::SCRATCH )
+			{
+				$this->scratch->set( $value );
+				$output->writeln( sprintf( '%s: %s (system config)', $key, $this->scratch->path() ) );
+
+				return self::SUCCESS;
+			}
+
 			if ( str_starts_with( $key, self::BINARIES ) )
 			{
 				$this->binaries->setOverride( substr( $key, strlen( self::BINARIES ) ), $value );

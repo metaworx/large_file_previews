@@ -1,0 +1,173 @@
+<?php
+
+declare( strict_types=1 );
+
+/**
+ * @copyright Copyright (c) 2026 metaworx
+ * @license   AGPL-3.0-or-later
+ */
+
+namespace OCA\LargeFilePreviews\Service;
+
+use OCA\LargeFilePreviews\Config\ConfigurationException;
+use OCP\IConfig;
+use OCP\ITempManager;
+
+/**
+ * Where a large working copy goes: the uncompressed, re-striped copy of a
+ * TIFF that ran out of memory, which can take gigabytes.
+ *
+ * Nextcloud's temporary directory unless system config says otherwise:
+ *
+ *     'large_file_previews.scratch_directory' => '/var/cache/large_file_previews',
+ *
+ * set with `occ lfp:config:set scratch_directory <path>`. A path, like a
+ * program's, stays out of app config, which an administrator can write
+ * without shell access. The directory must be on disk: on tmpfs or ramfs the
+ * copy would sit in the memory it was made to spare, so it is refused there,
+ * and where it has too little free space.
+ */
+class ScratchDirectory
+{
+
+//  constants
+
+	public const SYSTEM_KEY = 'large_file_previews.scratch_directory';
+
+	/**
+	 * Room left besides the copy, so that it never fills the disc.
+	 */
+	public const RESERVE_BYTES = 268_435_456;
+
+	/** The file systems that keep their files in memory. */
+	private const IN_MEMORY = [ 'tmpfs', 'ramfs' ];
+
+
+//  constructor
+
+	public function __construct(
+		private readonly IConfig      $config,
+		private readonly ITempManager $tempManager,
+	)
+	{
+	}
+
+
+//  other non-static methods
+
+	public function path(): string
+	{
+		$override = $this->override();
+
+		return rtrim( $override ?? (string) $this->tempManager->getTempBaseDir(), '/' );
+	}
+
+	/**
+	 * The directory set in system config, or null where none is.
+	 */
+	public function override(): ?string
+	{
+		$value = $this->config->getSystemValue( self::SYSTEM_KEY, null );
+
+		return is_string( $value ) && $value !== '' ? $value : null;
+	}
+
+	/**
+	 * Why a copy of the size given cannot go there, in English, or null
+	 * where it can.
+	 */
+	public function problem( int $bytes ): ?string
+	{
+		$path = $this->path();
+
+		if ( ! is_dir( $path ) || ! is_writable( $path ) )
+		{
+			return sprintf( 'the scratch directory %s is not a writable directory', $path );
+		}
+
+		$type = self::fileSystem( $path, (string) @file_get_contents( '/proc/mounts' ) );
+
+		if ( in_array( $type, self::IN_MEMORY, true ) )
+		{
+			return sprintf( 'the scratch directory %s is on %s, in memory; set scratch_directory to one on disk', $path, $type );
+		}
+
+		$free = @disk_free_space( $path );
+
+		if ( is_float( $free ) && $free < (float) ( $bytes + self::RESERVE_BYTES ) )
+		{
+			return sprintf( 'the scratch directory %s has %d MB free, and the copy takes %d MB', $path, (int) ( $free / 1_048_576.0 ), (int) ceil( $bytes / 1_048_576 ) );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Sets the directory in system config, after checking that it is one
+	 * the web server can write. From occ only.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function set( string $path ): void
+	{
+		$problem = match ( true )
+		{
+			! str_starts_with( $path, '/' ) => 'is not an absolute path',
+			! is_dir( $path )               => 'is not a directory',
+			! is_writable( $path )          => 'is not writable',
+			default                         => null,
+		};
+
+		if ( $problem !== null )
+		{
+			$message = sprintf( '%s %s.', $path, $problem );
+
+			throw new ConfigurationException( $message, $message );
+		}
+
+		$this->config->setSystemValue( self::SYSTEM_KEY, rtrim( $path, '/' ) );
+	}
+
+	public function unset(): void
+	{
+		$this->config->deleteSystemValue( self::SYSTEM_KEY );
+	}
+
+
+//  static methods
+
+	/**
+	 * The type of the file system a path is on, from `/proc/mounts`: the
+	 * longest mount point that holds it. Null where nothing is known.
+	 */
+	public static function fileSystem(
+		string $path,
+		string $mounts,
+	): ?string
+	{
+		$path  = rtrim( realpath( $path ) ?: $path, '/' ) . '/';
+		$found = null;
+		$depth = -1;
+
+		foreach ( explode( "\n", $mounts ) as $line )
+		{
+			$fields = explode( ' ', $line );
+
+			if ( count( $fields ) < 3 )
+			{
+				continue;
+			}
+
+			// Spaces and tabs in a mount point are octal escapes.
+			$point = rtrim( stripcslashes( $fields[1] ), '/' ) . '/';
+
+			if ( str_starts_with( $path, $point ) && strlen( $point ) > $depth )
+			{
+				$found = $fields[2];
+				$depth = strlen( $point );
+			}
+		}
+
+		return $found;
+	}
+}

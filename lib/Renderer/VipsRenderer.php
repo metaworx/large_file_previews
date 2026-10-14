@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 
 /**
  * Images through libvips:
@@ -49,6 +50,11 @@ use OCA\LargeFilePreviews\Service\RenderOutcome;
  * says "out of memory", fails to start a thread or aborts; any of these is
  * a render out of memory.
  *
+ * A TIFF decodes a strip at a time, so one in a single strip needs its
+ * whole image in memory: 15000 x 15000 pixels in one LZW strip failed under
+ * 512 MB. One that runs out of memory is re-striped by tiffcp and tried
+ * again (restripped()).
+ *
  * A type whose decoder `vips -l` does not list, or lists as untrusted
  * while those are blocked, is unsupported (VipsLoaders).
  */
@@ -64,6 +70,26 @@ class VipsRenderer
 	public const HEADER = 'vipsheader';
 
 	public const CONVERTER = 'vips';
+
+	public const RESTRIPPER = 'tiffcp';
+
+	/**
+	 * Bytes a sample of each libvips band format takes; an unknown one is
+	 * counted large.
+	 */
+	private const SAMPLE_BYTES
+		 = [
+			'uchar'     => 1,
+			'char'      => 1,
+			'ushort'    => 2,
+			'short'     => 2,
+			'uint'      => 4,
+			'int'       => 4,
+			'float'     => 4,
+			'complex'   => 8,
+			'double'    => 8,
+			'dpcomplex' => 16,
+		];
 
 	/**
 	 * The quality a JPEG or WebP preview is written at, before Nextcloud
@@ -90,6 +116,7 @@ class VipsRenderer
 		private readonly ConfigurationService $config,
 		private readonly VipsLoaders          $loaders,
 		private readonly BinaryLocator        $binaries,
+		private readonly ScratchDirectory     $scratch,
 	)
 	{
 	}
@@ -170,18 +197,42 @@ class VipsRenderer
 
 		// Not enlarged: a header that cannot be read leaves the box, and the
 		// thumbnail says what is wrong with the file.
-		$header = $this->runner->run( self::HEADER, [ $localPath ], true, $environment, $cap );
-		$size   = $header->isSuccess() ? self::longerSide( $header->stderr ) : null;
+		$run    = $this->runner->run( self::HEADER, [ $localPath ], true, $environment, $cap );
+		$header = $run->isSuccess() ? self::header( $run->stderr ) : null;
 
-		if ( $size !== null && $size < $box )
+		if ( $header !== null && max( $header['width'], $header['height'] ) < $box )
 		{
-			$box = $size;
+			$box = max( $header['width'], $header['height'] );
 		}
 
+		$outcome = $this->thumbnail( $localPath, $box, $output, $format, $environment, $cap );
+
+		// A TIFF in one strip, or a few large ones, is decoded a strip at a
+		// time; one that ran out of memory gets a second chance.
+		if ( $outcome->outcome === Outcome::OUT_OF_MEMORY && $header !== null && $header['loader'] === 'tiffload' )
+		{
+			return $this->restripped( $localPath, $header, $box, $output, $format, $environment, $cap, $outcome );
+		}
+
+		return $outcome;
+	}
+
+	/**
+	 * @param array<string, string> $environment
+	 */
+	private function thumbnail(
+		string        $input,
+		int           $box,
+		string        $output,
+		PreviewFormat $format,
+		array         $environment,
+		int           $cap,
+	): RenderOutcome
+	{
 		$outcome = $this->runner->run(
 			self::PROGRAM,
 			[
-				$localPath,
+				$input,
 				'--size',
 				(string) $box,
 				sprintf( '--vips-concurrency=%d', (int) $this->config->getScalar( ConfigLexicon::VIPS_CONCURRENCY ) ),
@@ -194,6 +245,92 @@ class VipsRenderer
 		);
 
 		return self::judged( $outcome, $output );
+	}
+
+	/**
+	 * The one-strip fallback: the TIFF's first image re-striped by tiffcp
+	 * into an uncompressed copy of 64 rows a strip, in the scratch
+	 * directory, which libvips then reads a few rows at a time.
+	 *
+	 *     tiffcp -c none -r 64 <scratch>/lfp-restrip-<random>/input.tif,0 <same>/copy.tif
+	 *
+	 * tiffcp holds the compressed strip, not the decoded one: measured with
+	 * libtiff 4.5, a 348 MB one-strip LZW TIFF passed under 384 MB of
+	 * address space, so it runs under libvips' cap. It reads `<path>,<image>`
+	 * up to the first comma, so the file is given as a link without one.
+	 * The copy and the link are removed whatever happens. Where the copy
+	 * cannot be made, the render stays out of memory, with the reason.
+	 *
+	 * @param array{width: int, height: int, bands: int, bytes: int, loader: string} $header
+	 * @param array<string, string>                                                 $environment
+	 */
+	private function restripped(
+		string        $localPath,
+		array         $header,
+		int           $box,
+		string        $output,
+		PreviewFormat $format,
+		array         $environment,
+		int           $cap,
+		RenderOutcome $outOfMemory,
+	): RenderOutcome
+	{
+		$bytes   = $header['width'] * $header['height'] * $header['bands'] * $header['bytes'];
+		$problem = match ( true )
+		{
+			! $this->binaries->locate( self::RESTRIPPER )->isFound() => 'tiffcp is not there',
+			default                                                  => $this->scratch->problem( $bytes ),
+		};
+
+		if ( $problem !== null )
+		{
+			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $problem );
+		}
+
+		$folder = $this->scratch->path() . '/lfp-restrip-' . bin2hex( random_bytes( 8 ) );
+
+		// tiffcp reads `<path>,<image>` up to the first comma.
+		if ( str_contains( $folder, ',' ) )
+		{
+			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: tiffcp cannot read from a scratch directory whose path holds ","' );
+		}
+
+		if ( ! @mkdir( $folder, 0700 ) )
+		{
+			return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: ' . $folder . ' could not be made' );
+		}
+
+		$input = $folder . '/input.tif';
+		$copy  = $folder . '/copy.tif';
+
+		try
+		{
+			// The file by a name without a comma, whatever its own.
+			if ( ! @symlink( $localPath, $input ) )
+			{
+				return $outOfMemory->as( Outcome::OUT_OF_MEMORY, $outOfMemory->reason . '; no one-strip fallback: no link to the file in ' . $folder );
+			}
+
+			// `,0` is the first image only.
+			$copied = $this->runner->run( self::RESTRIPPER, [ '-c', 'none', '-r', '64', $input . ',0', $copy ], false, $environment, $cap );
+
+			if ( ! $copied->isSuccess() || ! is_file( $copy ) )
+			{
+				return $copied->as( $copied->isSuccess() ? Outcome::NO_OUTPUT : $copied->outcome, 'the one-strip fallback: tiffcp: ' . $copied->reason );
+			}
+
+			$outcome = $this->thumbnail( $copy, $box, $output, $format, $environment, $cap );
+
+			return $outcome->isSuccess()
+				? $outcome
+				: $outcome->as( $outcome->outcome, 'the one-strip fallback: ' . $outcome->reason );
+		}
+		finally
+		{
+			@unlink( $copy );
+			@unlink( $input );
+			@rmdir( $folder );
+		}
 	}
 
 	/**
@@ -280,22 +417,37 @@ class VipsRenderer
 //  static methods
 
 	/**
-	 * The longer side of the image, from what vipsheader prints:
+	 * The image's size, bands, bytes a sample and loader, from what
+	 * vipsheader prints:
 	 *
 	 *     /path/name.tif: 22040x12059 uchar, 3 bands, srgb, tiffload
 	 *
 	 * The last such field on a line, since the path may hold anything.
+	 *
+	 * @return array{width: int, height: int, bands: int, bytes: int, loader: string}|null
 	 */
-	public static function longerSide( string $header ): ?int
+	public static function header( string $header ): ?array
 	{
-		if ( preg_match( '/^.*: (\d+)x(\d+) \w+, \d+ bands?, /m', $header, $matches ) !== 1 )
+		if ( preg_match( '/^.*: (\d+)x(\d+) (\w+), (\d+) bands?, \w+, (\w+)\s*$/m', $header, $matches ) !== 1 )
 		{
 			return null;
 		}
 
-		$side = max( (int) $matches[1], (int) $matches[2] );
+		$width  = (int) $matches[1];
+		$height = (int) $matches[2];
 
-		return $side > 0 ? $side : null;
+		if ( $width < 1 || $height < 1 )
+		{
+			return null;
+		}
+
+		return [
+			'width'  => $width,
+			'height' => $height,
+			'bands'  => max( 1, (int) $matches[4] ),
+			'bytes'  => self::SAMPLE_BYTES[ $matches[3] ] ?? 8,
+			'loader' => $matches[5],
+		];
 	}
 
 	/**

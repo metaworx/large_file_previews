@@ -51,6 +51,7 @@ class BinaryLocator
 			'vipsthumbnail',
 			'vipsheader',
 			'vips',
+			'tiffcp',
 			'timeout',
 			'prlimit',
 			'choom',

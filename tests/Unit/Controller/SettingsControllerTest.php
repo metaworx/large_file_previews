@@ -20,6 +20,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Settings\Admin;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
@@ -234,7 +235,7 @@ class SettingsControllerTest
 		        ->willReturn( [ 'tiffload' => false, 'jp2kload' => true ] )
 		;
 
-		$vips = new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders, $binaries );
+		$vips = new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders, $binaries, $this->createMock( ScratchDirectory::class ) );
 
 		return new class (
 			$body,

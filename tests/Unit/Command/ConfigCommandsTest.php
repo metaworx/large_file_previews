@@ -17,6 +17,7 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
@@ -28,6 +29,7 @@ use OCP\Files\NotFoundException;
 use OCP\Files\Storage\IStorage;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
+use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
@@ -51,6 +53,8 @@ class ConfigCommandsTest
 
 	private BinaryLocator $binaries;
 
+	private ScratchDirectory $scratch;
+
 
 //  getters / setters / is* / has*
 
@@ -69,10 +73,37 @@ class ConfigCommandsTest
 			$this->detectionCache(),
 			$this->createMock( LoggerInterface::class ),
 		);
+
+		$tempManager = $this->createMock( ITempManager::class );
+		$tempManager->method( 'getTempBaseDir' )
+		            ->willReturn( sys_get_temp_dir() )
+		;
+		$this->scratch = new ScratchDirectory( $system, $tempManager );
 	}
 
 
 //  other non-static methods
+
+	/**
+	 * The scratch directory goes to system config, after being checked;
+	 * unset, it is Nextcloud's temporary directory again.
+	 */
+	public function testTheScratchDirectoryIsSetInSystemConfigAndUnset(): void
+	{
+		$set = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
+
+		self::assertSame( Command::SUCCESS, $set->execute( [ 'key' => 'scratch_directory', 'value' => __DIR__ . '/' ] ) );
+		self::assertSame( [ 'large_file_previews.scratch_directory' => __DIR__ ], $this->systemValues );
+		self::assertSame( [], $this->appValues );
+		self::assertSame( Command::FAILURE, $set->execute( [ 'key' => 'scratch_directory', 'value' => __FILE__ ] ) );
+		self::assertStringContainsString( 'is not a directory', $set->getDisplay() );
+
+		$unset = new CommandTester( new ConfigUnset( $this->config, $this->binaries, $this->scratch ) );
+
+		self::assertSame( Command::SUCCESS, $unset->execute( [ 'key' => 'scratch_directory' ] ) );
+		self::assertSame( [], $this->systemValues );
+		self::assertSame( rtrim( sys_get_temp_dir(), '/' ), $this->scratch->path() );
+	}
 
 	/**
 	 * A path goes to system config, after being checked; never to app
@@ -80,7 +111,7 @@ class ConfigCommandsTest
 	 */
 	public function testAProgramsPathIsSetInSystemConfigAndUnset(): void
 	{
-		$set = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
+		$set = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::SUCCESS, $set->execute( [ 'key' => 'binaries.pdftoppm', 'value' => PHP_BINARY ] ) );
 		self::assertSame( [ 'large_file_previews.binaries' => [ 'pdftoppm' => PHP_BINARY ] ], $this->systemValues );
@@ -91,7 +122,7 @@ class ConfigCommandsTest
 		self::assertSame( Command::FAILURE, $set->execute( [ 'key' => 'binaries.bash', 'value' => '/bin/bash' ] ) );
 		self::assertStringContainsString( 'bash is not a program this app runs', $set->getDisplay() );
 
-		$unset = new CommandTester( new ConfigUnset( $this->config, $this->binaries ) );
+		$unset = new CommandTester( new ConfigUnset( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::SUCCESS, $unset->execute( [ 'key' => 'binaries.pdftoppm' ] ) );
 		self::assertSame( [], $this->systemValues );
@@ -99,7 +130,7 @@ class ConfigCommandsTest
 
 	public function testNamesAndAliases(): void
 	{
-		$set = new ConfigSet( $this->config, $this->binaries );
+		$set = new ConfigSet( $this->config, $this->binaries, $this->scratch );
 
 		self::assertSame( 'large-file-previews:config:set', $set->getName() );
 		self::assertSame( [ 'lfp:config:set' ], $set->getAliases() );
@@ -107,7 +138,7 @@ class ConfigCommandsTest
 
 	public function testSetAScalar(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ 'key' => 'timeout_seconds', 'value' => '45' ] ) );
 		self::assertSame( 45, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
@@ -116,7 +147,7 @@ class ConfigCommandsTest
 
 	public function testSetARuleAndARefusal(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--ext' => 'tif', '--enabled' => 'yes', '--min' => '200' ] ) );
 		self::assertSame( [ 'tif' => [ 'enabled' => true, 'min_size_mb' => 200 ] ], $this->appValues[ ConfigLexicon::EXTENSIONS ] );
@@ -130,7 +161,7 @@ class ConfigCommandsTest
 
 	public function testSetNeedsSomethingToSet(): void
 	{
-		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries ) );
+		$tester = new CommandTester( new ConfigSet( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::INVALID, $tester->execute( [ '--mime' => 'image/png' ] ) );
 		self::assertSame( Command::INVALID, $tester->execute( [ '--mime' => 'image/png', '--ext' => 'png', '--min' => '1' ] ) );
@@ -142,7 +173,7 @@ class ConfigCommandsTest
 	{
 		$this->config->setScalar( ConfigLexicon::CHOOM_ADJUST, 500 );
 		$this->config->setExtensionRule( 'tif', new TypeRule( true ) );
-		$tester = new CommandTester( new ConfigUnset( $this->config, $this->binaries ) );
+		$tester = new CommandTester( new ConfigUnset( $this->config, $this->binaries, $this->scratch ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ 'key' => 'choom_adjust' ] ) );
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--ext' => 'tif' ] ) );
@@ -242,13 +273,15 @@ class ConfigCommandsTest
 				new TypePolicy( $this->config ),
 				new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
 				$detector,
+				$this->scratch,
 			),
 		);
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--output' => 'json' ] ) );
 		$result = json_decode( $tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR );
 
-		self::assertSame( [ 'stored', 'programs', 'resolved', 'problems' ], array_keys( $result ) );
+		self::assertSame( [ 'stored', 'programs', 'scratch', 'resolved', 'problems' ], array_keys( $result ) );
+		self::assertSame( [ 'path' => rtrim( sys_get_temp_dir(), '/' ), 'source' => 'temporary directory' ], $result['scratch'] );
 		self::assertTrue( $result['stored']['extensions']['stored'] );
 		self::assertFalse( $result['stored']['timeout_seconds']['stored'] );
 		self::assertNull( $result['programs']['pdftoppm']['path'] );

@@ -20,6 +20,7 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use PHPUnit\Framework\TestCase;
@@ -303,23 +304,85 @@ class VipsRendererTest
 		self::assertSame( Outcome::START_FAILED, $renderer->render( '/in.tif', 100, '/tmp/out.gif' )->outcome );
 	}
 
-	public function testTheLongerSideFromTheHeader(): void
+	public function testTheHeaderParsed(): void
 	{
-		self::assertSame( 22040, VipsRenderer::longerSide( '/a/b.tif: 22040x12059 uchar, 3 bands, srgb, tiffload' ) );
-		self::assertSame( 600, VipsRenderer::longerSide( "warning\n/a/b.png: 300x600 ushort, 1 band, grey16, pngload\n" ) );
+		self::assertSame(
+			[ 'width' => 22040, 'height' => 12059, 'bands' => 3, 'bytes' => 1, 'loader' => 'tiffload' ],
+			VipsRenderer::header( '/a/b.tif: 22040x12059 uchar, 3 bands, srgb, tiffload' ),
+		);
+		self::assertSame(
+			[ 'width' => 300, 'height' => 600, 'bands' => 1, 'bytes' => 2, 'loader' => 'pngload' ],
+			VipsRenderer::header( "warning\n/a/b.png: 300x600 ushort, 1 band, grey16, pngload\n" ),
+		);
 		// The path may look like a header; the last field on the line counts.
-		self::assertSame( 20, VipsRenderer::longerSide( '/a/b: 9x9 x, 3 bands, c.tif: 10x20 uchar, 3 bands, srgb, tiffload' ) );
-		self::assertNull( VipsRenderer::longerSide( 'vipsheader: VipsForeignLoad: "/a.tif" is not a known file format' ) );
-		self::assertNull( VipsRenderer::longerSide( '/a.tif: 0x0 uchar, 3 bands, srgb, tiffload' ) );
+		self::assertSame( 20, VipsRenderer::header( '/a/b: 9x9 x, 3 bands, c.tif: 10x20 float, 3 bands, scrgb, tiffload' )['height'] ?? null );
+		self::assertSame( 4, VipsRenderer::header( '/a.tif: 1x1 float, 3 bands, scrgb, tiffload' )['bytes'] ?? null );
+		self::assertNull( VipsRenderer::header( 'vipsheader: VipsForeignLoad: "/a.tif" is not a known file format' ) );
+		self::assertNull( VipsRenderer::header( '/a.tif: 0x0 uchar, 3 bands, srgb, tiffload' ) );
+	}
+
+	/**
+	 * A TIFF out of memory is re-striped into an uncompressed copy in the
+	 * scratch directory, under libvips' cap, and rendered from it; the copy
+	 * is gone afterwards.
+	 */
+	public function testATiffOutOfMemoryIsRestripped(): void
+	{
+		$runner = $this->outOfMemoryOnce( '/data/a.tif: 15000x15000 uchar, 3 bands, srgb, tiffload' );
+
+		$outcome = $this->renderer( $runner, scratch: $this->scratch( null ) )->render( '/data/a.tif', 4096, $this->output );
+
+		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
+		self::assertSame( [ 'vipsheader', 'vipsthumbnail', 'tiffcp', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
+
+		$copy = $this->runs[2]['arguments'][5];
+
+		self::assertSame( [ '-c', 'none', '-r', '64', dirname( $copy ) . '/input.tif,0', $copy ], $this->runs[2]['arguments'] );
+		self::assertStringStartsWith( dirname( $this->output ) . '/lfp-restrip-', $copy );
+		self::assertSame( 1024, $this->runs[2]['cap'] );
+		self::assertSame( $copy, $this->runs[3]['arguments'][0] );
+		self::assertSame( '4096', $this->runs[3]['arguments'][2] );
+		self::assertDirectoryDoesNotExist( dirname( $copy ) );
+	}
+
+	/**
+	 * Where the copy cannot be made, the render stays out of memory and
+	 * says why; another image type, or a TIFF that fails otherwise, gets no
+	 * second chance.
+	 */
+	public function testNoFallbackWhereItCannotHelp(): void
+	{
+		$tiff = '/data/a.tif: 15000x15000 uchar, 3 bands, srgb, tiffload';
+
+		$outcome = $this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( 'the scratch directory /tmp is on tmpfs, in memory' ) )
+		                ->render( '/data/a.tif', 4096, $this->output )
+		;
+
+		self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome );
+		self::assertStringEndsWith( '; no one-strip fallback: the scratch directory /tmp is on tmpfs, in memory', $outcome->reason );
+
+		$this->runs = [];
+		$this->renderer( $this->outOfMemoryOnce( $tiff ), scratch: $this->scratch( null ), tiffcp: false )->render( '/data/a.tif', 4096, $this->output );
+
+		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
+
+		$this->runs = [];
+		$this->renderer( $this->outOfMemoryOnce( '/data/a.heic: 8000x6000 uchar, 3 bands, srgb, heifload' ), scratch: $this->scratch( null ) )
+		     ->render( '/data/a.heic', 4096, $this->output )
+		;
+
+		self::assertSame( [ 'vipsheader', 'vipsthumbnail' ], array_column( $this->runs, 'program' ) );
 	}
 
 	/**
 	 * @param array<string, bool>|null $loaders what `vips -l` answers
 	 */
 	private function renderer(
-		CommandRunner $runner,
-		?array        $loaders = null,
-		?string       $vips = '/usr/bin/vips',
+		CommandRunner     $runner,
+		?array            $loaders = null,
+		?string           $vips = '/usr/bin/vips',
+		?ScratchDirectory $scratch = null,
+		bool              $tiffcp = true,
 	): VipsRenderer
 	{
 		$listed = $this->createMock( VipsLoaders::class );
@@ -332,7 +395,16 @@ class VipsRendererTest
 		         ->willReturnCallback(
 			         static fn(
 				         string $program,
-			         ): BinaryLocation => new BinaryLocation( $program, $program === 'vips' ? $vips : null, BinaryLocation::SOURCE_FINDER ),
+			         ): BinaryLocation => new BinaryLocation(
+				         $program,
+				         match ( $program )
+				         {
+					         'vips'   => $vips,
+					         'tiffcp' => $tiffcp ? '/usr/bin/tiffcp' : null,
+					         default  => null,
+				         },
+				         BinaryLocation::SOURCE_FINDER,
+			         ),
 		         )
 		;
 
@@ -341,7 +413,85 @@ class VipsRendererTest
 			new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector(), $this->systemConfig() ),
 			$listed,
 			$binaries,
+			$scratch ?? $this->createMock( ScratchDirectory::class ),
 		);
+	}
+
+	/**
+	 * A scratch directory beside the output, with the problem given.
+	 */
+	private function scratch( ?string $problem ): ScratchDirectory
+	{
+		@mkdir( dirname( $this->output ) );
+
+		$scratch = $this->createMock( ScratchDirectory::class );
+		$scratch->method( 'path' )
+		        ->willReturn( dirname( $this->output ) )
+		;
+		$scratch->method( 'problem' )
+		        ->willReturn( $problem )
+		;
+
+		return $scratch;
+	}
+
+	/**
+	 * A runner whose first thumbnail runs out of memory, as libvips 8.15
+	 * says it, and whose tiffcp writes its copy.
+	 */
+	private function outOfMemoryOnce( string $header ): CommandRunner
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'run' )
+		       ->willReturnCallback(
+			       function(
+				       string $program,
+				       array  $arguments,
+				       bool   $keepStdout = false,
+				       array  $environment = [],
+				       ?int   $cap = null,
+			       ) use (
+				       $header,
+			       ): RenderOutcome
+			       {
+				       /** @var list<string> $arguments */
+				       /** @var array<string, string> $environment */
+				       $this->runs[] = [
+					       'program'     => $program,
+					       'arguments'   => $arguments,
+					       'keepStdout'  => $keepStdout,
+					       'environment' => $environment,
+					       'cap'         => $cap,
+				       ];
+
+				       $thumbnails = count( array_filter( $this->runs, static fn( array $run ): bool => $run['program'] === VipsRenderer::PROGRAM ) );
+
+				       $first = $program === VipsRenderer::PROGRAM && $thumbnails === 1;
+
+				       return match ( true )
+				       {
+					       $program === VipsRenderer::HEADER => new RenderOutcome( Outcome::SUCCEEDED, 'header', 0, null, $header ),
+					       $first                            => new RenderOutcome( Outcome::FAILED, 'exit status 255', 255, null, 'vips_tracked: out of memory --- size == 1MB' ),
+					       default                           => $this->written( (string) end( $arguments ) ),
+				       };
+			       },
+		       )
+		;
+
+		return $runner;
+	}
+
+	/**
+	 * Success, with the file a program was given last written, its save
+	 * options cut.
+	 */
+	private function written( string $last ): RenderOutcome
+	{
+		$target = (string) preg_replace( '/\[[^]]*]$/', '', $last );
+		@mkdir( dirname( $target ) );
+		touch( $target );
+
+		return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 );
 	}
 
 

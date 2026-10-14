@@ -20,6 +20,7 @@ use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
+use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
@@ -346,7 +347,7 @@ class LargeFileProviderTest
 		         ->willReturnCallback( static fn( string $program ): BinaryLocation => new BinaryLocation( $program, null, BinaryLocation::SOURCE_FINDER ) )
 		;
 
-		$vips = new VipsRenderer( $this->runner, $config, $loaders, $binaries );
+		$vips = new VipsRenderer( $this->runner, $config, $loaders, $binaries, $this->createMock( ScratchDirectory::class ) );
 
 		return new LargeFileProvider(
 			new TypePolicy( $config ),
