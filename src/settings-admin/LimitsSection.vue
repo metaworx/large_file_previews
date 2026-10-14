@@ -41,9 +41,10 @@ const LIMITS: Limit[] = [
 	{
 		switch: 'prlimit_enabled',
 		name: t('large_file_previews', 'Memory cap'),
-		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MB.'),
+		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each.'),
 		values: [
 			{ key: 'prlimit_as_mb', label: t('large_file_previews', 'MB') },
+			{ key: 'vips_prlimit_as_mb', label: t('large_file_previews', 'MB, libvips') },
 		],
 	},
 	{

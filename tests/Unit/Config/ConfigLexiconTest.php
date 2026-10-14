@@ -45,6 +45,7 @@ class ConfigLexiconTest
 				'timeout_kill_after_seconds',
 				'prlimit_enabled',
 				'prlimit_as_mb',
+				'vips_prlimit_as_mb',
 				'choom_enabled',
 				'choom_adjust',
 				'scan_native_enabled',

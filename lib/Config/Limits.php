@@ -28,4 +28,23 @@ final readonly class Limits
 	)
 	{
 	}
+
+
+//  other non-static methods
+
+	/**
+	 * The same limits with another address-space cap: a renderer's own.
+	 */
+	public function withPrlimitAsMb( int $prlimitAsMb ): self
+	{
+		return new self(
+			$this->timeoutEnabled,
+			$this->timeoutSeconds,
+			$this->timeoutKillAfterSeconds,
+			$this->prlimitEnabled,
+			$prlimitAsMb,
+			$this->choomEnabled,
+			$this->choomAdjust,
+		);
+	}
 }

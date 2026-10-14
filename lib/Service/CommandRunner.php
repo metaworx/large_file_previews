@@ -69,18 +69,28 @@ class CommandRunner
 	/**
 	 * Runs a program by name, under the configured limits.
 	 *
-	 * @param list<string> $arguments
-	 * @param bool         $keepStdout for a program that answers on stdout:
-	 *                                 kept with stderr, in the outcome's
-	 *                                 `stderr`, cut short as it is
+	 * @param list<string>          $arguments
+	 * @param bool                  $keepStdout  for a program that answers on
+	 *                                           stdout: kept with stderr, in the
+	 *                                           outcome's `stderr`, cut short
+	 *                                           as it is
+	 * @param array<string, string> $environment variables the program needs,
+	 *                                           besides the C locale it always
+	 *                                           runs in
+	 * @param int|null              $prlimitAsMb a renderer's own address-space
+	 *                                           cap, in place of the configured
+	 *                                           one; `prlimit_enabled` still
+	 *                                           decides whether there is a cap
 	 */
 	public function run(
 		string $program,
 		array  $arguments,
 		bool   $keepStdout = false,
+		array  $environment = [],
+		?int   $prlimitAsMb = null,
 	): RenderOutcome
 	{
-		$command = $this->command( $program, $arguments );
+		$command = $this->command( $program, $arguments, $prlimitAsMb );
 
 		if ( $command instanceof RenderOutcome )
 		{
@@ -95,7 +105,7 @@ class CommandRunner
 			);
 		}
 
-		return $this->execute( $command, $keepStdout );
+		return $this->execute( $command, $keepStdout, $environment );
 	}
 
 
@@ -110,6 +120,7 @@ class CommandRunner
 	public function command(
 		string $program,
 		array  $arguments,
+		?int   $prlimitAsMb = null,
 	): array|RenderOutcome
 	{
 		$location = $this->binaries->locate( $program );
@@ -122,7 +133,12 @@ class CommandRunner
 			);
 		}
 
-		$prefix = $this->prefix( $this->config->limits() );
+		$limits = $this->config->limits();
+		$prefix = $this->prefix(
+			$prlimitAsMb === null
+				? $limits
+				: $limits->withPrlimitAsMb( $prlimitAsMb ),
+		);
 
 		if ( $prefix instanceof RenderOutcome )
 		{
@@ -192,9 +208,6 @@ class CommandRunner
 	}
 
 	/**
-	 * @param list<string> $command
-	 */
-	/**
 	 * Runs a program by name with no limits around it, its stdout kept with
 	 * its stderr: for a version, which some programs print to one and some
 	 * to the other. Not for rendering.
@@ -222,11 +235,13 @@ class CommandRunner
 	}
 
 	/**
-	 * @param list<string> $command
+	 * @param list<string>          $command
+	 * @param array<string, string> $environment
 	 */
 	private function execute(
 		array $command,
 		bool  $keepStdout = false,
+		array $environment = [],
 	): RenderOutcome
 	{
 		$stderrFile = $this->tempManager->getTemporaryFile( '.stderr' );
@@ -249,8 +264,9 @@ class CommandRunner
 				],
 				$pipes,
 				null,
-				// The C locale, for messages the log can be searched for.
-				[ 'LC_ALL' => 'C' ],
+				// The C locale, for messages the log can be searched for;
+				// a renderer cannot change it.
+				[ ...$environment, 'LC_ALL' => 'C' ],
 			);
 
 			if ( ! is_resource( $process ) )

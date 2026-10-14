@@ -102,7 +102,9 @@ Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
 
 Each render runs under three limits, each switchable:
 a timeout (`timeout_seconds`, 30 by default),
-a cap on its address space (`prlimit_as_mb`, 512),
+a cap on its address space (`prlimit_as_mb`, 512;
+`vips_prlimit_as_mb`, 1024, for libvips,
+which decodes whole strips and runs threads),
 and an out-of-memory score that has the kernel kill it before a web server worker
 (`choom_adjust`, 1000).
 A limit switched on whose program is missing declines the file rather than run without it.

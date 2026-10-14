@@ -51,6 +51,8 @@ class ConfigLexicon
 
 	public const PRLIMIT_AS_MB = 'prlimit_as_mb';
 
+	public const VIPS_PRLIMIT_AS_MB = 'vips_prlimit_as_mb';
+
 	public const CHOOM_ENABLED = 'choom_enabled';
 
 	public const CHOOM_ADJUST = 'choom_adjust';
@@ -117,7 +119,16 @@ class ConfigLexicon
 				'max'        => 65536,
 				'definition' => 'The address-space cap of a render, in MB: not resident memory, it counts mapped libraries too.',
 			],
-			self::CHOOM_ENABLED              => [
+			// libvips at its heaviest measured case, a one-strip LZW TIFF of
+			// 15000 x 15000 pixels, failed at 512 and passed at 768; 1024
+			// leaves room above that and still stops a runaway early.
+			self::VIPS_PRLIMIT_AS_MB         => [
+				'default'    => 1024,
+				'min'        => 256,
+				'max'        => 65536,
+				'definition' => 'The address-space cap, in MB, of a render by libvips, which decodes whole strips and runs threads; prlimit_enabled switches it too.',
+			],
+			self::CHOOM_ENABLED             => [
 				'default'    => true,
 				'definition' => 'Whether each render runs under choom, so the kernel kills it before a web server worker when memory runs out.',
 			],

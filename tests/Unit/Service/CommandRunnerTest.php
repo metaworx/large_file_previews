@@ -102,6 +102,44 @@ class CommandRunnerTest
 		);
 	}
 
+	/**
+	 * A renderer's own cap takes the configured one's place; whether there
+	 * is a cap at all is still prlimit_enabled.
+	 */
+	public function testARenderersCapReplacesTheConfiguredOne(): void
+	{
+		$programs        = [ 'prlimit' => '/p', 'pdftoppm' => '/usr/bin/pdftoppm' ];
+		$this->appValues = self::only( ConfigLexicon::PRLIMIT_ENABLED ) + [ ConfigLexicon::PRLIMIT_AS_MB => 512 ];
+
+		self::assertSame(
+			[ '/p', '--as=1073741824', '--', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [], 1024 ),
+		);
+		self::assertSame(
+			[ '/p', '--as=536870912', '--', '/usr/bin/pdftoppm' ],
+			$this->runner( $programs )->command( 'pdftoppm', [] ),
+		);
+
+		$this->appValues = self::only( '' );
+
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [], 1024 ) );
+	}
+
+	/**
+	 * What a renderer sets reaches the program; the C locale stays.
+	 */
+	public function testTheEnvironmentReachesTheProgramButNotTheLocale(): void
+	{
+		$outcome = $this->unlimited()->run(
+			'environment',
+			[],
+			environment: [ 'LFP_TEST' => 'given', 'LC_ALL' => 'de_CH.UTF-8' ],
+		);
+
+		self::assertTrue( $outcome->isSuccess(), $outcome->reason );
+		self::assertSame( 'C given', $outcome->stderr );
+	}
+
 	public function testAMissingProgramDoesNotRun(): void
 	{
 		$outcome = $this->runner( [] )->run( 'pdftoppm', [] );
@@ -173,6 +211,17 @@ class CommandRunnerTest
 		$this->appValues = self::only( ConfigLexicon::PRLIMIT_ENABLED ) + [ ConfigLexicon::PRLIMIT_AS_MB => 256 ];
 
 		$outcome = $this->runner( self::system( 'prlimit' ) )->run( 'allocate', [] );
+
+		self::assertSame( Outcome::FAILED, $outcome->outcome );
+		self::assertStringContainsString( 'memory', strtolower( $outcome->stderr ) );
+	}
+
+	public function testARenderersCapIsTheOneTheRunGets(): void
+	{
+		$this->requirePrograms( 'prlimit', 'php' );
+		$this->appValues = self::only( ConfigLexicon::PRLIMIT_ENABLED ) + [ ConfigLexicon::PRLIMIT_AS_MB => 4096 ];
+
+		$outcome = $this->runner( self::system( 'prlimit' ) )->run( 'allocate', [], prlimitAsMb: 256 );
 
 		self::assertSame( Outcome::FAILED, $outcome->outcome );
 		self::assertStringContainsString( 'memory', strtolower( $outcome->stderr ) );

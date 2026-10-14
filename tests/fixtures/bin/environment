@@ -1,0 +1,3 @@
+#!/bin/sh
+# Says on stderr which locale it runs in, and the variable a test gave it.
+printf '%s %s' "$LC_ALL" "$LFP_TEST" >&2

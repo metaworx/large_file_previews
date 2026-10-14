@@ -26,7 +26,7 @@ the first stable release.
 
 - `README.md`, *Configuration*: which files are taken, per MIME type and
   extension, by size; how a scan is told; and the timeout, memory cap
-  and OOM score of each render.
+  (libvips' own) and OOM score of each render.
 
 - *Administration settings → Additional settings*: the status, what is
   active, which files are processed, and the limits, validated as `occ`
