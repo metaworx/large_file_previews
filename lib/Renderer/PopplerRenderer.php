@@ -100,6 +100,13 @@ class PopplerRenderer
 			],
 		);
 
+		// Under the address-space cap, poppler says so on stderr and still
+		// exits 0, leaving a PNG of a few bytes: measured with poppler 24.02.
+		if ( $outcome->isSuccess() && str_contains( $outcome->stderr, 'Out of memory' ) )
+		{
+			return $outcome->as( Outcome::OUT_OF_MEMORY, 'out of memory under the address-space cap (prlimit_as_mb)' );
+		}
+
 		if ( $outcome->isSuccess() && ! is_file( $outputPng ) )
 		{
 			return $outcome->as( Outcome::NO_OUTPUT, 'exit status 0, but no PNG written' );

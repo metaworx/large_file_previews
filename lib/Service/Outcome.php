@@ -69,6 +69,13 @@ enum Outcome: string
 	 */
 	case FAILED = 'failed';
 
+	/**
+	 * The address-space cap refused an allocation, and the program said so,
+	 * whatever its exit status: poppler exits 0 and leaves a PNG of a few
+	 * bytes.
+	 */
+	case OUT_OF_MEMORY = 'out_of_memory';
+
 
 //  getters / setters / is* / has*
 

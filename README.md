@@ -98,10 +98,29 @@ Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
 
 Each render runs under three limits, each switchable:
 a timeout (`timeout_seconds`, 30 by default),
-a cap on its address space (`prlimit_as_mb`, 2048),
+a cap on its address space (`prlimit_as_mb`, 512),
 and an out-of-memory score that has the kernel kill it before a web server worker
 (`choom_adjust`, 1000).
 A limit switched on whose program is missing declines the file rather than run without it.
+A render that runs into the address-space cap is a failure,
+recorded as out of memory, and the preview is left to the next provider.
+
+## Measured
+
+On a production server (Nextcloud 33.0.5, PHP 8.4, poppler 24.02),
+a PDF of 1.7 GB and 1817 A4 pages, read from local storage:
+
+| What | Result |
+|---|---|
+| `pdftoppm`, page 1 at 4096 pixels | 0.47 s, 61 MB resident at most |
+| Nextcloud's preview of it, through this app | 2.1 s, `occ` start-up included |
+| Smallest address-space cap the render passes | 96 MB; at 64 MB it runs out of memory |
+| The same file through Imaginary | killed at 2.5 GB and again at 6 GB of memory: it takes the whole file into memory |
+| The same file through Collabora | at most about 1123 pixels |
+
+The 512 MB default is five times what that file needs:
+room for heavier pages, and still an early stop for a runaway.
+A server can set its own.
 
 A page counts as scanned where one image covers it, each way,
 to at least `scan_coverage_percent` (90 by default);

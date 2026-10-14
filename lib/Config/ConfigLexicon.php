@@ -108,8 +108,11 @@ class ConfigLexicon
 				'default'    => true,
 				'definition' => 'Whether each render runs under prlimit --as, capping its address space.',
 			],
+			// A 1.7 GB, 1817-page PDF rendered at 4096 pixels within 96 MB of
+			// address space; 512 leaves room for heavier pages and still stops
+			// a runaway early.
 			self::PRLIMIT_AS_MB              => [
-				'default'    => 2048,
+				'default'    => 512,
 				'min'        => 256,
 				'max'        => 65536,
 				'definition' => 'The address-space cap of a render, in MB: not resident memory, it counts mapped libraries too.',

@@ -64,6 +64,16 @@ class ImageLoaderTest
 		self::assertSame( 2, $image->width() );
 	}
 
+	/**
+	 * What poppler leaves when it runs out of memory: a PNG cut short.
+	 */
+	public function testATruncatedPngIsNull(): void
+	{
+		file_put_contents( $this->file, substr( (string) base64_decode( self::PNG ), 0, 40 ) );
+
+		self::assertNull( ( new ImageLoader() )->load( $this->file ) );
+	}
+
 	public function testWhatIsNoImageIsNull(): void
 	{
 		file_put_contents( $this->file, '%PDF-1.4 not an image' );

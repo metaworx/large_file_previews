@@ -41,7 +41,7 @@ const LIMITS: Limit[] = [
 	{
 		switch: 'prlimit_enabled',
 		name: t('large_file_previews', 'Memory cap'),
-		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is well above the memory a render uses.'),
+		help: t('large_file_previews', 'Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MB.'),
 		values: [
 			{ key: 'prlimit_as_mb', label: t('large_file_previews', 'MB') },
 		],

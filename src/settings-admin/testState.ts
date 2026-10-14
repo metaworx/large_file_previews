@@ -51,7 +51,7 @@ export function testState(): SettingsState {
 			timeout_seconds: scalar(30, 1, 600),
 			timeout_kill_after_seconds: scalar(5, 1, 60),
 			prlimit_enabled: scalar(true),
-			prlimit_as_mb: scalar(2048, 256, 65536),
+			prlimit_as_mb: scalar(512, 256, 65536),
 			choom_enabled: scalar(true),
 			choom_adjust: scalar(1000, 0, 1000),
 			scan_native_enabled: scalar(true),

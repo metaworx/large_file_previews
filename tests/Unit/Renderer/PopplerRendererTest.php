@@ -98,6 +98,31 @@ class PopplerRendererTest
 		);
 	}
 
+	/**
+	 * As measured with poppler 24.02 under a 64 MB cap: "Out of memory",
+	 * exit 0, and a PNG of 90 bytes.
+	 */
+	public function testOutOfMemoryWithExitZeroIsAFailure(): void
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'run' )
+		       ->willReturnCallback(
+			       function(): RenderOutcome
+			       {
+				       file_put_contents( $this->output, str_repeat( 'x', 90 ) );
+
+				       return new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, "Syntax Warning: hints\nOut of memory" );
+			       },
+		       )
+		;
+
+		$outcome = ( new PopplerRenderer( $runner, $this->probe( null ) ) )->render( '/in.pdf', 4096, $this->output );
+
+		self::assertSame( Outcome::OUT_OF_MEMORY, $outcome->outcome );
+		self::assertSame( 'out of memory under the address-space cap (prlimit_as_mb)', $outcome->reason );
+		self::assertFalse( $outcome->isSuccess() );
+	}
+
 	public function testSuccessWithoutAFileIsNoOutput(): void
 	{
 		$runner = $this->createMock( CommandRunner::class );
