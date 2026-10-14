@@ -67,8 +67,8 @@ class ConfigUnset
 					     'A MIME type\'s rule: config:unset --mime image/tiff',
 					     'One field of it:    config:unset --mime image/tiff --field min_size_mb',
 					     '',
-					     'A MIME type\'s whole rule returns to its shipped default; a field cleared',
-					     'falls to the app\'s default. An extension\'s rule is removed.',
+					     'A MIME type\'s rule, or a field of it, returns to its shipped default;',
+					     'an extension\'s field cleared falls to its MIME type\'s, and its rule is removed.',
 				     ],
 			     ),
 		     )

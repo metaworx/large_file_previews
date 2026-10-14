@@ -76,6 +76,29 @@ class ScratchDirectory
 	}
 
 	/**
+	 * What is wrong with the directory set in system config, in English, or
+	 * null where none is set or it is a writable directory: a hand-written
+	 * config.php is checked by nothing else before a copy needs it.
+	 */
+	public function overrideProblem(): ?string
+	{
+		$value = $this->config->getSystemValue( self::SYSTEM_KEY, null );
+
+		if ( $value === null || $value === '' )
+		{
+			return null;
+		}
+
+		return match ( true )
+		{
+			! is_string( $value )                         => sprintf( '%s: not a path', self::SYSTEM_KEY ),
+			! str_starts_with( $value, '/' )              => sprintf( '%s: %s is not an absolute path', self::SYSTEM_KEY, $value ),
+			! is_dir( $value ) || ! is_writable( $value ) => sprintf( '%s: %s is not a writable directory', self::SYSTEM_KEY, $value ),
+			default                                       => null,
+		};
+	}
+
+	/**
 	 * Why a copy of the size given cannot go there, in English, or null
 	 * where it can.
 	 */

@@ -11,6 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
+use OCA\LargeFilePreviews\Config\RuleChange;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Renderer\PreviewFormat;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
@@ -215,15 +216,86 @@ class ConfigurationServiceTest
 		self::assertFalse( $service->isStored( ConfigLexicon::TIMEOUT_SECONDS ) );
 	}
 
-	public function testSetMimeRuleChangesOnlyTheFieldsGiven(): void
+	/**
+	 * Only the fields given are stored; the others stay the shipped
+	 * default's, so the image minimum follows preview_max_filesize_image
+	 * still.
+	 */
+	public function testSetMimeRuleStoresOnlyTheFieldsGiven(): void
 	{
 		$service = $this->service();
 
 		$rule = $service->setMimeRule( 'IMAGE/TIFF', new TypeRule( true ) );
 
 		self::assertEquals( new TypeRule( true, 50 ), $rule );
-		self::assertSame( [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 50 ] ], $this->appValues[ ConfigLexicon::MIMETYPES ] );
+		self::assertSame( [ 'image/tiff' => [ 'enabled' => true ] ], $this->appValues[ ConfigLexicon::MIMETYPES ] );
 		self::assertEquals( $rule, $service->mimeRules()['image/tiff'] );
+
+		$this->systemValues = [ ConfigLexicon::IMAGE_LIMIT_SYSTEM_KEY => 100 ];
+
+		self::assertEquals( new TypeRule( true, 100 ), $this->service()->mimeRules()['image/tiff'] );
+	}
+
+	/**
+	 * A type this app does not handle is refused, to unset fields of too;
+	 * one stored by hand may still be removed whole.
+	 */
+	public function testUnsetMimeRuleRefusesATypeTheAppDoesNotHandle(): void
+	{
+		$this->appValues[ ConfigLexicon::MIMETYPES ] = [ 'foo/bar' => [ 'enabled' => true ] ];
+		$service                                     = $this->service();
+
+		try
+		{
+			$service->unsetMimeRule( 'text/plain', [ TypeRule::FIELD_ENABLED ] );
+			self::fail( 'No refusal' );
+		}
+		catch ( ConfigurationException $e )
+		{
+			self::assertSame( 'text/plain is not a MIME type this app handles, so its files never reach it.', $e->getMessage() );
+		}
+
+		$service->unsetMimeRule( 'foo/bar' );
+
+		self::assertArrayNotHasKey( ConfigLexicon::MIMETYPES, $this->appValues );
+
+		$this->expectExceptionMessage( 'text/plain is not a MIME type this app handles' );
+
+		$service->unsetMimeRule( 'text/plain' );
+	}
+
+	/**
+	 * Several changes at once are all made, or none: the last one refused
+	 * leaves the first unwritten.
+	 */
+	public function testChangesAreAppliedTogetherOrNotAtAll(): void
+	{
+		$service = $this->service();
+
+		try
+		{
+			$service->apply(
+				[ ConfigLexicon::TIMEOUT_SECONDS => 60 ],
+				[ 'image/tiff' => new RuleChange( new TypeRule( true ) ) ],
+				[ 'tif' => new RuleChange( new TypeRule( null, 10, 5 ) ) ],
+			);
+			self::fail( 'No refusal' );
+		}
+		catch ( ConfigurationException $e )
+		{
+			self::assertSame( 'min_size_mb is above max_size_mb.', $e->getMessage() );
+		}
+
+		self::assertSame( [], $this->appValues );
+
+		$service->apply(
+			[ ConfigLexicon::TIMEOUT_SECONDS => 60, ConfigLexicon::CHOOM_ADJUST => null ],
+			[ 'image/tiff' => new RuleChange( new TypeRule( true ) ) ],
+			[ 'tif' => new RuleChange( new TypeRule( null, 10 ) ) ],
+		);
+
+		self::assertSame( 60, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
+		self::assertSame( [ 'tif' => [ 'min_size_mb' => 10 ] ], $this->appValues[ ConfigLexicon::EXTENSIONS ] );
 	}
 
 	public function testSetMimeRuleRefusesATypeTheProviderDoesNotRegisterFor(): void
@@ -263,13 +335,19 @@ class ConfigurationServiceTest
 		self::assertArrayNotHasKey( ConfigLexicon::MIMETYPES, $this->appValues );
 	}
 
-	public function testUnsetMimeFieldLeavesItToTheAppDefault(): void
+	/**
+	 * A field cleared falls to the shipped default, not to 0; the last one
+	 * cleared removes the type's entry.
+	 */
+	public function testAClearedFieldFallsToTheShippedDefault(): void
 	{
 		$service = $this->service();
+		$service->setMimeRule( 'image/tiff', new TypeRule( null, 100 ) );
 
 		$service->unsetMimeRule( 'image/tiff', [ TypeRule::FIELD_MIN ] );
 
-		self::assertEquals( new TypeRule( false ), $service->mimeRules()['image/tiff'] );
+		self::assertEquals( new TypeRule( false, 50 ), $service->mimeRules()['image/tiff'] );
+		self::assertArrayNotHasKey( ConfigLexicon::MIMETYPES, $this->appValues );
 	}
 
 	public function testExtensionsAreNormalised(): void
@@ -404,7 +482,7 @@ class ConfigurationServiceTest
 		$service = $this->service();
 
 		self::assertEquals( new TypeRule( false, 50 ), $service->mimeRules()['image/tiff'] );
-		self::assertEquals( new TypeRule( true ), $service->mimeRules()['image/png'] );
+		self::assertEquals( new TypeRule( true, 50 ), $service->mimeRules()['image/png'] );
 		self::assertArrayNotHasKey( 'text/plain', $service->mimeRules() );
 		self::assertSame( [ 'png' ], array_keys( $service->extensionRules() ) );
 		self::assertSame(

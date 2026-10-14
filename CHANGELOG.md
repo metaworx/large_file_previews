@@ -49,7 +49,8 @@ the first stable release.
   each setting with its `occ` command, copied with one click.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
-  what a type or file resolves to, and validated changes.
+  what a type or file resolves to, and validated changes, a MIME type's
+  laid over its shipped default.
 
 - `occ lfp:config:set binaries.<program>`: a program's path in system
   config, overriding the one Nextcloud finds.

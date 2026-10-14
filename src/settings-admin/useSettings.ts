@@ -51,11 +51,16 @@ export function useSettings() {
 				},
 				body: JSON.stringify(changes),
 			})
-			const body = await response.json().catch(() => null) as SettingsState | { error?: string } | null
+			const body = await response.json().catch(() => null) as SettingsState | { error?: string, state?: SettingsState } | null
 			if (!response.ok) {
 				const reason = body !== null && 'error' in body && typeof body.error === 'string'
 					? body.error
 					: t('large_file_previews', 'The setting could not be saved.')
+				// Nothing was changed; the state shows what is, the field the
+				// reader edited included.
+				if (body !== null && 'error' in body && body.state !== undefined) {
+					state.value = body.state
+				}
 				toastError(reason)
 				return false
 			}

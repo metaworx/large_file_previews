@@ -36,22 +36,38 @@ class BinaryLocatorTest
 		       ->willReturn( [] )
 		;
 		$finder = $this->createMock( IBinaryFinder::class );
+		// An executable that is surely there; a kept path is checked again.
 		$finder->expects( self::exactly( 2 ) )
 		       ->method( 'findBinaryPath' )
-		       ->willReturn( '/usr/bin/pdftoppm' )
+		       ->willReturn( PHP_BINARY )
 		;
 
 		$cache = $this->detectionCache();
 		$first = new BinaryLocator( $config, $finder, $cache, $this->createMock( LoggerInterface::class ) );
-		self::assertSame( '/usr/bin/pdftoppm', $first->locate( 'pdftoppm' )->path );
+		self::assertSame( PHP_BINARY, $first->locate( 'pdftoppm' )->path );
 
 		// Another request: from the cache, not the finder.
 		$second = new BinaryLocator( $config, $finder, $cache, $this->createMock( LoggerInterface::class ) );
-		self::assertSame( '/usr/bin/pdftoppm', $second->locate( 'pdftoppm' )->path );
-		self::assertSame( [ 'path.pdftoppm' => '/usr/bin/pdftoppm' ], $this->cacheValues );
+		self::assertSame( PHP_BINARY, $second->locate( 'pdftoppm' )->path );
+		self::assertSame( [ 'path.pdftoppm' => PHP_BINARY ], $this->cacheValues );
 
 		$second->refresh();
-		self::assertSame( '/usr/bin/pdftoppm', $second->locate( 'pdftoppm' )->path );
+		self::assertSame( PHP_BINARY, $second->locate( 'pdftoppm' )->path );
+	}
+
+	/**
+	 * A kept path is not run unchecked: one that is no executable file, as
+	 * someone else writing the cache might leave, is found again.
+	 */
+	public function testAKeptPathIsCheckedAgain(): void
+	{
+		$this->cacheValues = [ 'path.pdftoppm' => '/tmp/planted', 'path.pdfinfo' => 'pdfinfo' ];
+
+		$locator = $this->locator( [], [ 'pdftoppm' => '/usr/bin/pdftoppm' ] );
+
+		self::assertSame( '/usr/bin/pdftoppm', $locator->locate( 'pdftoppm' )->path );
+		self::assertSame( '/usr/bin/pdftoppm', $this->cacheValues['path.pdftoppm'] );
+		self::assertNull( $locator->locate( 'pdfinfo' )->path );
 	}
 
 	/**

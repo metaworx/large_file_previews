@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\Resolution;
+use OCA\LargeFilePreviews\Config\RuleChange;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
@@ -95,104 +96,97 @@ class SettingsController
 	 *      "extensions": {"tif": null}}
 	 *
 	 * A null clears: a setting back to its default, a field to the level
-	 * below, a whole rule to its shipped default or away. The first refusal
-	 * stops the rest and answers 400 with its reason; the page sends one
-	 * change at a time.
+	 * below, a whole rule to its shipped default or away. The changes are
+	 * made together or not at all: a refusal answers 400 with its reason,
+	 * and with the state, unchanged, for the page to show.
 	 */
 	#[ApiRoute( verb: 'PUT', url: '/settings' )]
 	public function update(): DataResponse
 	{
 		$body = json_decode( $this->readRequestBody(), true );
 
-		if ( ! is_array( $body ) )
-		{
-			return $this->refused( $this->l10n->t( 'The request is not valid.' ) );
-		}
-
 		try
 		{
+			if ( ! is_array( $body ) )
+			{
+				throw new ConfigurationException( 'The body is not an object.', $this->l10n->t( 'The request is not valid.' ) );
+			}
+
+			$scalars = [];
+
 			foreach ( self::map( $body, 'scalars' ) as $key => $value )
 			{
-				$value === null
-					? $this->config->unsetScalar( (string) $key )
-					: $this->config->setScalar( (string) $key, self::scalar( $value ) );
+				$scalars[ (string) $key ] = $value === null ? null : self::scalar( $value );
 			}
 
-			foreach ( self::map( $body, 'mimetypes' ) as $mime => $fields )
-			{
-				$this->applyRule( (string) $mime, $fields, true );
-			}
-
-			foreach ( self::map( $body, 'extensions' ) as $extension => $fields )
-			{
-				$this->applyRule( (string) $extension, $fields, false );
-			}
+			$this->config->apply(
+				$scalars,
+				$this->ruleChanges( self::map( $body, 'mimetypes' ) ),
+				$this->ruleChanges( self::map( $body, 'extensions' ) ),
+			);
 		}
 		catch ( ConfigurationException $e )
 		{
-			return $this->refused( $e->hint );
+			return new DataResponse(
+				[
+					'error' => $e->hint,
+					'state' => $this->state(),
+				],
+				Http::STATUS_BAD_REQUEST,
+			);
 		}
 
 		return new DataResponse( $this->state() );
 	}
 
 	/**
+	 * Each rule's change: its null fields cleared, the others set; a null
+	 * rule removed.
+	 *
+	 * @param array<array-key, mixed> $rules
+	 * @return array<string, RuleChange|null>
 	 * @throws ConfigurationException
 	 */
-	private function applyRule(
-		string $name,
-		mixed  $fields,
-		bool   $isMime,
-	): void
+	private function ruleChanges( array $rules ): array
 	{
-		if ( $fields === null )
-		{
-			$isMime
-				? $this->config->unsetMimeRule( $name )
-				: $this->config->unsetExtensionRule( $name );
+		$changes = [];
 
-			return;
+		foreach ( $rules as $name => $fields )
+		{
+			if ( $fields === null )
+			{
+				$changes[ (string) $name ] = null;
+
+				continue;
+			}
+
+			if ( ! is_array( $fields ) )
+			{
+				throw new ConfigurationException( 'A rule is an object.', $this->l10n->t( 'The request is not valid.' ) );
+			}
+
+			$cleared = array_map(
+				strval( ... ),
+				array_keys(
+					array_filter(
+						$fields,
+						static fn(
+							mixed $value,
+						): bool => $value === null,
+					),
+				),
+			);
+			$set     = TypeRule::fromArray( array_diff_key( $fields, array_flip( $cleared ) ) );
+
+			if ( is_string( $set ) )
+			{
+				throw new ConfigurationException( $set, $this->l10n->t( 'The request is not valid.' ) );
+			}
+
+			$changes[ (string) $name ] = new RuleChange( $set, $cleared );
 		}
 
-		if ( ! is_array( $fields ) )
-		{
-			throw new ConfigurationException( 'A rule is an object.', $this->l10n->t( 'The request is not valid.' ) );
-		}
-
-		$cleared = array_keys(
-			array_filter(
-				$fields,
-				static fn(
-					mixed $value,
-				): bool => $value === null,
-			),
-		);
-
-		if ( $cleared !== [] )
-		{
-			/** @var list<string> $cleared */
-			$isMime
-				? $this->config->unsetMimeRule( $name, $cleared )
-				: $this->config->unsetExtensionRule( $name, $cleared );
-		}
-
-		$set = array_diff_key( $fields, array_flip( $cleared ) );
-
-		if ( $set === [] )
-		{
-			return;
-		}
-
-		$rule = TypeRule::fromArray( $set );
-
-		if ( is_string( $rule ) )
-		{
-			throw new ConfigurationException( $rule, $this->l10n->t( 'The request is not valid.' ) );
-		}
-
-		$isMime
-			? $this->config->setMimeRule( $name, $rule )
-			: $this->config->setExtensionRule( $name, $rule );
+		return $changes;
 	}
 
 	/**
@@ -231,11 +225,6 @@ class SettingsController
 			'available'   => $unsupported === null && $this->binaries->locate( $renderer->program() )->isFound(),
 			'unsupported' => $unsupported?->toArray(),
 		];
-	}
-
-	private function refused( string $reason ): DataResponse
-	{
-		return new DataResponse( [ 'error' => $reason ], Http::STATUS_BAD_REQUEST );
 	}
 
 	/**
@@ -322,7 +311,11 @@ class SettingsController
 				$prerequisites,
 			),
 			'ready'         => ! $this->prerequisites->blocking( $prerequisites ),
-			'problems'      => $this->config->problems(),
+			'problems'      => [
+				...$this->config->problems(),
+				...$this->binaries->problems(),
+				...array_filter( [ $this->scratch->overrideProblem() ] ),
+			],
 			'lastFailure'   => $this->config->lastFailure(),
 			'overrideKey'   => BinaryLocator::SYSTEM_KEY,
 			'programs'      => $this->prerequisites->programList(),

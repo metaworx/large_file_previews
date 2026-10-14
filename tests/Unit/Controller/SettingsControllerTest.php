@@ -29,10 +29,10 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
-use OCP\Files\IMimeTypeDetector;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
 use OCP\IRequest;
+use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -195,13 +195,44 @@ class SettingsControllerTest
 		self::assertArrayNotHasKey( ConfigLexicon::TIMEOUT_SECONDS, $this->appValues );
 	}
 
-	public function testARefusalIsA400WithTheTranslatedReason(): void
+	/**
+	 * Nothing of the body is written where one part is refused, a field
+	 * cleared before it included; the answer carries the state as it is.
+	 */
+	public function testARefusalIsA400WithTheTranslatedReasonAndTheState(): void
 	{
-		$response = $this->controller( '{"scalars":{"timeout_seconds":900}}' )->update();
+		$this->appValues = [ ConfigLexicon::EXTENSIONS => [ 'tif' => [ 'min_size_mb' => 10 ] ] ];
+		$response        = $this->controller( '{"scalars":{"choom_adjust":500,"timeout_seconds":900},"extensions":{"tif":{"min_size_mb":null}}}' )->update();
+		$data            = (array) $response->getData();
 
 		self::assertSame( Http::STATUS_BAD_REQUEST, $response->getStatus() );
-		self::assertSame( [ 'error' => '«timeout_seconds must be between 1 and 600.»' ], $response->getData() );
-		self::assertSame( [], $this->appValues );
+		self::assertSame( '«timeout_seconds must be between 1 and 600.»', $data['error'] ?? null );
+		self::assertSame( [ 'error', 'state' ], array_keys( $data ) );
+		self::assertSame( [ ConfigLexicon::EXTENSIONS => [ 'tif' => [ 'min_size_mb' => 10 ] ] ], $this->appValues );
+
+		$response = $this->controller( '{"extensions":{"tif":{"min_size_mb":null,"max_size_mb":-5}}}' )->update();
+
+		self::assertSame( Http::STATUS_BAD_REQUEST, $response->getStatus() );
+		self::assertSame( [ ConfigLexicon::EXTENSIONS => [ 'tif' => [ 'min_size_mb' => 10 ] ] ], $this->appValues );
+	}
+
+	/**
+	 * What system config holds that is not used is on the page too: an
+	 * override for no program, a scratch directory that is none.
+	 */
+	public function testOverrideProblemsAreOnThePage(): void
+	{
+		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => 'relative/dir' ];
+
+		$problems = $this->controller( '', overrides: [ 'pdftopm' => '/usr/bin/pdftoppm' ] )->get()->getData()['problems'] ?? null;
+
+		self::assertSame(
+			[
+				'large_file_previews.binaries.pdftopm: not a program this app runs; ignored',
+				'large_file_previews.scratch_directory: relative/dir is not an absolute path',
+			],
+			$problems,
+		);
 	}
 
 	/**
@@ -225,7 +256,13 @@ class SettingsControllerTest
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":{"colour":1}}}' )->update()->getStatus() );
 	}
 
-	private function controller( string $body ): SettingsController
+	/**
+	 * @param array<string, string> $overrides programs' paths in system config
+	 */
+	private function controller(
+		string $body,
+		array  $overrides = [],
+	): SettingsController
 	{
 		$config = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n(), $this->mimeDetector(), $this->systemConfig() );
 
@@ -237,15 +274,21 @@ class SettingsControllerTest
 		              ->willReturn( [ [ 'name' => 'pdftoppm', 'path' => '/usr/bin/pdftoppm', 'source' => 'finder', 'problem' => null, 'version' => 'pdftoppm version 24.02.0' ] ] )
 		;
 
-		$scratch = $this->createMock( ScratchDirectory::class );
-		$scratch->method( 'path' )
-		        ->willReturn( '/var/tmp/nextcloud' )
+		$tempManager = $this->createMock( ITempManager::class );
+		$tempManager->method( 'getTempBaseDir' )
+		            ->willReturn( '/var/tmp/nextcloud' )
 		;
+		$scratch = new ScratchDirectory( $this->systemConfig(), $tempManager );
 
 		// pdftoppm is there; nothing else is asked for.
 		$systemConfig = $this->createMock( IConfig::class );
 		$systemConfig->method( 'getSystemValue' )
-		             ->willReturn( [] )
+		             ->willReturnCallback(
+			             static fn(
+				             string $key,
+				             mixed  $default = null,
+			             ): mixed => $key === BinaryLocator::SYSTEM_KEY ? $overrides : $default,
+		             )
 		;
 		$finder = $this->createMock( IBinaryFinder::class );
 		$finder->method( 'findBinaryPath' )

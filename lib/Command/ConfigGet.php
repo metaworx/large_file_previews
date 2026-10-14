@@ -11,9 +11,9 @@ namespace OCA\LargeFilePreviews\Command;
 
 use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\ValueParser;
+use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCP\Files\File;
-use OCP\Files\IMimeTypeDetector;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -38,9 +38,9 @@ class ConfigGet
 //  constructor
 
 	public function __construct(
-		private readonly TypePolicy        $policy,
-		private readonly IMimeTypeDetector $mimeTypes,
-		private readonly IRootFolder       $rootFolder,
+		private readonly TypePolicy           $policy,
+		private readonly ConfigurationService $config,
+		private readonly IRootFolder          $rootFolder,
 	)
 	{
 		parent::__construct();
@@ -120,9 +120,8 @@ class ConfigGet
 
 		if ( $mime === null && $extension !== null )
 		{
-			$detected = $this->mimeTypes->detectPath( 'file.' . ltrim( $extension, '.' ) );
-			$mime     = is_string( $detected ) ? $detected : null;
-			$derived  = true;
+			$mime    = $this->config->mimeOf( $extension );
+			$derived = true;
 		}
 
 		if ( $sizeText !== null )

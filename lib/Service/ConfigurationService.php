@@ -13,6 +13,7 @@ use OCA\LargeFilePreviews\AppInfo\Application;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\Limits;
+use OCA\LargeFilePreviews\Config\RuleChange;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
@@ -34,7 +35,8 @@ use OCP\IL10N;
  * reported by {@see problems()}.
  *
  * The type rules are read once per request; a write here drops what was
- * read.
+ * read. Several changes at once, as the page sends them, are applied
+ * together or not at all (apply()).
  */
 class ConfigurationService
 {
@@ -178,8 +180,8 @@ class ConfigurationService
 	}
 
 	/**
-	 * The rule of every MIME type the provider registers for: what is
-	 * stored for it, or its shipped default.
+	 * The rule of every MIME type the provider registers for: its shipped
+	 * default, with what is stored for it laid over field by field.
 	 *
 	 * @return array<string, TypeRule>
 	 */
@@ -279,13 +281,168 @@ class ConfigurationService
 		int|bool|string $value,
 	): void
 	{
+		$this->apply( scalars: [ $key => $value ] );
+	}
+
+	/**
+	 * Returns one scalar setting to its default.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function unsetScalar( string $key ): void
+	{
+		$this->apply( scalars: [ $key => null ] );
+	}
+
+	/**
+	 * Lays the fields set in `$changes` over what is stored for a MIME
+	 * type; what is not stored stays its shipped default's.
+	 *
+	 * @return TypeRule the rule now in force for the type
+	 * @throws ConfigurationException
+	 */
+	public function setMimeRule(
+		string   $mime,
+		TypeRule $changes,
+	): TypeRule
+	{
+		$this->apply( mimeRules: [ $mime => new RuleChange( $changes ) ] );
+
+		return $this->mimeRules()[ strtolower( trim( $mime ) ) ] ?? new TypeRule();
+	}
+
+	/**
+	 * Clears fields of what is stored for a MIME type, which then fall to
+	 * its shipped default; with no fields, the whole rule returns to it.
+	 *
+	 * @param list<string> $fields
+	 * @throws ConfigurationException
+	 */
+	public function unsetMimeRule(
+		string $mime,
+		array  $fields = [],
+	): void
+	{
+		$this->apply( mimeRules: [ $mime => $fields === [] ? null : new RuleChange( clear: $fields ) ] );
+	}
+
+	/**
+	 * Lays the fields set in `$changes` over an extension's rule, creating
+	 * it where there is none.
+	 *
+	 * @return TypeRule the extension's rule as now stored
+	 * @throws ConfigurationException
+	 */
+	public function setExtensionRule(
+		string   $extension,
+		TypeRule $changes,
+	): TypeRule
+	{
+		$this->apply( extensionRules: [ $extension => new RuleChange( $changes ) ] );
+
+		return $this->extensionRules()[ self::normaliseExtension( $extension ) ] ?? new TypeRule();
+	}
+
+	/**
+	 * Clears fields of an extension's rule; with no fields, or once none is
+	 * left, the extension's rule is gone.
+	 *
+	 * @param list<string> $fields
+	 * @throws ConfigurationException
+	 */
+	public function unsetExtensionRule(
+		string $extension,
+		array  $fields = [],
+	): void
+	{
+		$this->apply( extensionRules: [ $extension => $fields === [] ? null : new RuleChange( clear: $fields ) ] );
+	}
+
+	/**
+	 * Applies changes to settings and rules all together, or none of them:
+	 * each is validated against the others before anything is written.
+	 *
+	 * A null setting returns to its default, a null rule is removed, a MIME
+	 * type's to its shipped default.
+	 *
+	 * @param array<string, int|bool|string|null> $scalars
+	 * @param array<string, RuleChange|null>      $mimeRules      by MIME type
+	 * @param array<string, RuleChange|null>      $extensionRules by extension
+	 * @throws ConfigurationException the first change refused; then nothing is written
+	 */
+	public function apply(
+		array $scalars = [],
+		array $mimeRules = [],
+		array $extensionRules = [],
+	): void
+	{
+		$values = [];
+
+		foreach ( $scalars as $key => $value )
+		{
+			if ( $value === null )
+			{
+				// A key that is no setting is refused, even to unset.
+				self::scalarSpec( $key, $this->l10n );
+				$values[ $key ] = null;
+
+				continue;
+			}
+
+			$values[ $key ] = $this->validScalar( $key, $value );
+		}
+
+		$mimes = $this->storedMap( ConfigLexicon::MIMETYPES );
+
+		foreach ( $mimeRules as $mime => $change )
+		{
+			$mimes = $this->changedMimeRule( $mimes, (string) $mime, $change );
+		}
+
+		$extensions = $this->storedMap( ConfigLexicon::EXTENSIONS );
+
+		foreach ( $extensionRules as $extension => $change )
+		{
+			$extensions = $this->changedExtensionRule( $extensions, (string) $extension, $change );
+		}
+
+		foreach ( $values as $key => $value )
+		{
+			match ( true )
+			{
+				$value === null   => $this->appConfig->deleteKey( Application::APP_ID, $key ),
+				is_bool( $value ) => $this->appConfig->setValueBool( Application::APP_ID, $key, $value ),
+				is_int( $value )  => $this->appConfig->setValueInt( Application::APP_ID, $key, $value ),
+				default           => $this->appConfig->setValueString( Application::APP_ID, $key, $value ),
+			};
+		}
+
+		if ( $mimeRules !== [] )
+		{
+			$this->storeMap( ConfigLexicon::MIMETYPES, $mimes );
+		}
+
+		if ( $extensionRules !== [] )
+		{
+			$this->storeMap( ConfigLexicon::EXTENSIONS, $extensions );
+		}
+	}
+
+	/**
+	 * A setting's value as it would be stored, or why it cannot be.
+	 *
+	 * @throws ConfigurationException
+	 */
+	private function validScalar(
+		string          $key,
+		int|bool|string $value,
+	): int|bool|string
+	{
 		$spec = self::scalarSpec( $key, $this->l10n );
 
 		if ( is_bool( $spec['default'] ) )
 		{
-			$this->appConfig->setValueBool( Application::APP_ID, $key, $this->parseBool( $key, $value ) );
-
-			return;
+			return $this->parseBool( $key, $value );
 		}
 
 		if ( isset( $spec['choices'] ) )
@@ -302,9 +459,7 @@ class ConfigurationService
 				);
 			}
 
-			$this->appConfig->setValueString( Application::APP_ID, $key, $word );
-
-			return;
+			return $word;
 		}
 
 		$number = $this->parseInt( $key, $value );
@@ -324,35 +479,29 @@ class ConfigurationService
 				);
 		}
 
-		$this->appConfig->setValueInt( Application::APP_ID, $key, $number );
+		return $number;
 	}
 
 	/**
-	 * Returns one scalar setting to its default.
+	 * The stored MIME rules with one change made, and checked: only what
+	 * is stored is changed, and the rule in force, the shipped default with
+	 * it laid over, must be valid.
 	 *
+	 * @param array<array-key, mixed> $stored
+	 * @return array<array-key, mixed>
 	 * @throws ConfigurationException
 	 */
-	public function unsetScalar( string $key ): void
-	{
-		self::scalarSpec( $key, $this->l10n );
-
-		$this->appConfig->deleteKey( Application::APP_ID, $key );
-	}
-
-	/**
-	 * Lays the fields set in `$changes` over a MIME type's rule.
-	 *
-	 * @return TypeRule the rule now in force for the type
-	 * @throws ConfigurationException
-	 */
-	public function setMimeRule(
-		string   $mime,
-		TypeRule $changes,
-	): TypeRule
+	private function changedMimeRule(
+		array       $stored,
+		string      $mime,
+		?RuleChange $change,
+	): array
 	{
 		$mime = strtolower( trim( $mime ) );
 
-		if ( ! SupportedTypes::matches( $mime ) )
+		// What is not a type this app handles may still be removed, where a
+		// hand-written config stored it.
+		if ( ! SupportedTypes::matches( $mime ) && ( $change !== null || ! array_key_exists( $mime, $stored ) ) )
 		{
 			throw new ConfigurationException(
 				sprintf( '%s is not a MIME type this app handles, so its files never reach it.', $mime ),
@@ -360,104 +509,74 @@ class ConfigurationService
 			);
 		}
 
-		$rule = ( $this->mimeRules()[ $mime ] ?? new TypeRule() )->with( $changes );
-		$this->refuseInvalid( $rule );
+		if ( $change === null )
+		{
+			unset( $stored[ $mime ] );
 
-		$stored          = $this->storedMap( ConfigLexicon::MIMETYPES );
-		$stored[ $mime ] = $rule->toArray();
-		$this->storeMap( ConfigLexicon::MIMETYPES, $stored );
+			return $stored;
+		}
 
-		return $rule;
-	}
+		$this->refuseUnknownFields( $change->clear );
 
-	/**
-	 * Clears fields of a MIME type's rule, which then fall to the app's
-	 * default; with no fields, the whole rule returns to its shipped
-	 * default.
-	 *
-	 * @param list<string> $fields
-	 * @throws ConfigurationException
-	 */
-	public function unsetMimeRule(
-		string $mime,
-		array  $fields = [],
-	): void
-	{
-		$mime = strtolower( trim( $mime ) );
-		$this->refuseUnknownFields( $fields );
+		$own  = TypeRule::fromArray( $stored[ $mime ] ?? [] );
+		$rule = ( $own instanceof TypeRule ? $own : new TypeRule() )->without( $change->clear )->with( $change->set );
+		$this->refuseInvalid( $this->shippedRule( $mime )->with( $rule ) );
 
-		$stored = $this->storedMap( ConfigLexicon::MIMETYPES );
-
-		if ( $fields === [] )
+		if ( $rule->isEmpty() )
 		{
 			unset( $stored[ $mime ] );
 		}
 		else
 		{
-			$rule            = ( $this->mimeRules()[ $mime ] ?? new TypeRule() )->without( $fields );
 			$stored[ $mime ] = $rule->toArray();
 		}
 
-		$this->storeMap( ConfigLexicon::MIMETYPES, $stored );
+		return $stored;
 	}
 
 	/**
-	 * Lays the fields set in `$changes` over an extension's rule, creating
-	 * it where there is none.
+	 * The stored extension rules with one change made, and checked.
 	 *
-	 * @return TypeRule the extension's rule as now stored
+	 * @param array<array-key, mixed> $stored
+	 * @return array<array-key, mixed>
 	 * @throws ConfigurationException
 	 */
-	public function setExtensionRule(
-		string   $extension,
-		TypeRule $changes,
-	): TypeRule
+	private function changedExtensionRule(
+		array       $stored,
+		string      $extension,
+		?RuleChange $change,
+	): array
 	{
 		$extension = $this->validExtension( $extension );
-		$mime      = $this->mimeOf( $extension );
 
-		// A rule for a type the provider never sees could only mislead.
-		if ( $mime === null || ! SupportedTypes::matches( $mime ) )
+		if ( $change === null )
 		{
-			$type = $mime ?? 'of no known type';
+			unset( $stored[ $extension ] );
 
-			throw new ConfigurationException(
-				sprintf( 'Files .%s are %s, a type this app does not handle.', $extension, $type ),
-				$this->l10n->t( 'Files .%1$s are %2$s, a type this app does not handle.', [ $extension, $type ] ),
-			);
+			return $stored;
 		}
 
-		$rule = ( $this->extensionRules()[ $extension ] ?? new TypeRule() )->with( $changes );
+		$this->refuseUnknownFields( $change->clear );
+
+		// A rule for a type the provider never sees could only mislead.
+		if ( ! $change->set->isEmpty() )
+		{
+			$mime = $this->mimeOf( $extension );
+
+			if ( $mime === null || ! SupportedTypes::matches( $mime ) )
+			{
+				$type = $mime ?? 'of no known type';
+
+				throw new ConfigurationException(
+					sprintf( 'Files .%s are %s, a type this app does not handle.', $extension, $type ),
+					$this->l10n->t( 'Files .%1$s are %2$s, a type this app does not handle.', [ $extension, $type ] ),
+				);
+			}
+		}
+
+		$own  = TypeRule::fromArray( $stored[ $extension ] ?? [] );
+		$rule = ( $own instanceof TypeRule ? $own : new TypeRule() )->without( $change->clear )->with( $change->set );
 		$this->refuseInvalid( $rule );
-
-		$stored               = $this->storedMap( ConfigLexicon::EXTENSIONS );
-		$stored[ $extension ] = $rule->toArray();
-		$this->storeMap( ConfigLexicon::EXTENSIONS, $stored );
-
-		return $rule;
-	}
-
-	/**
-	 * Clears fields of an extension's rule; with no fields, or once none is
-	 * left, the extension's rule is gone.
-	 *
-	 * @param list<string> $fields
-	 * @throws ConfigurationException
-	 */
-	public function unsetExtensionRule(
-		string $extension,
-		array  $fields = [],
-	): void
-	{
-		$extension = $this->validExtension( $extension );
-		$this->refuseUnknownFields( $fields );
-
-		$stored = $this->storedMap( ConfigLexicon::EXTENSIONS );
-		$rule   = ( $this->extensionRules()[ $extension ] ?? new TypeRule() )->without(
-			$fields === []
-				? TypeRule::FIELDS
-				: $fields,
-		);
 
 		if ( $rule->isEmpty() )
 		{
@@ -468,7 +587,17 @@ class ConfigurationService
 			$stored[ $extension ] = $rule->toArray();
 		}
 
-		$this->storeMap( ConfigLexicon::EXTENSIONS, $stored );
+		return $stored;
+	}
+
+	/**
+	 * A MIME type's shipped default, from defaultMimeTypes().
+	 */
+	private function shippedRule( string $mime ): TypeRule
+	{
+		$rule = TypeRule::fromArray( $this->defaultMimeTypes()[ $mime ] ?? [] );
+
+		return $rule instanceof TypeRule ? $rule : new TypeRule();
 	}
 
 	/**
@@ -606,14 +735,21 @@ class ConfigurationService
 
 			$rule = TypeRule::fromArray( $stored );
 
-			if ( is_string( $rule ) )
+			// What is stored is laid over the shipped default, field by
+			// field: a field not stored follows it, the image minimum
+			// included.
+			$problem = is_string( $rule )
+				? $rule
+				: ( $mimeRules[ $mime ] ?? new TypeRule() )->with( $rule )->problem();
+
+			if ( $problem !== null || ! $rule instanceof TypeRule )
 			{
-				$this->problems[] = sprintf( '%s.%s: %s; the shipped default applies', ConfigLexicon::MIMETYPES, $mime, $rule );
+				$this->problems[] = sprintf( '%s.%s: %s; the shipped default applies', ConfigLexicon::MIMETYPES, $mime, (string) $problem );
 
 				continue;
 			}
 
-			$mimeRules[ $mime ] = $rule;
+			$mimeRules[ $mime ] = ( $mimeRules[ $mime ] ?? new TypeRule() )->with( $rule );
 		}
 
 		$extensionRules = [];

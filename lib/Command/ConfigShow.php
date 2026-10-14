@@ -15,7 +15,6 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCP\Files\IMimeTypeDetector;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -37,7 +36,6 @@ class ConfigShow
 		private readonly ConfigurationService $config,
 		private readonly TypePolicy           $policy,
 		private readonly BinaryLocator        $binaries,
-		private readonly IMimeTypeDetector    $mimeTypes,
 		private readonly ScratchDirectory     $scratch,
 	)
 	{
@@ -77,7 +75,7 @@ class ConfigShow
 		];
 		$untrusted = $this->config->untrustedAllowed();
 		$resolved  = $this->resolved();
-		$problems  = [ ...$this->config->problems(), ...$this->binaries->problems() ];
+		$problems  = [ ...$this->config->problems(), ...$this->binaries->problems(), ...array_filter( [ $this->scratch->overrideProblem() ] ) ];
 
 		if ( $this->writeJson(
 			$output,
@@ -254,8 +252,7 @@ class ConfigShow
 
 		foreach ( array_keys( $this->config->extensionRules() ) as $extension )
 		{
-			$mime   = $this->mimeTypes->detectPath( 'file.' . $extension );
-			$rows[] = $this->policy->resolve( is_string( $mime ) ? $mime : null, $extension )
+			$rows[] = $this->policy->resolve( $this->config->mimeOf( (string) $extension ), (string) $extension )
 			                       ->toArray()
 			;
 		}

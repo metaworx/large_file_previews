@@ -23,7 +23,6 @@ use OCA\LargeFilePreviews\Tests\Unit\EnglishL10n;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\Files\File;
 use OCP\Files\Folder;
-use OCP\Files\IMimeTypeDetector;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\Storage\IStorage;
@@ -217,6 +216,11 @@ class ConfigCommandsTest
 		self::assertTrue( $result['mime_derived'] );
 		self::assertSame( 62_914_560, $result['size'] );
 		self::assertSame( 'disabled', $result['verdict'] );
+
+		// As the page says it: an extension of no known type has none.
+		$tester->execute( [ '--ext' => 'xyz', '--output' => 'json' ] );
+
+		self::assertNull( json_decode( $tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR )['mime'] );
 	}
 
 	public function testGetWithoutASizeGivesNoVerdictForAnEnabledType(): void
@@ -276,11 +280,6 @@ class ConfigCommandsTest
 	{
 		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ 'tif' => [ 'enabled' => true ], 'BAD' => [] ];
 
-		$detector = $this->createMock( IMimeTypeDetector::class );
-		$detector->method( 'detectPath' )
-		         ->willReturn( 'image/tiff' )
-		;
-
 		$config = $this->createMock( IConfig::class );
 		$config->method( 'getSystemValue' )
 		       ->willReturn( [] )
@@ -296,7 +295,6 @@ class ConfigCommandsTest
 				$this->config,
 				new TypePolicy( $this->config ),
 				new BinaryLocator( $config, $finder, $this->detectionCache(), $this->createMock( LoggerInterface::class ) ),
-				$detector,
 				$this->scratch,
 			),
 		);
@@ -324,15 +322,6 @@ class ConfigCommandsTest
 	 */
 	private function get( array $files = [] ): ConfigGet
 	{
-		$detector = $this->createMock( IMimeTypeDetector::class );
-		$detector->method( 'detectPath' )
-		         ->willReturnCallback(
-			         static fn(
-				         string $path,
-			         ): string => str_ends_with( $path, '.tif' ) ? 'image/tiff' : 'application/octet-stream',
-		         )
-		;
-
 		$root = $this->createMock( IRootFolder::class );
 		$root->method( 'get' )
 		     ->willReturnCallback(
@@ -357,6 +346,6 @@ class ConfigCommandsTest
 		     )
 		;
 
-		return new ConfigGet( new TypePolicy( $this->config ), $detector, $root );
+		return new ConfigGet( new TypePolicy( $this->config ), $this->config, $root );
 	}
 }

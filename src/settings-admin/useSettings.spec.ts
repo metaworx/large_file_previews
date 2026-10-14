@@ -80,6 +80,19 @@ describe('useSettings', () => {
 		expect(state.value?.scalars.timeout_seconds.value).toBe(30)
 	})
 
+	it('shows the state a refusal carries, as the server has it', async () => {
+		fetchMock.mockResolvedValueOnce(response(testState()))
+		const { state, load, save } = useSettings()
+		await load()
+		const current = testState()
+		current.scalars.timeout_seconds.value = 45
+		fetchMock.mockResolvedValueOnce(response({ error: 'refused', state: current }, 400))
+
+		expect(await save({ scalars: { timeout_seconds: 900 } })).toBe(false)
+
+		expect(state.value?.scalars.timeout_seconds.value).toBe(45)
+	})
+
 	it('says so when the server cannot be reached', async () => {
 		fetchMock.mockRejectedValue(new Error('offline'))
 		const { save, saving } = useSettings()

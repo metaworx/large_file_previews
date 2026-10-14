@@ -163,9 +163,12 @@ class BinaryLocator
 		}
 
 		// What the finder found is kept; an empty string remembers "missing".
+		// A kept path is checked again before it is run, as the finder
+		// checked it: the cache may be shared with other servers, or written
+		// by more than this app.
 		$path = $this->cache->get( 'path.' . $program );
 
-		if ( $path === null )
+		if ( $path === null || ( $path !== '' && ! self::runnable( $path ) ) )
 		{
 			$found = $this->finder->findBinaryPath( $program );
 			$path  = is_string( $found ) ? $found : '';
@@ -263,6 +266,14 @@ class BinaryLocator
 
 
 //  static methods
+
+	/**
+	 * An absolute path to an executable file.
+	 */
+	private static function runnable( string $path ): bool
+	{
+		return str_starts_with( $path, '/' ) && is_file( $path ) && is_executable( $path );
+	}
 
 	/**
 	 * @throws ConfigurationException

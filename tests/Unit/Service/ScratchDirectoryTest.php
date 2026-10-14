@@ -77,6 +77,32 @@ class ScratchDirectoryTest
 	}
 
 	/**
+	 * A hand-written override that is no absolute, writable directory is
+	 * reported where the page and config:show list problems.
+	 */
+	public function testAnOverrideThatIsNoDirectoryIsAProblem(): void
+	{
+		self::assertNull( $this->scratch( '/' )->overrideProblem() );
+
+		$cases = [
+			'tmp'                => 'large_file_previews.scratch_directory: tmp is not an absolute path',
+			__FILE__             => 'large_file_previews.scratch_directory: ' . __FILE__ . ' is not a writable directory',
+			sys_get_temp_dir()   => null,
+		];
+
+		foreach ( $cases as $path => $problem )
+		{
+			$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => $path ];
+
+			self::assertSame( $problem, $this->scratch( '/' )->overrideProblem(), $path );
+		}
+
+		$this->systemValues = [ ScratchDirectory::SYSTEM_KEY => [ 'a' ] ];
+
+		self::assertSame( 'large_file_previews.scratch_directory: not a path', $this->scratch( '/' )->overrideProblem() );
+	}
+
+	/**
 	 * One copy at a time: a second lock waits, and gives up after the time
 	 * given; closing the first lets the next in.
 	 */

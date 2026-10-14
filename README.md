@@ -99,6 +99,9 @@ Out of the box, PDF and Illustrator files are taken at any size,
 and every image type is off;
 switched on, an image is taken from `preview_max_filesize_image` up,
 50 MB unless set, where Nextcloud's own image providers stop.
+A MIME type keeps only the fields set for it,
+so the rest follow its shipped default, the image minimum included,
+and a field cleared returns to it.
 
 Everything below is set in *Administration settings → Additional settings*,
 which also shows whether previews can be rendered and the last render that failed,
