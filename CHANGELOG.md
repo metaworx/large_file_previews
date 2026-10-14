@@ -34,7 +34,7 @@ the first stable release.
 - `README.md`, *Configuration*: previews stored as PNG, JPEG or WebP,
   by default as Nextcloud's `preview_format` says; `preview_background`.
 
-- `README.md`, *Configuration*: a TIFF in one strip out of memory,
+- `README.md`, *Configuration*: a TIFF in one large strip out of memory,
   re-striped by `tiffcp` into a copy in `scratch_directory`, on disk.
 
 - *Administration settings → Additional settings*: status, files

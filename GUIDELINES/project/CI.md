@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.1.0)
+# CI Conventions — Large File Previews (v1.2.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -100,8 +100,12 @@ A version tag runs the same jobs as a branch, and publishes nothing yet.
 
 ## 7. Runner Constraints
 
-- **`poppler-utils` is installed in the PHPUnit job**:
-  the integration tests run `pdftoppm`.
+- **`poppler-utils`, `libvips-tools` and `libtiff-tools`
+  are installed in the PHPUnit job**:
+  the integration tests run `pdftoppm`,
+  libvips' `vipsthumbnail`, `vipsheader` and `vips`,
+  and `tiffcp` for the one-strip TIFF fallback;
+  the image tests are skipped where libvips is not there.
   `timeout`, `prlimit` and `choom` come with the runner's coreutils and util-linux.
 - **`nextcloud/setup-server-action` is pinned to a commit**, not a release:
   its newest release, v0.5.0, still pins actions on Node 20.

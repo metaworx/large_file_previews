@@ -122,8 +122,9 @@ A limit switched on whose program is missing declines the file rather than run w
 A render that runs into the address-space cap is a failure,
 recorded as out of memory, and the preview is left to the next provider.
 
-A TIFF is decoded a strip at a time,
-so one stored in a single strip needs the whole image in memory.
+A TIFF is read a strip at a time,
+so one stored in a single large strip can need far more memory than its preview:
+a 151 MB TIFF in one LZW strip failed under 256 MB.
 One that runs out of memory gets a second chance where `tiffcp` is installed:
 its first image is copied, uncompressed, in strips of 64 rows,
 and libvips renders the copy, which is removed afterwards.

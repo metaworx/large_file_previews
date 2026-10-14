@@ -50,10 +50,11 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * says "out of memory", fails to start a thread or aborts; any of these is
  * a render out of memory.
  *
- * A TIFF decodes a strip at a time, so one in a single strip needs its
- * whole image in memory: 15000 x 15000 pixels in one LZW strip failed under
- * 512 MB. One that runs out of memory is re-striped by tiffcp and tried
- * again (restripped()).
+ * A TIFF is read a strip at a time, so one in a single large strip can need
+ * far more memory than its preview: 6000 x 6000 floats in one LZW strip,
+ * 151 MB, failed under 256 MB, 15000 x 15000 bytes, 365 MB, under 512. One
+ * that runs out of memory is re-striped by tiffcp and tried again
+ * (restripped()); tiffcp needs about the compressed strip.
  *
  * A type whose decoder `vips -l` does not list, or lists as untrusted
  * while those are blocked, is unsupported (VipsLoaders).
@@ -207,7 +208,7 @@ class VipsRenderer
 
 		$outcome = $this->thumbnail( $localPath, $box, $output, $format, $environment, $cap );
 
-		// A TIFF in one strip, or a few large ones, is decoded a strip at a
+		// A TIFF in one strip, or a few large ones, is read a strip at a
 		// time; one that ran out of memory gets a second chance.
 		if ( $outcome->outcome === Outcome::OUT_OF_MEMORY && $header !== null && $header['loader'] === 'tiffload' )
 		{

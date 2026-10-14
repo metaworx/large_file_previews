@@ -149,13 +149,13 @@ jobs:
       - name: Checkout app code
         uses: actions/checkout@v5
 
-      # The renderer the integration tests run, and the limits around it:
-      # timeout is coreutils and prlimit and choom util-linux, both already
-      # on the runner.
-      - name: poppler-utils
+      # The renderers the integration tests run, the one-strip TIFF fallback,
+      # and the limits around them: timeout is coreutils and prlimit and choom
+      # util-linux, both already on the runner.
+      - name: poppler-utils, libvips-tools, libtiff-tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends poppler-utils
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools
 
       - name: Nextcloud server
         uses: ./.github/actions/nextcloud-server
