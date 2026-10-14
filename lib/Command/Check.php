@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Command;
 
 use OCA\LargeFilePreviews\Service\BinaryLocator;
+use OCA\LargeFilePreviews\Service\Platform;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use Symfony\Component\Console\Helper\Table;
@@ -93,7 +94,7 @@ class Check
 		}
 
 		$table = new Table( $output );
-		$table->setHeaders( [ 'Kind', 'Name', 'Status', 'Needed for', 'Detail' ] );
+		$table->setHeaders( [ 'Kind', 'Name', 'Status', 'Needed for', 'Detail', 'Install' ] );
 
 		foreach ( $items as $item )
 		{
@@ -104,11 +105,19 @@ class Check
 					$item->isBlocking() ? '<error>' . $item->status . '</error>' : $item->status,
 					$item->neededFor,
 					$item->detail,
+					Platform::text( $item->install ),
 				],
 			);
 		}
 
 		$table->render();
+
+		$platform = $this->prerequisites->platformName();
+		$output->writeln(
+			$platform === null
+				? 'Platform: not one the app knows packages for; see the README for each program\'s package.'
+				: sprintf( 'Platform: %s.', $platform ),
+		);
 		$output->writeln(
 			$blocking
 				? '<error>Not ready: large previews are not rendered until what is missing is there, or its limit is switched off.</error>'

@@ -9,6 +9,7 @@
  */
 import { computed } from 'vue'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
+import InstallHint from './InstallHint.vue'
 import { t } from '../l10n'
 import type { SettingsState } from './types'
 
@@ -20,12 +21,29 @@ const failureTime = computed(() => props.state.lastFailure === null
 	? ''
 	: new Date(props.state.lastFailure.time * 1000).toLocaleString())
 
+const platformText = computed(() => {
+	switch (props.state.platform) {
+	case 'debian':
+		return t('large_file_previews', 'The packages named are Debian\'s and Ubuntu\'s.')
+	case 'fedora':
+		return t('large_file_previews', 'The packages named are Fedora\'s.')
+	case 'rhel':
+		return t('large_file_previews', 'The packages named are those of RHEL and its rebuilds.')
+	case 'alpine':
+		return t('large_file_previews', 'The packages named are Alpine\'s.')
+	case 'arch':
+		return t('large_file_previews', 'The packages named are Arch\'s.')
+	default:
+		return t('large_file_previews', 'This server\'s distribution is not one the app knows packages for; the README names each program\'s package.')
+	}
+})
+
 function statusText(status: string): string {
 	switch (status) {
 	case 'ok':
 		return t('large_file_previews', 'available')
 	case 'optional':
-		return t('large_file_previews', 'not needed')
+		return t('large_file_previews', 'optional')
 	case 'disabled':
 		return t('large_file_previews', 'disabled')
 	default:
@@ -66,10 +84,16 @@ function statusText(status: string): string {
 					<td>{{ item.name }}</td>
 					<td>{{ statusText(item.status) }}</td>
 					<td>{{ item.needed_for }}</td>
-					<td>{{ item.detail }}</td>
+					<td>
+						{{ item.detail }}
+						<InstallHint v-if="item.status !== 'ok' && item.install !== null" :install="item.install" />
+					</td>
 				</tr>
 			</tbody>
 		</table>
+		<p class="lfp-hint lfp-platform">
+			{{ platformText }}
+		</p>
 		<p class="lfp-hint">
 			{{ t('large_file_previews', 'A program\'s path is found by Nextcloud, or set in system config only, never here; Advanced, below, shows each path and the command that sets it.') }}
 		</p>

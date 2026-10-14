@@ -324,6 +324,7 @@ class SettingsController
 			'lastFailure'   => $this->config->lastFailure(),
 			'overrideKey'   => BinaryLocator::SYSTEM_KEY,
 			'programs'      => $this->prerequisites->programList(),
+			'platform'      => $this->prerequisites->platformFamily(),
 			'scratch'       => [
 				'path'       => $this->scratch->path(),
 				'overridden' => $this->scratch->override() !== null,

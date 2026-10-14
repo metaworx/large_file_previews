@@ -78,12 +78,23 @@ export interface ExtensionRow {
 	noEffect: boolean
 }
 
+/**
+ * What installs a program on the server's platform: the command, null where
+ * no package brings it, and a note where one is due.
+ */
+export interface Install {
+	command: string | null
+	note: string | null
+}
+
 export interface PrerequisiteItem {
 	group: 'permission' | 'extension' | 'program'
 	name: string
 	status: 'ok' | 'missing' | 'disabled' | 'optional'
 	needed_for: string
 	detail: string
+	/** Null where the platform is not one the app knows packages for. */
+	install: Install | null
 }
 
 export interface Failure {
@@ -101,6 +112,7 @@ export interface ProgramRow {
 	source: 'finder' | 'override'
 	problem: string | null
 	version: string | null
+	install: Install | null
 }
 
 export interface SettingsState {
@@ -116,6 +128,8 @@ export interface SettingsState {
 	programs: ProgramRow[]
 	/** Where a large working copy goes; set in system config only. */
 	scratch: { path: string, overridden: boolean }
+	/** The distribution's family, where it is one the app knows packages for. */
+	platform: 'debian' | 'fedora' | 'rhel' | 'alpine' | 'arch' | null
 }
 
 /** What PUT /settings takes; every part optional, null clears. */

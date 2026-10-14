@@ -24,8 +24,8 @@ the first stable release.
   `vipsthumbnail`, from local, unencrypted storage only.
 
 - `README.md`, *When previews fail*: a setup check, with the last failed
-  render, and `occ lfp:check`, listing what the app needs; programs and
-  versions found once and kept, `--refresh` to find them again.
+  render, and `occ lfp:check`, listing what the app needs, and the
+  package for it per distribution; `--refresh` to find programs again.
 
 - `README.md`, *Configuration*: files taken by type, extension and
   size, images from `preview_max_filesize_image`; scans; each render's

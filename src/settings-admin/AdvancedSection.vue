@@ -10,6 +10,7 @@
  */
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import InstallHint from './InstallHint.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import { binaryCommand, scalarCommand, scratchCommand } from './occ'
@@ -85,6 +86,7 @@ function foundBy(program: ProgramRow): string {
 							{{ program.path }}
 						</template>
 						<span v-else class="lfp-hint">{{ program.problem ?? t('large_file_previews', 'not found') }}</span>
+						<InstallHint v-if="program.path === null && program.install !== null" :install="program.install" />
 						<OccCommand :command="binaryCommand(program.name, program.path ?? '/path/to/' + program.name)" />
 					</td>
 					<td>{{ foundBy(program) }}</td>

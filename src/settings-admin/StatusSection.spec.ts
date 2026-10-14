@@ -18,6 +18,30 @@ describe('StatusSection', () => {
 
 		expect(wrapper.findComponent({ name: 'NcNoteCard' }).props('type')).toBe('error')
 		expect(wrapper.find('.lfp-status--missing').text()).toContain('pdftoppm')
+		expect(wrapper.find('.lfp-status--missing').text()).toContain('apt install poppler-utils')
+	})
+
+	it('names what installs an optional program, and none for one that is there', () => {
+		const wrapper = mount(StatusSection, { props: { state: testState() } })
+
+		expect(wrapper.find('.lfp-status--optional').text()).toContain('optional')
+		expect(wrapper.find('.lfp-status--optional').text()).toContain('apt install util-linux')
+		expect(wrapper.find('.lfp-status--ok').text()).not.toContain('apt install')
+		expect(wrapper.find('.lfp-platform').text()).toBe('The packages named are Debian\'s and Ubuntu\'s.')
+	})
+
+	it('says why nothing installs a program, and where the platform is unknown', () => {
+		const state = testState()
+		state.prerequisites[1].install = { command: null, note: 'not-packaged' }
+		state.platform = 'rhel'
+		const wrapper = mount(StatusSection, { props: { state } })
+
+		expect(wrapper.find('.lfp-status--optional').text()).toContain('No package brings it on RHEL or EPEL.')
+		expect(wrapper.find('.lfp-status--optional').text()).not.toContain('dnf')
+
+		state.platform = null
+
+		expect(mount(StatusSection, { props: { state } }).find('.lfp-platform').text()).toContain('not one the app knows packages for')
 	})
 
 	it('names the last failure and what is set but not used', () => {

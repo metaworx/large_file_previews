@@ -50,16 +50,20 @@ class CheckTest
 
 	public function testSomethingMissingExitsOneInEveryFormat(): void
 	{
-		$tester = $this->tester( [ new Prerequisite( Prerequisite::GROUP_PROGRAM, 'pdftoppm', Prerequisite::MISSING, 'rendering' ) ], true );
+		$install = [ 'command' => 'apt install poppler-utils', 'note' => null ];
+		$tester  = $this->tester( [ new Prerequisite( Prerequisite::GROUP_PROGRAM, 'pdftoppm', Prerequisite::MISSING, 'rendering', '', $install ) ], true );
 
 		self::assertSame( Command::FAILURE, $tester->execute( [] ) );
 		self::assertStringContainsString( 'Not ready', $tester->getDisplay() );
+		self::assertStringContainsString( 'apt install poppler-utils', $tester->getDisplay() );
+		self::assertStringContainsString( 'Platform: Debian or Ubuntu.', $tester->getDisplay() );
 
 		self::assertSame( Command::FAILURE, $tester->execute( [ '--output' => 'json' ] ) );
 		$result = json_decode( $tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR );
 
 		self::assertFalse( $result['ready'] );
 		self::assertSame( 'missing', $result['items'][0]['status'] );
+		self::assertSame( $install, $result['items'][0]['install'] );
 	}
 
 	/**
@@ -78,6 +82,9 @@ class CheckTest
 		;
 		$prerequisites->method( 'blocking' )
 		              ->willReturn( $blocking )
+		;
+		$prerequisites->method( 'platformName' )
+		              ->willReturn( 'Debian or Ubuntu' )
 		;
 
 		return new CommandTester( new Check( $prerequisites, $binaries ?? $this->createMock( BinaryLocator::class ) ) );

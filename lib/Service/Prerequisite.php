@@ -41,7 +41,9 @@ final readonly class Prerequisite
 	/**
 	 * @param string $group  self::GROUP_*
 	 * @param string $status self::OK, MISSING, DISABLED or OPTIONAL
-	 * @param string $detail a path, a version, or why, in English
+	 * @param string                                      $detail  a path, a version, or why, in English
+	 * @param array{command: ?string, note: ?string}|null $install what installs a program on this
+	 *                                                             platform (Platform::install())
 	 */
 	public function __construct(
 		public string $group,
@@ -49,6 +51,7 @@ final readonly class Prerequisite
 		public string $status,
 		public string $neededFor,
 		public string $detail = '',
+		public ?array $install = null,
 	)
 	{
 	}
@@ -68,7 +71,7 @@ final readonly class Prerequisite
 //  other non-static methods
 
 	/**
-	 * @return array{group: string, name: string, status: string, needed_for: string, detail: string}
+	 * @return array{group: string, name: string, status: string, needed_for: string, detail: string, install: array{command: ?string, note: ?string}|null}
 	 */
 	public function toArray(): array
 	{
@@ -78,6 +81,7 @@ final readonly class Prerequisite
 			'status'     => $this->status,
 			'needed_for' => $this->neededFor,
 			'detail'     => $this->detail,
+			'install'    => $this->install,
 		];
 	}
 }

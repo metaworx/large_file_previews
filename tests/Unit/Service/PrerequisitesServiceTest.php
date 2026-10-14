@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Outcome;
+use OCA\LargeFilePreviews\Service\Platform;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
@@ -155,10 +156,47 @@ class PrerequisitesServiceTest
 
 		self::assertSame( BinaryLocator::PROGRAMS, array_column( $list, 'name' ) );
 		self::assertSame(
-			[ 'name' => 'pdftoppm', 'path' => '/usr/bin/pdftoppm', 'source' => 'finder', 'problem' => null, 'version' => 'pdftoppm version 24.02.0' ],
+			[
+				'name'    => 'pdftoppm',
+				'path'    => '/usr/bin/pdftoppm',
+				'source'  => 'finder',
+				'problem' => null,
+				'version' => 'pdftoppm version 24.02.0',
+				'install' => [ 'command' => 'apt install poppler-utils', 'note' => null ],
+			],
 			$list[0],
 		);
-		self::assertSame( [ 'name' => 'vips', 'path' => null, 'source' => 'finder', 'problem' => null, 'version' => null ], $list[5] );
+		self::assertSame( 'vips', $list[5]['name'] );
+		self::assertNull( $list[5]['path'] );
+		self::assertNull( $list[5]['version'] );
+		self::assertSame( [ 'command' => 'apt install libvips-tools', 'note' => null ], $list[5]['install'] );
+	}
+
+	/**
+	 * vipsthumbnail is optional while every image type is off, and needed,
+	 * with what installs it, once one is on, by its MIME type or by an
+	 * extension.
+	 */
+	public function testVipsthumbnailIsNeededWhileImagesAreOn(): void
+	{
+		$programs = [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ];
+		$item     = self::item( $this->service( $programs )->check(), 'vipsthumbnail' );
+
+		self::assertSame( Prerequisite::OPTIONAL, $item->status );
+		self::assertSame( 'rendering images, switched off', $item->neededFor );
+		self::assertSame( [ 'command' => 'apt install libvips-tools', 'note' => null ], $item->install );
+
+		$this->appValues = [ ConfigLexicon::MIMETYPES => [ 'image/tiff' => [ 'enabled' => true ] ] ];
+		$service         = $this->service( $programs );
+
+		self::assertSame( Prerequisite::MISSING, self::item( $service->check(), 'vipsthumbnail' )->status );
+		self::assertTrue( $service->blocking() );
+		self::assertSame( Prerequisite::OPTIONAL, self::item( $service->check(), 'vipsheader' )->status );
+
+		$this->appValues = [ ConfigLexicon::EXTENSIONS => [ 'tif' => [ 'enabled' => true ] ] ];
+
+		self::assertSame( Prerequisite::MISSING, self::item( $this->service( $programs )->check(), 'vipsthumbnail' )->status );
+		self::assertSame( 'Debian or Ubuntu', $this->service( $programs )->platformName() );
 	}
 
 	public function testAnUnwritableTemporaryDirectoryBlocks(): void
@@ -202,6 +240,7 @@ class PrerequisitesServiceTest
 			$runner ?? $this->createMock( CommandRunner::class ),
 			$tempManager,
 			$this->detectionCache(),
+			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),
 		);
 	}
 

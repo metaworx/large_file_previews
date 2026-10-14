@@ -34,8 +34,8 @@ class PrerequisitesService
 			// Without them a scanned page is enlarged to the full box; no reason to stop rendering.
 			'pdfinfo'   => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
 			'pdfimages' => [ 'version' => '-v', 'limit' => false, 'for' => 'rendering a scanned page at its own resolution' ],
-			// Images are off until switched on; without it, an image's render fails.
-			'vipsthumbnail' => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering images' ],
+			// Needed while an image type is switched on, as a limit while it is.
+			'vipsthumbnail' => [ 'version' => '--version', 'limit' => 'images', 'for' => 'rendering images' ],
 			// Without it an image smaller than the preview is enlarged.
 			'vipsheader'    => [ 'version' => '--version', 'limit' => false, 'for' => 'rendering an image at its own size where that is smaller' ],
 			// Without it, which image types libvips reads is found out by
@@ -57,6 +57,7 @@ class PrerequisitesService
 		private readonly CommandRunner        $runner,
 		private readonly ITempManager         $tempManager,
 		private readonly DetectionCache       $cache,
+		private readonly Platform             $platform,
 	)
 	{
 	}
@@ -102,7 +103,7 @@ class PrerequisitesService
 	 * Every program the app runs: where it is, how it was found, and its
 	 * version, from the same cache as check()'s.
 	 *
-	 * @return list<array{name: string, path: ?string, source: string, problem: ?string, version: ?string}>
+	 * @return list<array{name: string, path: ?string, source: string, problem: ?string, version: ?string, install: array{command: ?string, note: ?string}|null}>
 	 */
 	public function programList(): array
 	{
@@ -119,10 +120,28 @@ class PrerequisitesService
 				'version' => $location->path !== null && $flag !== null
 					? $this->version( $program, $location->path, $flag )
 					: null,
+				'install' => $this->platform->install( $program ),
 			];
 		}
 
 		return $list;
+	}
+
+	/**
+	 * The platform's name, where it is one the app knows packages for.
+	 */
+	public function platformName(): ?string
+	{
+		return $this->platform->name();
+	}
+
+	/**
+	 * The platform's family (Platform::DEBIAN and so on), for the page to
+	 * name in its reader's language.
+	 */
+	public function platformFamily(): ?string
+	{
+		return $this->platform->family();
 	}
 
 	/**
@@ -186,6 +205,7 @@ class PrerequisitesService
 			'timeout' => $limits->timeoutEnabled,
 			'prlimit' => $limits->prlimitEnabled,
 			'choom'   => $limits->choomEnabled,
+			'images'  => $this->config->imagesEnabled(),
 		];
 		$items   = [];
 
@@ -209,6 +229,7 @@ class PrerequisitesService
 					$needed ? Prerequisite::MISSING : Prerequisite::OPTIONAL,
 					$for,
 					$location->problem ?? '',
+					$this->platform->install( $program ),
 				);
 
 				continue;

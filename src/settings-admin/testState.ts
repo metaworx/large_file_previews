@@ -70,17 +70,18 @@ export function testState(): SettingsState {
 		mimetypes: [pdf(), tiff()],
 		extensions: [],
 		prerequisites: [
-			{ group: 'program', name: 'pdftoppm', status: 'ok', needed_for: 'rendering', detail: '/usr/bin/pdftoppm (finder)' },
-			{ group: 'program', name: 'choom', status: 'optional', needed_for: 'the OOM score, switched off', detail: '' },
+			{ group: 'program', name: 'pdftoppm', status: 'ok', needed_for: 'rendering', detail: '/usr/bin/pdftoppm (finder)', install: { command: 'apt install poppler-utils', note: null } },
+			{ group: 'program', name: 'choom', status: 'optional', needed_for: 'the OOM score, switched off', detail: '', install: { command: 'apt install util-linux', note: null } },
 		],
 		ready: true,
 		problems: [],
 		lastFailure: null,
 		overrideKey: 'large_file_previews.binaries',
 		programs: [
-			{ name: 'pdftoppm', path: '/usr/bin/pdftoppm', source: 'finder', problem: null, version: 'pdftoppm version 24.02.0' },
-			{ name: 'vipsthumbnail', path: null, source: 'finder', problem: null, version: null },
+			{ name: 'pdftoppm', path: '/usr/bin/pdftoppm', source: 'finder', problem: null, version: 'pdftoppm version 24.02.0', install: { command: 'apt install poppler-utils', note: null } },
+			{ name: 'vipsthumbnail', path: null, source: 'finder', problem: null, version: null, install: { command: 'apt install libvips-tools', note: null } },
 		],
 		scratch: { path: '/var/tmp/nextcloud', overridden: false },
+		platform: 'debian',
 	}
 }

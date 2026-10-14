@@ -174,6 +174,31 @@ class ConfigurationService
 	}
 
 	/**
+	 * Whether any image type is switched on: by its MIME type, or by an
+	 * extension that enables files of one.
+	 */
+	public function imagesEnabled(): bool
+	{
+		foreach ( $this->mimeRules() as $mime => $rule )
+		{
+			if ( $rule->enabled === true && in_array( $mime, SupportedTypes::IMAGE_TYPES, true ) )
+			{
+				return true;
+			}
+		}
+
+		foreach ( $this->extensionRules() as $extension => $rule )
+		{
+			if ( $rule->enabled === true && in_array( $this->mimeOf( (string) $extension ), SupportedTypes::IMAGE_TYPES, true ) )
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * What is stored but left out because it is not valid, in English.
 	 *
 	 * @return list<string>

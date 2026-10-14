@@ -40,11 +40,24 @@ so the file is never loaded into PHP, copied, or sent to another service.
 ## Requirements
 
 - Nextcloud 33 to 35, PHP 8.2 or later.
-- `pdftoppm`, from `poppler-utils` on Debian and Ubuntu.
-- For images: `vipsthumbnail` and `vipsheader`, from `libvips-tools`;
-  optionally `tiffcp`, from `libtiff-tools`, for a TIFF in one large strip.
+- `pdftoppm`; `pdfinfo` and `pdfimages` to tell a scanned page.
+- For images, while an image type is switched on: `vipsthumbnail`;
+  `vipsheader` and `vips`,
+  to keep an image at its own size and tell its decoders;
+  optionally `tiffcp`, for a TIFF in one large strip.
 - For the limits around each render, each optional:
-  `timeout` (coreutils), `prlimit` and `choom` (util-linux).
+  `timeout`, `prlimit` and `choom`.
+
+| Programs | Debian, Ubuntu | Fedora | RHEL and rebuilds | Alpine | Arch |
+|---|---|---|---|---|---|
+| `pdftoppm`, `pdfinfo`, `pdfimages` | poppler-utils | poppler-utils | poppler-utils | poppler-utils | poppler |
+| `vipsthumbnail`, `vipsheader`, `vips` | libvips-tools | vips-tools | none, nor in EPEL | vips-tools, community | libvips |
+| `tiffcp` | libtiff-tools | libtiff-tools | libtiff-tools, CRB | tiff-tools | libtiff |
+| `timeout` | coreutils | coreutils | coreutils | coreutils | coreutils |
+| `prlimit`, `choom` | util-linux | util-linux | util-linux | util-linux-misc | util-linux |
+
+`occ lfp:check` and the settings page name the command that installs what is missing,
+for the distribution the server runs, read from `/etc/os-release`.
 
 ## When previews fail
 

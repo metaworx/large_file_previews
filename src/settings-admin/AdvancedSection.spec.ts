@@ -29,7 +29,12 @@ describe('AdvancedSection', () => {
 		const row = section().find('[data-program="vipsthumbnail"]')
 
 		expect(row.text()).toContain('not found')
-		expect(row.findComponent(OccCommand).props('command')).toBe('occ lfp:config:set binaries.vipsthumbnail /path/to/vipsthumbnail')
+		const commands: unknown[] = []
+		for (const command of row.findAllComponents(OccCommand)) {
+			commands.push(command.props('command'))
+		}
+
+		expect(commands).toEqual(['apt install libvips-tools', 'occ lfp:config:set binaries.vipsthumbnail /path/to/vipsthumbnail'])
 	})
 
 	it('shows the scratch directory, read only', () => {
