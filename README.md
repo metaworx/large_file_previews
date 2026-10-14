@@ -19,10 +19,13 @@ so the file is never loaded into PHP, copied, or sent to another service.
   A page that is one scan is rendered at the scan's own resolution where that is smaller,
   not enlarged: a 300 dpi A4 scan gives a preview 3508 pixels tall, not 4096.
 - **Large images** through `vipsthumbnail` from libvips:
-  TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF, AVIF and more,
+  TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF and JPEG 2000,
+  and AVIF, JPEG XL, BMP and PNM where the server's libvips reads them,
   each type switched off until it is switched on.
-  The image is read in strips or from a pyramid's nearest level, never whole,
+  The image is read in strips or from a pyramid's nearest level rather than whole,
   and never enlarged: one smaller than the preview keeps its own size.
+  Nextcloud 34 has no image type for `.avif`, `.jxl`, `.ppm`, `.pgm` or `.pbm`:
+  those reach the app only with a mimetype mapping of the server's own.
 
 ## What it does not do
 
@@ -115,7 +118,7 @@ Each render runs under three limits, each switchable:
 a timeout (`timeout_seconds`, 30 by default),
 a cap on its address space (`prlimit_as_mb`, 512;
 `vips_prlimit_as_mb`, 1024, for libvips,
-which decodes whole strips and runs threads),
+which reads whole strips and runs threads),
 and an out-of-memory score that has the kernel kill it before a web server worker
 (`choom_adjust`, 1000).
 A limit switched on whose program is missing declines the file rather than run without it.
@@ -156,27 +159,12 @@ so a transparent image is laid on `preview_background`, white or black.
 The quality is Nextcloud's:
 it re-encodes every preview at its app config `preview` `jpeg_quality` or `webp_quality`.
 
-## Measured
-
-On a production server (Nextcloud 33.0.5, PHP 8.4, poppler 24.02),
-a PDF of 1.7 GB and 1817 A4 pages, read from local storage:
-
-| What | Result |
-|---|---|
-| `pdftoppm`, page 1 at 4096 pixels | 0.47 s, 61 MB resident at most |
-| Nextcloud's preview of it, through this app | 2.1 s, `occ` start-up included |
-| Smallest address-space cap the render passes | 96 MB; at 64 MB it runs out of memory |
-| The same file through Imaginary | killed at 2.5 GB and again at 6 GB of memory: it takes the whole file into memory |
-| The same file through Collabora | at most about 1123 pixels |
-
-The 512 MB default is five times what that file needs:
-room for heavier pages, and still an early stop for a runaway.
-A server can set its own.
-
 A page counts as scanned where one image covers it, each way,
 to at least `scan_coverage_percent` (90 by default);
 `scan_native_enabled` switches the scan sizing off,
 and every page then fills the preview size.
+
+## Paths, and what the app trusts
 
 A program's path can be overridden, in system config only:
 
@@ -193,6 +181,8 @@ under `large_file_previews.binaries`.
 App config is no place for a path:
 an administrator can write it over the provisioning API without shell access,
 and a path is code the web server runs.
+The scratch directory is kept in system config for the same reason,
+under `large_file_previews.scratch_directory`.
 
 A file of its own works too, kept by hand or by a deployment tool:
 Nextcloud reads every `config/*.config.php`,
@@ -201,6 +191,58 @@ so `config/large_file_previews.config.php` may hold
 Nextcloud copies what it reads there into `config.php` whenever it next writes its config,
 so remove a path from both:
 with `occ lfp:config:unset`, and then from the file.
+
+A file is read where it lies and handed to the renderer by its path,
+as an argument, never through a shell.
+libvips' untrusted decoders, not hardened against hostile files,
+stay blocked unless switched on.
+The only copy ever made is the re-striped TIFF, in the scratch directory,
+removed once rendered.
+
+## Measured
+
+On a production server, Nextcloud 33.0.5 and PHP 8.4,
+as the web server's user, files read from local storage.
+
+### PDF
+
+poppler 24.02, a PDF of 1.7 GB and 1817 A4 pages:
+
+| What | Result |
+|---|---|
+| `pdftoppm`, page 1 at 4096 pixels | 0.47 s, 61 MB resident at most |
+| Nextcloud's preview of it, through this app | 2.1 s, `occ` start-up included |
+| Smallest address-space cap the render passes | 96 MB; at 64 MB it runs out of memory |
+| The same file through Imaginary | killed at 2.5 GB and again at 6 GB of memory: it takes the whole file into memory |
+| The same file through Collabora | at most about 1123 pixels |
+
+The 512 MB default is five times what that file needs:
+room for heavier pages, and still an early stop for a runaway.
+A server can set its own.
+
+### Images
+
+libvips 8.15.1, one thread, untrusted decoders blocked,
+a preview of 4096 pixels:
+
+| File | Time | Resident at most | Address-space cap it passes |
+|---|---|---|---|
+| TIFF, 798 MB, 22040 x 12059, uncompressed | 2.95 s | 147 MB | 512; 256 with two arenas |
+| TIFF, 644 MB, 15000 x 15000, in strips | 3.7 s | 101 MB | 512 |
+| TIFF, 873 MB, 15000 x 15000, a tiled pyramid | 0.05 s | 24 MB | 512 |
+| TIFF, 349 MB, 15000 x 15000, one LZW strip | 3.9 s | 452 MB | 768 |
+| WebP, 44 MB, 10000 x 10000 | 7.0 s | 202 MB | 768; 640 with two arenas |
+| HEIC, 40 MB, 8000 x 6000 | 9.0 s | 338 MB | 768; 640 with two arenas |
+
+The cap, in MB, counts more than the memory a render uses:
+mapped libraries, thread stacks,
+and glibc's malloc arenas, 64 MB reserved for each thread.
+So libvips runs with two arenas, and its cap is 1024 MB.
+Under the cap a render fails at once,
+or crashes, as libheif does under 640 MB.
+The one-strip TIFF in the table, under a cap of 512 MB,
+fails in 0.11 s, is re-striped by `tiffcp` in 2.5 s,
+and its copy renders in 1.0 s within 98 MB.
 
 ## License
 
