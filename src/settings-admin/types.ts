@@ -163,6 +163,8 @@ export interface SettingsState {
 	 * there.
 	 */
 	untrusted: { allowed: boolean, blockable: boolean | null }
+	/** The app's version, as installed. */
+	version: string
 	/** The distribution's family, where it is one the app knows packages for. */
 	platform: 'debian' | 'fedora' | 'rhel' | 'alpine' | 'arch' | null
 }

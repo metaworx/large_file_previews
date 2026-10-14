@@ -3,9 +3,9 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * Whether previews can be rendered: what the server has, the last render
- * that failed, and what is set but not used. Read only; a program's path is
- * set in config.php, and the page says how.
+ * The app's version, and whether previews can be rendered: what the server
+ * has, the last render that failed, and what is set but not used. Read only;
+ * a program's path is set in config.php, and the page says how.
  */
 import { computed } from 'vue'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
@@ -55,6 +55,9 @@ function statusText(status: PrerequisiteItem['status']): string {
 <template>
 	<div class="lfp-status">
 		<h3>{{ t('large_file_previews', 'Status') }}</h3>
+		<p class="lfp-hint lfp-version">
+			{{ t('large_file_previews', 'Large File Previews, v{version}', { version: state.version }) }}
+		</p>
 		<NcNoteCard v-if="state.ready" type="success">
 			{{ t('large_file_previews', 'Everything the app needs is available.') }}
 		</NcNoteCard>

@@ -4,6 +4,13 @@ import StatusSection from './StatusSection.vue'
 import { testState } from './testState'
 
 describe('StatusSection', () => {
+	it('names the app\'s version first', () => {
+		const wrapper = mount(StatusSection, { props: { state: testState() } })
+
+		expect(wrapper.find('.lfp-version').text()).toBe('Large File Previews, v0.1.0')
+		expect(wrapper.find('h3 + p').classes()).toContain('lfp-version')
+	})
+
 	it('says when everything needed is there', () => {
 		const notes = mount(StatusSection, { props: { state: testState() } }).findAllComponents({ name: 'NcNoteCard' })
 

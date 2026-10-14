@@ -23,6 +23,7 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Settings\Admin;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -74,7 +75,8 @@ class SettingsControllerTest
 	{
 		$data = $this->controller( '' )->get()->getData();
 
-		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted' ], array_keys( $data ) );
+		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted', 'version' ], array_keys( $data ) );
+		self::assertSame( '0.1.0', $data['version'] );
 		self::assertSame( 'pdftoppm version 24.02.0', $data['programs'][0]['version'] );
 		self::assertSame( [ 'path' => '/var/tmp/nextcloud', 'overridden' => false ], $data['scratch'] );
 		self::assertSame( [ 'allowed' => false, 'blockable' => null ], $data['untrusted'] );
@@ -290,6 +292,12 @@ class SettingsControllerTest
 
 		$vips = new VipsRenderer( $this->createMock( CommandRunner::class ), $config, $loaders, $binaries, $this->createMock( ScratchDirectory::class ) );
 
+		$apps = $this->createMock( IAppManager::class );
+		$apps->method( 'getAppVersion' )
+		     ->with( 'large_file_previews' )
+		     ->willReturn( '0.1.0' )
+		;
+
 		return new class (
 			$body,
 			$this->createMock( IRequest::class ),
@@ -303,6 +311,7 @@ class SettingsControllerTest
 			$binaries,
 			$scratch,
 			$loaders,
+			$apps,
 			$this->markingL10n(),
 		)
 		    extends

@@ -51,9 +51,9 @@ the first stable release.
   descriptors, a kept path checked before it runs, names and messages
   logged as text.
 
-- *Administration settings → Additional settings*: status, files
-  processed, preview format, limits, failed files, libvips, programs with
-  versions; each setting with its `occ` command, copied with one click.
+- *Administration settings → Additional settings*: the app's version,
+  status, files processed, preview format, limits, failed files,
+  libvips, programs with versions; each setting with its `occ` command.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes, a MIME type's

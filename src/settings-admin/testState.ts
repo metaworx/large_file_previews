@@ -85,6 +85,7 @@ export function testState(): SettingsState {
 		],
 		scratch: { path: '/var/tmp/nextcloud', overridden: false },
 		untrusted: { allowed: false, blockable: true },
+		version: '0.1.0',
 		platform: 'debian',
 	}
 }

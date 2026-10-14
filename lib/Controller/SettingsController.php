@@ -24,6 +24,7 @@ use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
@@ -58,6 +59,7 @@ class SettingsController
 		private readonly BinaryLocator        $binaries,
 		private readonly ScratchDirectory     $scratch,
 		private readonly VipsLoaders          $vips,
+		private readonly IAppManager          $apps,
 		private readonly IL10N                $l10n,
 	)
 	{
@@ -329,6 +331,8 @@ class SettingsController
 				'allowed'   => $this->config->untrustedAllowed(),
 				'blockable' => $this->vips->canBlockUntrusted(),
 			],
+			// The app's own, as installed, for the reader to quote.
+			'version'       => $this->apps->getAppVersion( Application::APP_ID ),
 		];
 	}
 
