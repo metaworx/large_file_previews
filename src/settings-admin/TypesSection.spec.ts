@@ -135,6 +135,16 @@ describe('TypesSection', () => {
 		expect(wrapper.emitted('save')).toEqual([[{ extensions: { tif: { enabled: false } } }]])
 	})
 
+	it('says a type the app never handles is not one, not that it lacks a renderer', () => {
+		const state = testState()
+		state.extensions = [tif({ extension: '7z', mime: 'application/x-7z-compressed', renderer: { program: null, available: false } })]
+
+		const row7z = row(section(state), '[data-extension="7z"]')
+
+		expect(row7z.text()).toContain('Not a type this app handles')
+		expect(row7z.text()).not.toContain('libvips')
+	})
+
 	it('marks an extension that changes nothing', () => {
 		const state = testState()
 		state.extensions = [tif({ extension: 'pdf', mime: 'application/pdf', rule: { enabled: true }, noEffect: true })]

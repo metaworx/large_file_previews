@@ -62,8 +62,9 @@ function processingText(processing: string): string {
 				<td>{{ row.extension === null ? '' : '.' + row.extension }}</td>
 				<td>{{ processingText(row.processing) }}</td>
 				<td>
-					{{ row.renderer.program }}
-					<span v-if="!row.renderer.available" class="lfp-badge">{{ t('large_file_previews', 'not available') }}</span>
+					{{ row.renderer.program ?? '' }}
+					<span v-if="row.renderer.program === null" class="lfp-badge">{{ t('large_file_previews', 'not handled') }}</span>
+					<span v-else-if="!row.renderer.available" class="lfp-badge">{{ t('large_file_previews', 'not available') }}</span>
 				</td>
 				<td>{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span></td>
 				<td>{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span></td>

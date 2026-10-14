@@ -25,9 +25,12 @@ export type RuleChange = {
 	[K in keyof Rule]?: Rule[K] | null
 }
 
-/** The program that renders a type, and whether the server has it. */
+/**
+ * The program that renders a type, and whether the server has it; no
+ * program where the type is not one this app handles at all.
+ */
 export interface Renderer {
-	program: string
+	program: string | null
 	available: boolean
 }
 

@@ -212,6 +212,47 @@ class ConfigurationServiceTest
 		self::assertSame( [ 'tif' => [ 'min_size_mb' => 200 ] ], $this->appValues[ ConfigLexicon::EXTENSIONS ] );
 	}
 
+	/**
+	 * Its files never reach the provider, so a rule for it could only
+	 * mislead.
+	 */
+	public function testAnExtensionOfATypeTheAppDoesNotHandleIsRefused(): void
+	{
+		$service = $this->service( true );
+
+		foreach ( [ '7z' => 'application/x-7z-compressed', 'xyz' => 'of no known type' ] as $extension => $type )
+		{
+			try
+			{
+				$service->setExtensionRule( $extension, new TypeRule( true ) );
+				self::fail( 'No refusal for ' . $extension );
+			}
+			catch ( ConfigurationException $e )
+			{
+				self::assertSame( sprintf( 'Files .%s are %s, a type this app does not handle.', $extension, $type ), $e->getMessage() );
+				self::assertStringStartsWith( '«', $e->hint );
+			}
+		}
+
+		self::assertArrayNotHasKey( ConfigLexicon::EXTENSIONS, $this->appValues );
+	}
+
+	/**
+	 * One written past the service is kept, so it can be seen and removed,
+	 * and reported.
+	 */
+	public function testAStoredRuleForAnUnhandledTypeIsReported(): void
+	{
+		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ '7z' => [ 'enabled' => true ] ];
+		$service                                      = $this->service();
+
+		self::assertArrayHasKey( '7z', $service->extensionRules() );
+		self::assertSame(
+			[ 'extensions.7z: application/x-7z-compressed is not a type this app handles; it has no effect' ],
+			$service->problems(),
+		);
+	}
+
 	public function testAnInvalidExtensionIsRefused(): void
 	{
 		$this->expectExceptionMessage( '"../x" is not a file extension.' );
@@ -313,6 +354,7 @@ class ConfigurationServiceTest
 		return new ConfigurationService(
 			$this->memoryAppConfig(),
 			$marking ? $this->markingL10n() : $this->englishL10n(),
+			$this->mimeDetector(),
 		);
 	}
 }

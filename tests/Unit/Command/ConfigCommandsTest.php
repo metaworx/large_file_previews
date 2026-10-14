@@ -56,7 +56,7 @@ class ConfigCommandsTest
 	{
 		parent::setUp();
 
-		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() );
+		$this->config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() );
 	}
 
 

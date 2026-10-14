@@ -25,7 +25,6 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\Files\IMimeTypeDetector;
 use OCP\IL10N;
 use OCP\IRequest;
 
@@ -54,7 +53,6 @@ class SettingsController
 		private readonly Renderers            $renderers,
 		private readonly PrerequisitesService $prerequisites,
 		private readonly BinaryLocator        $binaries,
-		private readonly IMimeTypeDetector    $mimeTypes,
 		private readonly IL10N                $l10n,
 	)
 	{
@@ -193,11 +191,20 @@ class SettingsController
 	 * Which program renders a MIME type, and whether it is there. A type
 	 * with no renderer yet names the one planned for it.
 	 *
-	 * @return array{program: string, available: bool}
+	 * @return array{program: ?string, available: bool} no program where the provider never sees the type
 	 */
 	private function renderer( ?string $mime ): array
 	{
-		$renderer = $mime === null ? null : $this->renderers->for( $mime );
+		// A type the provider never sees has no renderer, nor a planned one.
+		if ( $mime === null || ! SupportedTypes::matches( $mime ) )
+		{
+			return [
+				'program'   => null,
+				'available' => false,
+			];
+		}
+
+		$renderer = $this->renderers->for( $mime );
 
 		if ( $renderer === null )
 		{
@@ -261,8 +268,7 @@ class SettingsController
 
 		foreach ( $this->config->extensionRules() as $extension => $rule )
 		{
-			$mime       = $this->mimeTypes->detectPath( 'file.' . $extension );
-			$mime       = is_string( $mime ) ? $mime : null;
+			$mime       = $this->config->mimeOf( $extension );
 			$resolution = $this->policy->resolve( $mime, $extension );
 			$renderer   = $this->renderer( $mime );
 			$byMime     = $mime !== null && $this->policy->resolve( $mime, null )->enabled;
@@ -315,7 +321,7 @@ class SettingsController
 	 * One row of what the configuration resolves to: processing, renderer,
 	 * and each size with the level it came from.
 	 *
-	 * @param array{program: string, available: bool} $renderer
+	 * @param array{program: ?string, available: bool} $renderer
 	 * @return array<string, mixed>
 	 */
 	private static function activeRow(

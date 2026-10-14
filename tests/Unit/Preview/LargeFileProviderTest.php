@@ -273,7 +273,7 @@ class LargeFileProviderTest
 		            )
 		;
 
-		$config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n() );
+		$config = new ConfigurationService( $this->memoryAppConfig(), $this->englishL10n(), $this->mimeDetector() );
 
 		$time = $this->createMock( ITimeFactory::class );
 		$time->method( 'getTime' )

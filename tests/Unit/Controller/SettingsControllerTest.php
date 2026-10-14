@@ -114,6 +114,20 @@ class SettingsControllerTest
 	 * excluded, never; enabled with no size where its MIME type is on, it
 	 * changes nothing, and says so.
 	 */
+	/**
+	 * A rule from before for a type the provider never sees names no
+	 * renderer at all, not a planned one.
+	 */
+	public function testAnUnhandledTypeHasNoRenderer(): void
+	{
+		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ '7z' => [ 'enabled' => true ] ];
+
+		$extensions = $this->controller( '' )->get()->getData()['extensions'];
+
+		self::assertSame( [ 'program' => null, 'available' => false ], $extensions[0]['renderer'] );
+		self::assertSame( 'application/x-7z-compressed', $extensions[0]['mime'] );
+	}
+
 	public function testExtensionsInTheActiveListAndTheirEffect(): void
 	{
 		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [
@@ -122,7 +136,7 @@ class SettingsControllerTest
 			'ai'  => [ 'enabled' => false ],
 		];
 
-		$data       = $this->controller( '', [ 'tif' => 'image/tiff', 'pdf' => 'application/pdf', 'ai' => 'application/illustrator' ] )->get()->getData();
+		$data       = $this->controller( '' )->get()->getData();
 		$extensions = array_column( $data['extensions'], null, 'extension' );
 		$active     = array_column( array_filter( $data['active'], static fn( array $row ): bool => $row['extension'] !== null ), null, 'extension' );
 
@@ -184,23 +198,9 @@ class SettingsControllerTest
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":{"colour":1}}}' )->update()->getStatus() );
 	}
 
-	/**
-	 * @param array<string, string> $mimeByExtension what Nextcloud would say each extension is
-	 */
-	private function controller(
-		string $body,
-		array  $mimeByExtension = [],
-	): SettingsController
+	private function controller( string $body ): SettingsController
 	{
-		$config   = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n() );
-		$detector = $this->createMock( IMimeTypeDetector::class );
-		$detector->method( 'detectPath' )
-		         ->willReturnCallback(
-			         static fn(
-				         string $path,
-			         ): string => $mimeByExtension[ substr( $path, 5 ) ] ?? 'image/tiff',
-		         )
-		;
+		$config = new ConfigurationService( $this->memoryAppConfig(), $this->markingL10n(), $this->mimeDetector() );
 
 		$prerequisites = $this->createMock( PrerequisitesService::class );
 		$prerequisites->method( 'check' )
@@ -230,7 +230,6 @@ class SettingsControllerTest
 			new Renderers( new PopplerRenderer( $this->createMock( CommandRunner::class ), $this->createMock( PageProbe::class ) ) ),
 			$prerequisites,
 			$binaries,
-			$detector,
 			$this->markingL10n(),
 		)
 		    extends

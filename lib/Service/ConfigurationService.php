@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Config\Limits;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Config\ValueParser;
+use OCP\Files\IMimeTypeDetector;
 use OCP\IAppConfig;
 use OCP\IL10N;
 
@@ -53,8 +54,9 @@ class ConfigurationService
 //  constructor
 
 	public function __construct(
-		private readonly IAppConfig $appConfig,
-		private readonly IL10N      $l10n,
+		private readonly IAppConfig        $appConfig,
+		private readonly IL10N             $l10n,
+		private readonly IMimeTypeDetector $mimeTypes,
 	)
 	{
 	}
@@ -143,6 +145,19 @@ class ConfigurationService
 		$this->load();
 
 		return $this->problems;
+	}
+
+	/**
+	 * The MIME type Nextcloud gives files of an extension, or null where it
+	 * knows none.
+	 */
+	public function mimeOf( string $extension ): ?string
+	{
+		$mime = $this->mimeTypes->detectPath( 'file.' . self::normaliseExtension( $extension ) );
+
+		return is_string( $mime ) && $mime !== '' && $mime !== 'application/octet-stream'
+			? $mime
+			: null;
 	}
 
 	/**
@@ -287,6 +302,18 @@ class ConfigurationService
 	): TypeRule
 	{
 		$extension = $this->validExtension( $extension );
+		$mime      = $this->mimeOf( $extension );
+
+		// A rule for a type the provider never sees could only mislead.
+		if ( $mime === null || ! SupportedTypes::matches( $mime ) )
+		{
+			$type = $mime ?? 'of no known type';
+
+			throw new ConfigurationException(
+				sprintf( 'Files .%s are %s, a type this app does not handle.', $extension, $type ),
+				$this->l10n->t( 'Files .%1$s are %2$s, a type this app does not handle.', [ $extension, $type ] ),
+			);
+		}
 
 		$rule = ( $this->extensionRules()[ $extension ] ?? new TypeRule() )->with( $changes );
 		$this->refuseInvalid( $rule );
@@ -460,6 +487,19 @@ class ConfigurationService
 				$this->problems[] = sprintf( '%s.%s: %s; ignored', ConfigLexicon::EXTENSIONS, $extension, $rule );
 
 				continue;
+			}
+
+			// Kept, so that it can be seen and removed; it changes nothing.
+			$mime = $this->mimeOf( $extension );
+
+			if ( $mime === null || ! SupportedTypes::matches( $mime ) )
+			{
+				$this->problems[] = sprintf(
+					'%s.%s: %s is not a type this app handles; it has no effect',
+					ConfigLexicon::EXTENSIONS,
+					$extension,
+					$mime ?? 'no known type',
+				);
 			}
 
 			$extensionRules[ $extension ] = $rule;

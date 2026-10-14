@@ -32,7 +32,9 @@ const emit = defineEmits<{
 const newExtension = ref('')
 
 function noRenderer(renderer: Renderer): string {
-	return t('large_file_previews', 'No suitable renderer ({program})', { program: renderer.program })
+	return renderer.program === null
+		? t('large_file_previews', 'Not a type this app handles')
+		: t('large_file_previews', 'No suitable renderer ({program})', { program: renderer.program })
 }
 
 function differs(rule: Rule, shipped: Rule): boolean {
