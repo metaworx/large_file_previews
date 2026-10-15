@@ -90,6 +90,8 @@ OC.L10N.register(
     "Program" : "Programm",
     "Programs" : "Programme",
     "Programs found again." : "Programme erneut gesucht.",
+    "Providers" : "Anbieter",
+    "Providers:" : "Anbieter:",
     "Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker." : "Erhöht den Wert, nach dem der Kernel Prozesse beendet, wenn der Speicher ausgeht, sodass ein Rendervorgang vor einem Webserver-Prozess beendet wird.",
     "Remove" : "Entfernen",
     "Render a scanned page at its own resolution, not enlarged" : "Eine gescannte Seite in ihrer eigenen Auflösung rendern, nicht vergrößert",

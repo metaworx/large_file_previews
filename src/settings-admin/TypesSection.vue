@@ -13,7 +13,7 @@
  * is processed". Each rule's row is a RuleRow; what each part means is
  * behind its ⓘ.
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
@@ -25,7 +25,7 @@ import RuleRow from './RuleRow.vue'
 import { scalarCommand } from './occ'
 import { t } from '../l10n'
 import { scalarChange } from './types'
-import type { Changes, Inherited, Rule, RuleChange, SettingsState } from './types'
+import type { Changes, Inherited, Provider, Rule, RuleChange, SettingsState } from './types'
 
 const props = defineProps<{
 	state: SettingsState
@@ -45,6 +45,11 @@ function inheritsFrom(below: Rule | null): Inherited {
 		max_size_mb: below?.max_size_mb ?? props.state.scalars.max_size_mb.value,
 	}
 }
+
+/** Each MIME type's preview providers, for the rows of what is processed. */
+const providersByMime = computed<Record<string, Provider[]>>(() => Object.fromEntries(
+	props.state.mimetypes.map((row) => [row.mime, row.providers]),
+))
 
 /** An extension's MIME type's rule in force, where the app handles the type. */
 function mimeRule(mime: string | null): Rule | null {
@@ -77,7 +82,7 @@ function addExtension(): void {
 		</h3>
 
 		<h4>{{ t('large_file_previews', 'What is processed') }}</h4>
-		<ActiveTable :rows="state.active" />
+		<ActiveTable :rows="state.active" :providers="providersByMime" />
 
 		<h4>{{ t('large_file_previews', 'Defaults') }}</h4>
 		<div class="lfp-fields">
@@ -153,6 +158,7 @@ function addExtension(): void {
 					:stored="row.stored"
 					:shipped="row.default"
 					:inherits="inheritsFrom(row.default)"
+					:providers="row.providers"
 					:renderer="row.renderer"
 					:saving="saving"
 					@save="saveMime(row.mime, $event)" />

@@ -20,10 +20,11 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
+import ProviderList from './ProviderList.vue'
 import { ruleCommand } from './occ'
 import { rendererProblem } from './renderer'
 import { t } from '../l10n'
-import type { Inherited, Renderer, Rule, RuleChange } from './types'
+import type { Inherited, Provider, Renderer, Rule, RuleChange } from './types'
 
 const props = withDefaults(defineProps<{
 	kind: 'mime' | 'ext'
@@ -44,12 +45,15 @@ const props = withDefaults(defineProps<{
 	noEffect?: boolean
 	/** What each size field falls back to where nothing is set at this level. */
 	inherits?: Inherited | null
+	/** A MIME type's preview providers, in the order Nextcloud tries them. */
+	providers?: Provider[] | null
 }>(), {
 	shipped: null,
 	stored: null,
 	mime: null,
 	noEffect: false,
 	inherits: null,
+	providers: null,
 })
 
 const emit = defineEmits<{
@@ -102,6 +106,10 @@ function fieldId(field: string): string {
 			<template v-else>
 				{{ name }}
 			</template>
+			<span v-if="providers !== null" class="lfp-hint lfp-rule-providers">
+				{{ t('large_file_previews', 'Providers:') }}
+				<ProviderList :providers="providers" />
+			</span>
 			<span v-if="rendererProblem(renderer) !== null" class="lfp-note lfp-note--error">{{ rendererProblem(renderer)?.text }}</span>
 			<span v-else-if="noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
 			<OccCommand :command="ruleCommand(kind, name, own)" />

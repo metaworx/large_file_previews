@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TypesSection from './TypesSection.vue'
-import { testState, withPdfOn } from './testState'
+import { OURS, testState, withPdfOn } from './testState'
 import type { ExtensionRow, SettingsState } from './types'
 
 function section(state: SettingsState = testState()) {
@@ -102,6 +102,27 @@ describe('TypesSection', () => {
 		expect(active.text()).toContain('application/pdf')
 		expect(active.text()).toContain('pdftoppm')
 		expect(active.text()).toContain('no limit (default)')
+		expect(active.find('tbody tr').findComponent({ name: 'ProviderList' }).props('providers')).toEqual([OURS])
+	})
+
+	it('lists a MIME type\'s providers beneath its name, amber where one comes before this app', () => {
+		const state = testState()
+		state.mimetypes[0].providers = [
+			{ name: 'ImaginaryPDF', class: 'OC\\Preview\\ImaginaryPDF', ours: false, before: true },
+			{ ...OURS },
+		]
+		const providers = row(section(state), '[data-mime="application/pdf"] .lfp-rule-providers')
+
+		expect(providers.text()).toContain('Providers:')
+		expect(providers.findAll('.lfp-provider').map((name) => name.text())).toEqual(['ImaginaryPDF', 'Large File Previews'])
+		expect(providers.find('.lfp-provider--before').attributes('title')).toBe('OC\\Preview\\ImaginaryPDF')
+	})
+
+	it('lists no providers for an extension: they are its MIME type\'s', () => {
+		const state = testState()
+		state.extensions = [tif()]
+
+		expect(row(section(state), '[data-extension="tif"] .lfp-rule-providers').exists()).toBe(false)
 	})
 
 	it('names a missing renderer\'s program, with a badge saying it is not available', () => {

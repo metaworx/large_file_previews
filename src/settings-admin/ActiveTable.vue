@@ -8,13 +8,18 @@
  * apply, each with the level it comes from. Computed by the server, by the
  * resolver the preview provider uses, and sent again with every save.
  */
+import ProviderList from './ProviderList.vue'
 import { rendererProblem } from './renderer'
 import { t } from '../l10n'
-import type { ActiveRow, Sourced } from './types'
+import type { ActiveRow, Provider, Sourced } from './types'
 
-defineProps<{
+withDefaults(defineProps<{
 	rows: ActiveRow[]
-}>()
+	/** Each MIME type's preview providers, in the order Nextcloud tries them. */
+	providers?: Record<string, Provider[]>
+}>(), {
+	providers: () => ({}),
+})
 
 function sizeText(value: number): string {
 	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
@@ -53,6 +58,7 @@ function processingText(processing: ActiveRow['processing']): string {
 				<th>{{ t('large_file_previews', 'Renderer') }}</th>
 				<th>{{ t('large_file_previews', 'Minimum, MiB') }}</th>
 				<th>{{ t('large_file_previews', 'Maximum, MiB') }}</th>
+				<th>{{ t('large_file_previews', 'Providers') }}</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -68,9 +74,10 @@ function processingText(processing: ActiveRow['processing']): string {
 				</td>
 				<td>{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span></td>
 				<td>{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span></td>
+				<td><ProviderList :providers="providers[row.mime ?? ''] ?? []" /></td>
 			</tr>
 			<tr v-if="rows.length === 0">
-				<td colspan="6" class="lfp-hint">
+				<td colspan="7" class="lfp-hint">
 					{{ t('large_file_previews', 'Nothing is processed: every MIME type is disabled.') }}
 				</td>
 			</tr>

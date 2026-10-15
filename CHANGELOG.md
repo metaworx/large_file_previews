@@ -53,8 +53,8 @@ the first stable release.
   logged as text.
 
 - *Administration settings → Additional settings*: version, status (amber
-  if nothing is processed), files processed, previews, limits, failures,
-  libvips, programs; as stored, empty sizes inherited; `occ`, ⓘ help.
+  if nothing is processed), types and their providers, previews, limits,
+  failures, libvips, programs; empty sizes inherited; `occ`, ⓘ help.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   each type's preview providers, what a type or file resolves to, and

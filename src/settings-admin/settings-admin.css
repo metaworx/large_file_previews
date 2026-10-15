@@ -39,6 +39,11 @@
 	min-width: 18rem;
 }
 
+/* A MIME type's providers, a line of their own beneath its name. */
+.lfp-settings .lfp-rule-providers {
+	display: block;
+}
+
 .lfp-settings .lfp-limit {
 	margin-block-end: calc(var(--default-grid-baseline) * 4);
 }

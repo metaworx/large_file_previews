@@ -4,7 +4,10 @@
  *
  * A settings state as the server answers it out of the box, for specs.
  */
-import type { ActiveRow, MimeRow, Renderer, Scalar, SettingsState } from './types'
+import type { ActiveRow, MimeRow, Provider, Renderer, Scalar, SettingsState } from './types'
+
+/** This app's provider, the first and only one for a type on a bare server. */
+export const OURS: Provider = { name: 'Large File Previews', class: 'OCA\\LargeFilePreviews\\Preview\\LargeFileProvider', ours: true, before: false }
 
 const POPPLER: Renderer = { program: 'pdftoppm', available: true, unsupported: null }
 const VIPS: Renderer = { program: 'vipsthumbnail', available: false, unsupported: null }
@@ -24,6 +27,7 @@ function pdf(): MimeRow {
 		stored: {},
 		default: { enabled: false },
 		renderer: { ...POPPLER },
+		providers: [{ ...OURS }],
 	}
 }
 
@@ -34,6 +38,7 @@ function tiff(): MimeRow {
 		stored: {},
 		default: { enabled: false, min_size_mb: 50 },
 		renderer: { ...VIPS },
+		providers: [{ ...OURS }],
 	}
 }
 

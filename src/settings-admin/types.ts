@@ -92,6 +92,18 @@ export interface ActiveRow {
 }
 
 /**
+ * A preview provider Nextcloud tries for a type: named by its class's short
+ * name, this app's by the app's name, and marked where it is asked before
+ * this app's, where it may take a file the app would have taken.
+ */
+export interface Provider {
+	name: string
+	class: string
+	ours: boolean
+	before: boolean
+}
+
+/**
  * What a rule's size fields fall back to where nothing is set at its level:
  * for a MIME type, what it ships with, else the default; for an extension,
  * its MIME type's size in force, else the default.
@@ -109,6 +121,8 @@ export interface MimeRow {
 	stored: Rule
 	default: Rule
 	renderer: Renderer
+	/** The preview providers Nextcloud tries for the type, in its order. */
+	providers: Provider[]
 }
 
 export interface ExtensionRow {

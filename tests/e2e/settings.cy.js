@@ -143,6 +143,14 @@ describe( 'The settings page', () => {
 		} )
 	} )
 
+	it( 'lists the providers Nextcloud tries for a type, this app first', () => {
+		cy.get( `tr[data-mime="${ MIME }"] .lfp-rule-providers .lfp-provider` ).first()
+			.should( 'have.text', 'Large File Previews' )
+			.and( 'have.attr', 'title', 'OCA\\LargeFilePreviews\\Preview\\LargeFileProvider' )
+			.and( 'not.have.class', 'lfp-provider--before' )
+		cy.get( '.lfp-provider--before' ).should( 'not.exist' )
+	} )
+
 	it( 'keeps every help icon clear of every Save button', () => {
 		cy.get( '.lfp-help-icon' ).should( 'have.length.greaterThan', 0 )
 		cy.get( '.lfp-number__save' ).should( 'have.length.greaterThan', 0 )

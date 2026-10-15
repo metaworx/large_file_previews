@@ -293,6 +293,12 @@ msgstr "Programme"
 msgid "Programs found again."
 msgstr "Programme erneut gesucht."
 
+msgid "Providers"
+msgstr "Anbieter"
+
+msgid "Providers:"
+msgstr "Anbieter:"
+
 msgid "Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker."
 msgstr "Erhöht den Wert, nach dem der Kernel Prozesse beendet, wenn der Speicher ausgeht, sodass ein Rendervorgang vor einem Webserver-Prozess beendet wird."
 
