@@ -41,6 +41,13 @@ Nur Dateien auf lokalem, unverschlüsseltem Speicher werden gerendert. Alles and
 	<website>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews</website>
 	<bugs>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/work_items</bugs>
 	<repository type="git">https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews.git</repository>
+<!-- BEGIN GENERATED RELEASE-PIN - do not edit; run "changelog.sh cut" -->
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Settings.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/What-Is-Processed.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/MIME-Types.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Extensions.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Limits.png</screenshot>
+<!-- END GENERATED RELEASE-PIN -->
 	<dependencies>
 		<php min-version="8.2"/>
 		<database>sqlite</database>

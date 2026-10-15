@@ -14,7 +14,7 @@ the first stable release.
 ### Added
 
 - `appinfo/info.xml`: the app, `large_file_previews`, for Nextcloud 33
-  to 35 and PHP 8.2 and later.
+  to 35 and PHP 8.2 and later, with screenshots of its settings.
 
 - `img/app.svg` and `img/app-dark.svg`: the app's icon, a picture with
   an arrow enlarging it.

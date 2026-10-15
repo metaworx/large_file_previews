@@ -17,6 +17,7 @@ so any one of them runs alone.
 |------|----------------|
 | `app-enable.cy.js` | The app enabled and disabled on the Apps page, as `occ` sees it, and the settings showing the version the server runs; left enabled. |
 | `l10n-german.cy.js` | The settings page in `de` and in `de_DE`. Sets the administrator's language, and lifts `force_language` for its run; restores both. |
+| `screenshots.cy.js` | Not a test: the screenshot set of `docs/Screenshots/`, as a spec. Skips itself unless `CYPRESS_capture=1`; see *Taking the screenshots*. |
 | `settings.cy.js` | `7z` refused with the server's message; `heic`, whose type is off, added and listed in *What is processed*, then removed; `pdf` marked as having no effect; a stored minimum shown as stored after a reload, the shipped one as the placeholder, and `occ` reading the same; no help icon over a *Save* button. |
 | `store/install-from-apps-page.cy.js` | The install check's: the release installed through the Apps page from the store the server is pointed at, until `occ` reports it enabled at the version under test. Skips itself unless `CYPRESS_storeInstall` names that version. |
 
@@ -49,6 +50,22 @@ npx cypress run
 ```
 
 One spec: add `--spec tests/e2e/<spec>.cy.js`.
+
+### Taking the screenshots
+
+`screenshots.cy.js` sets the light theme and a few rules,
+takes the set into `docs/Screenshots/`, and puts both back.
+It runs only when asked:
+
+```bash
+CYPRESS_capture=1 \
+CYPRESS_occ="$HOME/projects/nextcloud_testing/scripts/nc-test 34-lfp occ" \
+npx cypress run --spec tests/e2e/screenshots.cy.js
+```
+
+`appinfo/info.xml` names each image at the release's tag,
+in a block `changelog.sh cut` moves to the next release;
+a new image is added there and to the README.
 
 Cypress is pinned to an exact version in `package.json`,
 so that its binary, about 500 MB, is the one already in `~/.cache/Cypress`

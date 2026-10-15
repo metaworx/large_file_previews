@@ -41,6 +41,39 @@ and copied only to give a TIFF in one large strip a second chance.
 - It does not change the order of other providers, and renders no video:
   Nextcloud's own video provider already reads the local path.
 
+## Screenshots
+
+The settings, under *Administration settings → Additional settings*,
+open with the app's status and what it needs:
+
+![The settings page][shot-settings]
+
+What is processed: PDF, Illustrator, TIFF from 50 MiB,
+HEIC through its extension, and `.tif` excluded:
+
+![What is processed][shot-processed]
+
+The MIME types, each with its `occ` command;
+JPEG 2000 and JPEG XL blocked, their decoders untrusted:
+
+![The MIME types][shot-mime]
+
+The extensions: `.heic` enabled from 20 MiB, `.tif` excluded:
+
+![The extensions][shot-extensions]
+
+The limits each render runs under:
+
+![The limits][shot-limits]
+
+`tests/e2e/screenshots.cy.js` takes them; `tests/e2e/README.md` says how.
+
+[shot-settings]: docs/Screenshots/Settings.png
+[shot-processed]: docs/Screenshots/What-Is-Processed.png
+[shot-mime]: docs/Screenshots/MIME-Types.png
+[shot-extensions]: docs/Screenshots/Extensions.png
+[shot-limits]: docs/Screenshots/Limits.png
+
 ## Requirements
 
 - Nextcloud 33 to 35, PHP 8.2 or later,
