@@ -18,7 +18,21 @@ runs:
   steps:
     # node-deps installs with CYPRESS_INSTALL_BINARY=0, so that no other job
     # downloads it, and npm may not run the package's install script at all:
-    # the binary of the pinned version is fetched here, once.
+    # the binary of the pinned version, about 240 MB, comes from GitHub's
+    # cache, keyed on that version, and from Cypress's server only where the
+    # cache has none yet - once per version rather than once per job.
+    - name: Cypress version
+      id: cypress
+      shell: bash
+      run: echo "version=$(node -p "require('./package.json').devDependencies.cypress")" >> "$GITHUB_OUTPUT"
+
+    - name: Cypress binary from the cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/Cypress
+        key: cypress-${{ runner.os }}-${{ steps.cypress.outputs.version }}
+
+    # A no-op where the cache brought the binary.
     - name: Cypress binary
       shell: bash
       run: npx cypress install

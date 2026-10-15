@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.5.0)
+# CI Conventions — Large File Previews (v1.5.1)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -167,9 +167,12 @@ A version tag whose lint, PHPUnit and Cypress jobs pass runs `publish.yml`:
   the server action is told `database: mysql`.
 - **Node 24 and `npm ci`** come from `.github/actions/node-deps`,
   with npm's cache keyed on the lock file,
-  and without Cypress's binary (`CYPRESS_INSTALL_BINARY=0`), about 500 MB:
-  `.github/actions/cypress-run` fetches it in the one job that runs it,
-  whether or not npm ran the package's install script.
+  and without Cypress's binary (`CYPRESS_INSTALL_BINARY=0`), about 240 MB:
+  `.github/actions/cypress-run` restores it from GitHub's cache,
+  keyed on the pinned version,
+  and downloads it from Cypress's server only where the cache has none yet,
+  once per version rather than once per job.
+  A download cut off midway failed a run before the cache.
 - **Cypress is pinned to an exact version** in `package.json`,
   so that a developer's cached binary stays the one used.
 - **The lint job checks out the submodule and the whole history**:

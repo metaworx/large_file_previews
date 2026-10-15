@@ -68,8 +68,9 @@ in a block `changelog.sh cut` moves to the next release;
 a new image is added there and to the README.
 
 Cypress is pinned to an exact version in `package.json`,
-so that its binary, about 500 MB, is the one already in `~/.cache/Cypress`
-rather than a newer one downloaded.
+so that its binary, about 240 MB to download and 360 MB unpacked,
+is the one already in `~/.cache/Cypress` rather than a newer one downloaded.
+In CI it comes from GitHub's cache, keyed on that version.
 
 ## What the support file does
 
