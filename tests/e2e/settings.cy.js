@@ -10,7 +10,7 @@ const EXTENSIONS = [ '7z', 'heic', 'pdf' ]
 // A type that ships a minimum of its own, 50 MiB: the field shows what is
 // stored, and the shipped value only as its placeholder.
 const MIME = 'image/tiff'
-const SHIPPED_MIN = '50'
+const SHIPPED_MIN = '50 (inherited)'
 
 // @nextcloud/dialogs' toast container; its class is a CSS-module hash, so
 // it is matched by the stable half of the name, as src/toast.css does.
@@ -75,6 +75,10 @@ describe( 'The settings page', () => {
 		cy.get( 'tr[data-extension="heic"]', { timeout: FIND_TIMEOUT } )
 			.should( 'contain', 'image/heic' )
 			.and( 'contain', 'enabled' )
+		// Its sizes are empty, and inherit HEIC's: a minimum of 50 MiB, no
+		// maximum.
+		cy.get( 'input[id="lfp-min-ext-heic"]' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '50 (inherited)' )
+		cy.get( 'input[id="lfp-max-ext-heic"]' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', 'no limit (inherited)' )
 		cy.get( '.lfp-active tbody tr' ).filter( ':contains(".heic")' )
 			.should( 'have.length', 1 )
 			.and( 'contain', 'image/heic' )

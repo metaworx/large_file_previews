@@ -514,3 +514,6 @@ msgstr ""
 #, php-format
 msgid "the program %s is missing"
 msgstr ""
+
+msgid "{value} (inherited)"
+msgstr ""

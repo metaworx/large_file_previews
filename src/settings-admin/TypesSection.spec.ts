@@ -12,6 +12,15 @@ function row(wrapper: ReturnType<typeof section>, selector: string) {
 	return wrapper.find(selector)
 }
 
+/** The placeholders of a row's size fields, minimum first. */
+function placeholders(wrapper: ReturnType<typeof section>, selector: string): unknown[] {
+	const found: unknown[] = []
+	for (const field of row(wrapper, selector).findAllComponents({ name: 'NumberField' })) {
+		found.push(field.props('placeholder'))
+	}
+	return found
+}
+
 function tif(extra: Partial<ExtensionRow> = {}): ExtensionRow {
 	return {
 		extension: 'tif',
@@ -43,8 +52,32 @@ describe('TypesSection', () => {
 		const fields = row(section(state), '[data-mime="image/tiff"]').findAllComponents({ name: 'NumberField' })
 
 		expect(fields[0].props('value')).toBeNull()
-		expect(fields[0].props('placeholder')).toBe('50')
+		expect(fields[0].props('placeholder')).toBe('50 (inherited)')
 		expect(fields[1].props('value')).toBe(900)
+	})
+
+	it('shows what a MIME type\'s empty fields inherit: what it ships with, else the default', () => {
+		expect(placeholders(section(), '[data-mime="application/pdf"]')).toEqual(['0 (inherited)', 'no limit (inherited)'])
+	})
+
+	it('shows what an extension\'s empty fields inherit: its MIME type\'s size in force, else the default', () => {
+		const state = testState()
+		state.mimetypes[1].rule = { enabled: true, min_size_mb: 70 }
+		state.extensions = [
+			tif({ rule: { enabled: true } }),
+			tif({ extension: '7z', mime: 'application/x-7z-compressed', rule: { enabled: true } }),
+		]
+		const wrapper = section(state)
+
+		expect(placeholders(wrapper, '[data-extension="tif"]')).toEqual(['70 (inherited)', 'no limit (inherited)'])
+		expect(placeholders(wrapper, '[data-extension="7z"]')).toEqual(['0 (inherited)', 'no limit (inherited)'])
+	})
+
+	it('keeps a rule\'s size labels off its fields, where they would cover the placeholder', () => {
+		for (const field of row(section(), '[data-mime="application/pdf"]').findAllComponents({ name: 'NumberField' })) {
+			expect(field.props('labelOutside')).toBe(true)
+			expect(field.find('input').attributes('aria-label')).toBe(field.props('label'))
+		}
 	})
 
 	it('gives an extension the command for its rule', () => {

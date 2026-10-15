@@ -91,6 +91,16 @@ export interface ActiveRow {
 	max_size_mb: Sourced<number>
 }
 
+/**
+ * What a rule's size fields fall back to where nothing is set at its level:
+ * for a MIME type, what it ships with, else the default; for an extension,
+ * its MIME type's size in force, else the default.
+ */
+export interface Inherited {
+	min_size_mb: number
+	max_size_mb: number
+}
+
 export interface MimeRow {
 	mime: string
 	/** The rule in force: the shipped default with what is stored laid over it. */

@@ -7,7 +7,9 @@
  * scanned pages, each MIME type and each extension.
  *
  * Each table shows only what is set at its own level; an empty size field
- * is not set there. What applies in the end is the table at the top, "What
+ * is not set there, and its placeholder says what it inherits: a MIME type
+ * what it ships with, an extension its MIME type's size, each else the
+ * default. What applies in the end is the table at the top, "What
  * is processed". Each rule's row is a RuleRow; what each part means is
  * behind its ⓘ.
  */
@@ -23,9 +25,9 @@ import RuleRow from './RuleRow.vue'
 import { scalarCommand } from './occ'
 import { t } from '../l10n'
 import { scalarChange } from './types'
-import type { Changes, RuleChange, SettingsState } from './types'
+import type { Changes, Inherited, Rule, RuleChange, SettingsState } from './types'
 
-defineProps<{
+const props = defineProps<{
 	state: SettingsState
 	saving: boolean
 }>()
@@ -35,6 +37,19 @@ const emit = defineEmits<{
 }>()
 
 const newExtension = ref('')
+
+/** What a rule's empty size fields inherit: the level below's sizes, else the defaults. */
+function inheritsFrom(below: Rule | null): Inherited {
+	return {
+		min_size_mb: below?.min_size_mb ?? props.state.scalars.min_size_mb.value,
+		max_size_mb: below?.max_size_mb ?? props.state.scalars.max_size_mb.value,
+	}
+}
+
+/** An extension's MIME type's rule in force, where the app handles the type. */
+function mimeRule(mime: string | null): Rule | null {
+	return props.state.mimetypes.find((row) => row.mime === mime)?.rule ?? null
+}
 
 function saveMime(mime: string, change: RuleChange | null): void {
 	emit('save', { mimetypes: { [mime]: change } })
@@ -137,6 +152,7 @@ function addExtension(): void {
 					:rule="row.rule"
 					:stored="row.stored"
 					:shipped="row.default"
+					:inherits="inheritsFrom(row.default)"
 					:renderer="row.renderer"
 					:saving="saving"
 					@save="saveMime(row.mime, $event)" />
@@ -166,6 +182,7 @@ function addExtension(): void {
 					:name="row.extension"
 					:mime="row.mime"
 					:rule="row.rule"
+					:inherits="inheritsFrom(mimeRule(row.mime))"
 					:renderer="row.renderer"
 					:no-effect="row.noEffect"
 					:saving="saving"

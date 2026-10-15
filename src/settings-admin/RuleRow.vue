@@ -10,6 +10,10 @@
  *
  * A MIME type is enabled or disabled, and resets to what it ships with; an
  * extension is enabled, excluded, or as its MIME type, and is removed.
+ *
+ * A size field shows what is set at this level, and where nothing is, what
+ * it inherits as its placeholder: "50 (inherited)". The column header names
+ * the field, so its label stays off it, where it would cover the placeholder.
  */
 import { computed } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -19,7 +23,7 @@ import OccCommand from './OccCommand.vue'
 import { ruleCommand } from './occ'
 import { rendererProblem } from './renderer'
 import { t } from '../l10n'
-import type { Renderer, Rule, RuleChange } from './types'
+import type { Inherited, Renderer, Rule, RuleChange } from './types'
 
 const props = withDefaults(defineProps<{
 	kind: 'mime' | 'ext'
@@ -38,11 +42,14 @@ const props = withDefaults(defineProps<{
 	mime?: string | null
 	/** An extension selected anyway by its MIME type, with no size of its own. */
 	noEffect?: boolean
+	/** What each size field falls back to where nothing is set at this level. */
+	inherits?: Inherited | null
 }>(), {
 	shipped: null,
 	stored: null,
 	mime: null,
 	noEffect: false,
+	inherits: null,
 })
 
 const emit = defineEmits<{
@@ -69,16 +76,15 @@ function switchText(): string {
 /** What is set at this level: a MIME type's stored fields, an extension's rule. */
 const own = computed<Rule>(() => props.stored ?? props.rule)
 
-/**
- * A MIME type's size in force, for a field left empty to show as what it
- * follows; an extension's comes from its MIME type, which the row does not
- * hold.
- */
-function inherited(value: number | undefined): string | null {
-	if (props.stored === null || value === undefined) {
+/** What a size field left empty inherits, as its placeholder. */
+function inherited(field: keyof Inherited): string | null {
+	if (props.inherits === null) {
 		return null
 	}
-	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
+	const value = props.inherits[field]
+	return t('large_file_previews', '{value} (inherited)', {
+		value: value === -1 ? t('large_file_previews', 'no limit') : String(value),
+	})
 }
 
 function fieldId(field: string): string {
@@ -88,7 +94,7 @@ function fieldId(field: string): string {
 
 <template>
 	<tr :class="{ 'lfp-unavailable': !renderer.available }">
-		<td>
+		<td class="lfp-rule-name">
 			<template v-if="kind === 'ext'">
 				.{{ name }}
 				<span class="lfp-hint">{{ mime ?? '' }}</span>
@@ -112,10 +118,11 @@ function fieldId(field: string): string {
 			<NumberField :id="fieldId('min')"
 				:label="t('large_file_previews', 'Minimum')"
 				:value="own.min_size_mb ?? null"
-				:placeholder="inherited(rule.min_size_mb)"
+				:placeholder="inherited('min_size_mb')"
 				:min="0"
 				clearable
 				narrow
+				label-outside
 				:disabled="saving || !renderer.available"
 				@save="emit('save', { min_size_mb: $event })" />
 		</td>
@@ -123,10 +130,11 @@ function fieldId(field: string): string {
 			<NumberField :id="fieldId('max')"
 				:label="t('large_file_previews', 'Maximum')"
 				:value="own.max_size_mb ?? null"
-				:placeholder="inherited(rule.max_size_mb)"
+				:placeholder="inherited('max_size_mb')"
 				:min="-1"
 				clearable
 				narrow
+				label-outside
 				:disabled="saving || !renderer.available"
 				@save="emit('save', { max_size_mb: $event })" />
 		</td>

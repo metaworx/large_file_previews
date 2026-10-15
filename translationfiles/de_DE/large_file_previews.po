@@ -514,3 +514,6 @@ msgstr "die PHP-Funktion %s ist deaktiviert"
 #, php-format
 msgid "the program %s is missing"
 msgstr "das Programm %s fehlt"
+
+msgid "{value} (inherited)"
+msgstr "{value} (geerbt)"

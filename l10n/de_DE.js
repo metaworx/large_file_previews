@@ -161,6 +161,7 @@ OC.L10N.register(
     "system config" : "Systemkonfiguration",
     "the PHP extension %s is missing" : "die PHP-Erweiterung %s fehlt",
     "the PHP function %s is disabled" : "die PHP-Funktion %s ist deaktiviert",
-    "the program %s is missing" : "das Programm %s fehlt"
+    "the program %s is missing" : "das Programm %s fehlt",
+    "{value} (inherited)" : "{value} (geerbt)"
 },
 "nplurals=2; plural=(n != 1);");

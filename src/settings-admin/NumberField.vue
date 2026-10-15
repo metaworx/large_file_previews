@@ -8,6 +8,10 @@
  * is not set at this level. The field shows only what is set here, never a
  * value from another level; what applies where it is empty may be its
  * placeholder. Its help, where it has one, is an ⓘ after the button.
+ *
+ * A label inside the field covers the placeholder until the field has the
+ * focus; where a column header names the field, `labelOutside` drops the
+ * label, which then names the field to assistive technology only.
  */
 import { computed, ref, watch } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -23,6 +27,8 @@ const props = withDefaults(defineProps<{
 	max?: number | null
 	clearable?: boolean
 	narrow?: boolean
+	/** No visible label, so that the placeholder shows: a column header names the field. */
+	labelOutside?: boolean
 	disabled?: boolean
 	/** What applies where the field is empty: the value of the level below. */
 	placeholder?: string | null
@@ -33,6 +39,7 @@ const props = withDefaults(defineProps<{
 	max: null,
 	clearable: false,
 	narrow: false,
+	labelOutside: false,
 	disabled: false,
 	placeholder: null,
 	help: null,
@@ -73,6 +80,8 @@ function save(): void {
 			class="lfp-number__field"
 			type="number"
 			:label="label"
+			:label-outside="labelOutside"
+			:aria-label="labelOutside ? label : undefined"
 			:placeholder="placeholder ?? undefined"
 			:min="min ?? undefined"
 			:max="max ?? undefined"
@@ -103,8 +112,9 @@ function save(): void {
 	width: 16rem;
 }
 
+/* A rule's size: wide enough for what it inherits, "no limit (inherited)". */
 .lfp-number--narrow .lfp-number__field {
-	width: 8rem;
+	width: 12rem;
 }
 
 .lfp-number__save {

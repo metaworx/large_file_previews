@@ -64,6 +64,17 @@ describe('NumberField', () => {
 		expect(wrapper.element.lastElementChild?.classList.contains('lfp-help')).toBe(true)
 	})
 
+	it('drops its visible label where it is outside, and stays named by it', () => {
+		const inside = field({ value: null, placeholder: '50 (inherited)' }).wrapper
+		const outside = field({ value: null, placeholder: '50 (inherited)', labelOutside: true }).wrapper
+
+		expect(inside.find('label').text()).toBe('Seconds')
+		expect(inside.find('input').attributes('aria-label')).toBeUndefined()
+		expect(outside.find('label').exists()).toBe(false)
+		expect(outside.find('input').attributes('aria-label')).toBe('Seconds')
+		expect(outside.find('input').attributes('placeholder')).toBe('50 (inherited)')
+	})
+
 	it('has no help button without a help text', () => {
 		expect(field().wrapper.findComponent(HelpPopover).exists()).toBe(false)
 	})
