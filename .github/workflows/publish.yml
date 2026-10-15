@@ -8,8 +8,9 @@ name: Publish to Nextcloud App Store
 # Three jobs, one secret each at most: `build` runs the third-party code
 # (npm, Composer) and holds nothing; `sign` holds the key and runs none of
 # it; `store` holds the store token and can verify the signature but not
-# make one. The tarballs are named after the app id the manifest states,
-# which release-meta reads.
+# make one. Between sign and store, `precheck` installs the signed release
+# (install-check.yml), with the certificate only. The tarballs are named
+# after the app id the manifest states, which release-meta reads.
 on:
   workflow_call:
   workflow_dispatch:
@@ -107,9 +108,22 @@ jobs:
             build/${{ needs.build.outputs.app-id }}-${{ needs.build.outputs.version }}.tar.gz.signature
           fail_on_unmatched_files: true
 
+  # The release installed from a fake store that lists it - the real
+  # listing with this release added - by occ, and a preview rendered by
+  # the installed copy, before the real store hears of it.
+  precheck:
+    name: Install before publishing
+    needs: [ build, sign ]
+    uses: ./.github/workflows/install-check.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.build.outputs.version }}
+      kind: ${{ needs.build.outputs.kind }}
+      tag: ${{ needs.build.outputs.tag }}
+
   store:
     name: Publish to the App Store
-    needs: [ build, sign ]
+    needs: [ build, sign, precheck ]
     runs-on: ubuntu-latest
     environment: appstore
     outputs:

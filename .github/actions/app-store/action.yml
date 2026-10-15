@@ -1,0 +1,80 @@
+name: App store for the install check
+description: >-
+  Points the server at the fake store, which serves the real store's full
+  listing with the release under test added from its GitHub release, drops
+  whatever listing the server had fetched, and with `occ-install` installs
+  the app from it the way an administrator does at the console. The app id
+  is the manifest's. Before the app's first release the real store lists
+  nothing to extend: the fake store then lists it from its manifest and its
+  certificate, APPSTORE_CERT in the environment.
+
+inputs:
+  version:
+    description: The version under test, e.g. 0.20.3
+    required: true
+  kind:
+    description: nightly or stable
+    required: true
+  tag:
+    description: The tag whose GitHub release holds the tarball and its signature
+    required: true
+  occ-install:
+    description: Install the app with occ once the store lists it (true or false)
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # Nextcloud refuses addresses on the local machine by default; the
+    # tarball itself still comes from GitHub.
+    - name: Start the fake store
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        TAG: ${{ inputs.tag }}
+        NIGHTLY: ${{ inputs.kind == 'nightly' }}
+      run: |
+        app_id="$(sed -n 's|.*<id>\([^<]*\)</id>.*|\1|p' appinfo/info.xml | head -n1 | tr -d '[:space:]')"
+        download="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${app_id}-${VERSION}.tar.gz"
+        curl -fsSL -o /tmp/release.signature "${download}.signature"
+        flags=()
+        if [ "$NIGHTLY" = true ]; then
+          flags+=(--nightly)
+        fi
+        if [ -n "${APPSTORE_CERT:-}" ]; then
+          printf '%s\n' "$APPSTORE_CERT" > /tmp/app.crt
+          flags+=(--certificate /tmp/app.crt)
+        fi
+        nohup python3 tests/e2e/store/appstore.py fake --version "$VERSION" --download "$download" \
+          --signature /tmp/release.signature "${flags[@]}" --port 8090 > /tmp/fake-store.log 2>&1 &
+        pid=$!
+        for i in $(seq 1 90); do
+          grep -q 'serving on' /tmp/fake-store.log && break
+          kill -0 "$pid" 2> /dev/null || break
+          sleep 2
+        done
+        if ! grep -q 'serving on' /tmp/fake-store.log; then
+          cat /tmp/fake-store.log
+          echo "::error::The fake store did not start."
+          exit 1
+        fi
+        head -n 1 /tmp/fake-store.log
+        php nextcloud/occ config:system:set appstoreurl --value=http://127.0.0.1:8090/api/v1
+        php nextcloud/occ config:system:set allow_local_remote_servers --value=true --type=boolean
+
+    # The server keeps what it fetched for an hour.
+    - name: Drop the server's cached listing
+      shell: bash
+      working-directory: nextcloud
+      run: rm -f data/appdata_*/appstore/apps.json
+
+    - name: Install with occ
+      if: inputs.occ-install == 'true'
+      shell: bash
+      run: |
+        app_id="$(sed -n 's|.*<id>\([^<]*\)</id>.*|\1|p' appinfo/info.xml | head -n1 | tr -d '[:space:]')"
+        if [ "${{ inputs.kind }}" = nightly ]; then
+          php nextcloud/occ app:install --allow-unstable "$app_id"
+        else
+          php nextcloud/occ app:install "$app_id"
+        fi

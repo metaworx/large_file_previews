@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.2.0)
+# CI Conventions — Large File Previews (v1.3.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -26,7 +26,7 @@ and for the constraints that a future edit would otherwise break silently.
 
 | Platform | Files |
 |----------|-------|
-| GitHub Actions | `.github/workflows/test.yml`, with the composite actions under `.github/actions/` |
+| GitHub Actions | `.github/workflows/test.yml`, which calls `publish.yml` on a tag, which calls `install-check.yml`; the composite actions under `.github/actions/` |
 
 GitHub Actions is the only pipeline.
 GitLab (`origin`) is the code host and the issue tracker,
@@ -40,7 +40,8 @@ and GitHub runs the matrix for free.
 | Trigger | Jobs |
 |---------|------|
 | push to any branch, pull request | upstream releases (reports only), lint, PHPUnit |
-| tag `vX.Y.Z` or `vX.Y.Z-suffix` | the same |
+| tag `vX.Y.Z` or `vX.Y.Z-suffix` | the same, then publish (§6) |
+| by hand, `install-check.yml` | the install check of a release that is out |
 
 - **Lint** runs the frontend's ESLint, `vue-tsc`, Stylelint, Vitest and build,
   then the PHP syntax check, ECS, Psalm,
@@ -51,8 +52,7 @@ and GitHub runs the matrix for free.
   Nextcloud 35 refuses PHP 8.2.
 - A `[RELEASE]` commit pushed with its tag runs once, on the tag:
   the branch's run of the same commit is skipped.
-- Nothing publishes yet.
-  Packaging and the app store follow once the app's certificate is issued.
+- A version tag's run publishes once lint and PHPUnit pass (§6).
 
 ## 3. The Commands Are the Project's Commands
 
@@ -91,12 +91,48 @@ Left out, for now:
 
 ## 5. Secrets and Variables
 
-None yet.
+The release jobs need these on the GitHub mirror,
+each in the environment of the job that uses it:
+
+| Name | Kind | Environment | Used by |
+|------|------|-------------|---------|
+| `APPSTORE_KEY` | secret | `signing` | `sign`: signs the tarball |
+| `APPSTORE_CERT` | variable or secret | `signing`, `appstore`, and the repository for `precheck` | verifying the signature; listing the app in the fake store before its first release |
+| `APPSTORE_TOKEN` | secret | `appstore` | `store`: posts the release |
+| `RELEASE_NOTIFY` | variable, optional | repository | `listed`: whom the comment on the release commit mentions; the tag's pusher otherwise |
+
+The `signing` and `appstore` environments allow version tags only.
 The upstream job reads `github.token`, which GitHub provides.
 
 ## 6. Releases
 
-A version tag runs the same jobs as a branch, and publishes nothing yet.
+A version tag whose lint and PHPUnit jobs pass runs `publish.yml`:
+
+1. **build**
+   runs `package.sh`, which builds the tarballs, with no secret;
+   `release-meta` refuses a tag that does not name the manifest's version,
+   or whose commit is not on master,
+   and makes a 0.x version nightly.
+2. **sign**
+   signs with `APPSTORE_KEY`,
+   and makes the GitHub release, its notes the CHANGELOG section.
+3. **precheck**
+   runs `install-check.yml`,
+   which installs the signed release by `occ app:install` on Nextcloud 33 to 35,
+   from a fake store that lists it (`tests/e2e/store/appstore.py fake`);
+   `tests/e2e/store/check-install.sh` checks the install
+   and renders a PDF's preview through it.
+   Before the first release the fake store lists the app
+   from its manifest and certificate.
+4. **store**
+   posts the release to the App Store with `APPSTORE_TOKEN`,
+   after verifying its signature.
+5. **listed**
+   watches the store, and every host it redirects to,
+   until they list the upload (`appstore.py watch`).
+
+The app has no browser tests,
+so there is no install through the Apps page and no e2e smoke test.
 
 ## 7. Runner Constraints
 

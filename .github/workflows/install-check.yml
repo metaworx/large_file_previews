@@ -1,0 +1,122 @@
+name: Install check
+
+# Installs a release on fresh servers the way an administrator does at the
+# console - `occ app:install` - then checks that every install step
+# happened and runs a smoke test of the installed copy: the shipped
+# tarball, built frontend, no dev packages, verified by the server against
+# the app's certificate, and a PDF's preview rendered by `occ`
+# (tests/e2e/store/check-install.sh). The app has no browser tests, so
+# there is no install through the Apps page here.
+#
+# Against the fake store: the real store's full listing with the release
+# added from its GitHub release, or, before the app's first release, an
+# entry made from its manifest and certificate. publish.yml runs it before
+# the upload, so a release that does not install never reaches the store.
+# It can also be run by hand against a release that is out.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The version under test, e.g. 0.20.3
+        type: string
+        required: true
+      kind:
+        description: nightly or stable
+        type: string
+        required: true
+      tag:
+        description: The tag whose tests to run and whose release holds the tarball; v<version> when empty
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version under test, e.g. 0.20.3
+        type: string
+        required: true
+      kind:
+        description: How the release is listed
+        type: choice
+        options: [ nightly, stable ]
+        default: nightly
+      tag:
+        description: The tag whose tests to run and whose release holds the tarball; v<version> when empty
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: occ / NC ${{ matrix.nextcloud-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        nextcloud-version: [ 'stable33', 'stable34', 'stable35' ]
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: nextcloud
+          MYSQL_USER: nextcloud
+          MYSQL_PASSWORD: nextcloud
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout the release's tests
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || format('v{0}', inputs.version) }}
+
+      # What the smoke test renders with; timeout, prlimit and choom are
+      # coreutils and util-linux, already on the runner.
+      - name: poppler-utils
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils
+
+      - name: Nextcloud server
+        uses: ./.github/actions/nextcloud-server
+        with:
+          nextcloud-version: ${{ matrix.nextcloud-version }}
+
+      # The certificate lists the app in the fake store before its first
+      # release, when the real store has no entry for it to extend.
+      - name: App store
+        uses: ./.github/actions/app-store
+        env:
+          APPSTORE_CERT: ${{ vars.APPSTORE_CERT || secrets.APPSTORE_CERT }}
+        with:
+          version: ${{ inputs.version }}
+          kind: ${{ inputs.kind }}
+          tag: ${{ inputs.tag != '' && inputs.tag || format('v{0}', inputs.version) }}
+          occ-install: 'true'
+
+      - name: The install steps happened, and a preview renders
+        run: bash tests/e2e/store/check-install.sh nextcloud "$VERSION"
+
+      # The server's side of a failure: the logs say why. Here rather than in
+      # an action, which comes from the release's checkout and so cannot be
+      # added afterwards.
+      - name: Server logs
+        if: failure()
+        working-directory: nextcloud
+        run: |
+          log="$(php occ config:system:get datadirectory)/nextcloud.log"
+          echo "::group::$log"
+          tail -n 300 "$log" || true
+          echo "::endgroup::"
