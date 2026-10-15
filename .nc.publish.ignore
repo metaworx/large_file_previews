@@ -1,0 +1,85 @@
+# .nc.publish.ignore — files/directories excluded from the Nextcloud App Store
+# release package. Consumed by package.sh via `rsync --exclude-from`.
+#
+# Patterns use rsync(1) exclude syntax:
+#   - a leading '/' anchors the pattern to the package root
+#   - '*' matches within a single path component
+#   - unanchored patterns match at any depth
+#
+# What ships is appinfo/, lib/, templates/, img/, the built js/ and css/,
+# l10n/ where there is one, and composer.json with its production
+# autoloader, beside CHANGELOG.md, LICENSE and README.md.
+
+# VCS / repository metadata
+.git
+.gitignore
+.gitattributes
+.gitmodules
+.github
+# Placeholder files
+*.gitkeep
+
+# Release tooling (this file and the packaging script)
+/.nc.publish.ignore
+/package.sh
+/.gitlab/
+
+# Translation tooling and sources: l10n/ ships, what it is made from does not
+/scripts/
+/.l10nignore
+/translationfiles/
+
+# IDE / editor
+.idea
+.editorconfig
+
+# Agent / project tooling
+/GUIDELINES
+/AGENTS.md
+/CLAUDE.md
+/.aiignore
+/.roo
+/.junie
+/.appstore
+
+# Node / frontend tooling
+/node_modules
+/src
+/package.json
+/package-lock.json
+/.nvmrc
+/.eslintrc.cjs
+/stylelint.config.cjs
+/tsconfig.json
+/vite.config.ts
+
+# PHP tooling
+/vendor
+/vendor-bin
+/ecs.php
+/psalm.xml
+/rector.php
+
+# Tests & dev-only docs
+/tests
+/docs
+/CONTRIBUTING.md
+/ROADMAP.md
+
+# Build artifacts
+/build
+/dist
+
+# Local-only working directories. These are gitignored, so they never show up
+# in `git status`, but rsync copies them into the package all the same — the
+# nextcloud-v* trees are full Nextcloud checkouts beside the checkout, for the
+# IDE and the test bootstrap's fallback, and carry their own data/ directory.
+/nextcloud-v*
+/.cache
+/.claude
+/.local
+/.env.*
+
+# Test tooling not covered above
+/vitest.config.ts
+/vitest.setup.ts

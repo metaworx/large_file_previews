@@ -1,0 +1,432 @@
+#!/usr/bin/env bash
+#
+# package.sh — Build, package, and (optionally) sign this Nextcloud app for
+# the Nextcloud App Store. The app id and version are read from
+# appinfo/info.xml.
+#
+# What it does:
+#   1. Builds the frontend assets (npm ci + npm run build) if needed.
+#   2. Copies the app into a clean staging directory.
+#   3. Removes dev-only files listed in .nc.publish.ignore.
+#   4. Installs production Composer dependencies.
+#   5. Creates build/<app_id>.tar.gz and a versioned copy.
+#   6. Signs the versioned archive (see "Signing" below).
+#
+# The archive contains a single top-level directory named after the app id
+# (<app_id>/), which is what the Nextcloud App Store expects.
+#
+# Signing
+# -------
+# The App Store requires an SHA-512 signature of the archive:
+#   openssl dgst -sha512 -sign <key> <archive> | openssl base64
+# package.sh signs automatically when a key is available, resolved in order:
+#   1. APPSTORE_KEY / APPSTORE_CERT environment variables — accepted as a
+#      path to a file (GitLab file-type variables), raw PEM content, or
+#      base64-encoded PEM (GitLab masked variables reject whitespace, so a
+#      base64 encoding is required there).
+#   2. ~/.nextcloud/certificates/<app_id>.key and .crt (local development).
+# The signature is written next to the archive as <archive>.signature and is
+# also printed to stdout for pasting into the App Store upload form.
+#
+# Publishing never signs: --appstore posts the <archive>.signature that is
+# already there, after verifying it against the certificate (APPSTORE_CERT,
+# or ~/.nextcloud/certificates/<app_id>.crt). The key stays with whoever
+# signs; whoever publishes needs only the certificate and the token.
+#
+# Usage:
+#   bash package.sh              # build, package, and sign (if key available)
+#   bash package.sh --sign-only  # only sign the existing versioned archive
+#   bash package.sh --verify     # only verify its signature against the certificate
+#   DOWNLOAD_URL=... bash package.sh --appstore           # verify, then publish
+#   DOWNLOAD_URL=... bash package.sh --appstore --nightly
+#   PHP=php8.2 bash package.sh   # use a specific PHP binary for Composer
+#   KEEP_STAGING=1 bash package.sh  # keep the unpacked staging tree
+#
+# Requires: bash, openssl always; curl additionally for --appstore; rsync,
+# tar, npm, composer, php additionally for a full build (no flags). PHP is
+# auto-detected as php8.2 (falling back to php) and can be overridden via the
+# PHP env var. The App Store API token is read from the API_TOKEN env var or
+# ~/.nextcloud/API_TOKEN.txt.
+
+set -euo pipefail
+
+SCRIPT_VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "==> Packaging script"
+echo "    Script:         ${BASH_SOURCE[0]}"
+echo "    Script Version: $SCRIPT_VERSION"
+echo "    Script Path:    $SCRIPT_DIR"
+
+cd "$SCRIPT_DIR"
+
+SIGN_ONLY=false
+VERIFY_ONLY=false
+APPSTORE=false
+NIGHTLY=false
+for arg in "$@"; do
+	case "$arg" in
+		--sign-only) SIGN_ONLY=true ;;
+		--verify) VERIFY_ONLY=true ;;
+		--appstore) APPSTORE=true ;;
+		--nightly) NIGHTLY=true ;;
+		*) echo "ERROR: unknown argument: $arg" >&2; exit 2 ;;
+	esac
+done
+
+echo "==> Looking for required binaries ..."
+
+# Full builds need the whole toolchain; --sign-only/--verify/--appstore only
+# touch an already-built archive and don't need PHP, rsync, tar, npm, or
+# composer.
+NEED_FULL_BUILD=true
+if [ "$SIGN_ONLY" = true ] || [ "$VERIFY_ONLY" = true ] || [ "$APPSTORE" = true ]; then
+	NEED_FULL_BUILD=false
+fi
+
+REQUIRED_BINS=(bash openssl)
+if [ "$APPSTORE" = true ]; then
+	REQUIRED_BINS+=(curl)
+fi
+if [ "$NEED_FULL_BUILD" = true ]; then
+	REQUIRED_BINS+=(rsync tar npm composer)
+
+	# Resolve the PHP binary: $PHP env override, else php8.2, else php.
+	PHP_BIN="${PHP:-$(command -v php8.2 || command -v php || true)}"
+	if [ -z "$PHP_BIN" ]; then
+		echo "ERROR: no PHP binary found — set the PHP env var (e.g. PHP=/usr/bin/php8.2)." >&2
+		exit 1
+	fi
+	echo "    $PHP_BIN"
+fi
+
+for bin in "${REQUIRED_BINS[@]}"; do
+	if ! command -v "$bin" > /dev/null 2>&1; then
+		echo "ERROR: required binary '${bin}' not found in PATH." >&2
+		exit 1
+	fi
+	echo "    $(command -v "$bin")"
+done
+
+# ---------------------------------------------------------------------------
+# App metadata
+# ---------------------------------------------------------------------------
+if [ ! -f appinfo/info.xml ]; then
+	echo "ERROR: appinfo/info.xml not found — run this script from the repo root." >&2
+	exit 1
+fi
+
+APP_ID="$(sed -n 's|.*<id>\([^<]*\)</id>.*|\1|p' appinfo/info.xml | head -n1 | tr -d '[:space:]')"
+VERSION="$(sed -n 's|.*<version>\([^<]*\)</version>.*|\1|p' appinfo/info.xml | head -n1 | tr -d '[:space:]')"
+
+if [ -z "$APP_ID" ] || [ -z "$VERSION" ]; then
+	echo "ERROR: could not determine app id/version from appinfo/info.xml." >&2
+	exit 1
+fi
+
+BUILD_DIR="${BUILD_DIR:-build}"
+STAGING_DIR="${BUILD_DIR}/${APP_ID}"
+ARTIFACT="${BUILD_DIR}/${APP_ID}.tar.gz"
+VERSIONED_ARTIFACT="${BUILD_DIR}/${APP_ID}-${VERSION}.tar.gz"
+
+echo "==> App Metadata:"
+echo "    App ID:         $APP_ID"
+echo "    App Version:    $VERSION"
+echo "    App Build Dir:  $BUILD_DIR"
+
+# ---------------------------------------------------------------------------
+# Signing
+# ---------------------------------------------------------------------------
+KEY_FILE=""
+CERT_FILE=""
+
+# Materializes a PEM env var value (file path, raw PEM, or base64-encoded
+# PEM) into $out_file. Never echoes any part of $value.
+materialize_pem() {
+	local value="$1" out_file="$2" label="$3"
+
+	if [ -f "$value" ]; then
+		echo "==> ${label}: file path" >&2
+		printf '%s' "$value"
+		return 0
+	fi
+
+	case "$value" in
+		"-----BEGIN"*)
+			echo "==> ${label}: raw PEM" >&2
+			printf '%s\n' "$value" > "$out_file"
+			printf '%s' "$out_file"
+			return 0
+			;;
+	esac
+
+	if printf '%s' "$value" | base64 -d > "$out_file" 2>/dev/null && grep -q -- "-----BEGIN" "$out_file"; then
+		echo "==> ${label}: base64-encoded PEM" >&2
+		printf '%s' "$out_file"
+		return 0
+	fi
+
+	echo "ERROR: ${label} is neither a file path, PEM content, nor valid base64-encoded PEM." >&2
+	rm -f "$out_file"
+	return 1
+}
+
+# Resolve the signing key/cert paths into the globals KEY_FILE / CERT_FILE.
+# Materializes PEM content from the environment into the given temp dir.
+resolve_signing_material() {
+	local tmp="$1"
+	KEY_FILE=""
+	CERT_FILE=""
+
+	if [ -n "${APPSTORE_KEY:-}" ]; then
+		KEY_FILE="$(materialize_pem "$APPSTORE_KEY" "$tmp/key.pem" "APPSTORE_KEY")" || return 1
+		if [ -n "${APPSTORE_CERT:-}" ]; then
+			CERT_FILE="$(materialize_pem "$APPSTORE_CERT" "$tmp/cert.crt" "APPSTORE_CERT")" || return 1
+		fi
+	else
+		local cert_dir="${NEXTCLOUD_CERT_DIR:-${HOME}/.nextcloud/certificates}"
+		KEY_FILE="${cert_dir}/${APP_ID}.key"
+		CERT_FILE="${cert_dir}/${APP_ID}.crt"
+	fi
+}
+
+# Resolve the certificate alone into the global CERT_FILE: APPSTORE_CERT when
+# set, else the local certificate. Verifying needs nothing else.
+resolve_certificate() {
+	local tmp="$1"
+	CERT_FILE=""
+
+	if [ -n "${APPSTORE_CERT:-}" ]; then
+		CERT_FILE="$(materialize_pem "$APPSTORE_CERT" "$tmp/cert.crt" "APPSTORE_CERT")" || return 1
+	else
+		CERT_FILE="${NEXTCLOUD_CERT_DIR:-${HOME}/.nextcloud/certificates}/${APP_ID}.crt"
+	fi
+}
+
+# Verify <archive>.signature against a certificate: the SHA-512 signature of
+# the archive, made with the key the certificate belongs to.
+verify_signature() {
+	local archive="$1" cert_file="$2"
+	local signature_file="${archive}.signature" tmp
+	tmp="$(mktemp -d)"
+
+	if [ ! -f "$signature_file" ]; then
+		echo "ERROR: no signature (${signature_file})." >&2
+		rm -rf "$tmp"
+		return 1
+	fi
+	if [ ! -f "${cert_file:-}" ]; then
+		echo "ERROR: no certificate found (${cert_file:-<unset>}) — cannot verify ${signature_file}." >&2
+		rm -rf "$tmp"
+		return 1
+	fi
+	if ! openssl x509 -in "$cert_file" -pubkey -noout > "$tmp/pubkey.pem" \
+		|| ! openssl base64 -d -A < "$signature_file" > "$tmp/sig.bin" \
+		|| ! openssl dgst -sha512 -verify "$tmp/pubkey.pem" -signature "$tmp/sig.bin" "$archive" > /dev/null 2>&1; then
+		echo "ERROR: signature verification failed: ${signature_file} is not ${archive} signed with the key of ${cert_file}." >&2
+		rm -rf "$tmp"
+		return 1
+	fi
+
+	echo "    Signature verified against ${cert_file}."
+	rm -rf "$tmp"
+	return 0
+}
+
+# openssl SHA-512 signature of an archive (detached, base64) — what the App
+# Store upload form expects.
+sign_archive() {
+	local archive="$1"
+	local tmp key_file cert_file signature_file
+	tmp="$(mktemp -d)"
+
+	resolve_signing_material "$tmp"
+	key_file="$KEY_FILE"
+	cert_file="$CERT_FILE"
+
+	if [ ! -f "$key_file" ]; then
+		echo "==> No signing key found (${key_file}) — skipping signature."
+		rm -rf "$tmp"
+		return 0
+	fi
+
+	echo "==> Signing ${archive} (openssl dgst -sha512)"
+	signature_file="${archive}.signature"
+	if ! openssl dgst -sha512 -sign "$key_file" "$archive" | openssl base64 -A > "$signature_file"; then
+		echo "ERROR: signing failed." >&2
+		rm -rf "$tmp"
+		return 1
+	fi
+
+	if [ ! -f "${cert_file:-}" ]; then
+		echo "ERROR: no certificate found (${cert_file:-<unset>}) — cannot verify the signature just produced." >&2
+		echo "       Set APPSTORE_CERT (or place it at the local cert path) alongside the key, or use --sign-only once it is available." >&2
+		rm -rf "$tmp"
+		return 1
+	fi
+
+	verify_signature "$archive" "$cert_file" || { rm -rf "$tmp"; return 1; }
+
+	echo "    Signature file: ${signature_file}"
+	echo ""
+	echo "    --- Signature (paste into the App Store upload form) ---"
+	cat "$signature_file"
+	echo ""
+	echo "    -------------------------------------------------------"
+
+	rm -rf "$tmp"
+	return 0
+}
+
+# Resolve the App Store API token into $TOKEN: $API_TOKEN env, else file.
+resolve_token() {
+	if [ -n "${API_TOKEN:-}" ]; then
+		TOKEN="$API_TOKEN"
+	elif [ -f "${HOME}/.nextcloud/API_TOKEN.txt" ]; then
+		TOKEN="$(tr -d '[:space:]' < "${HOME}/.nextcloud/API_TOKEN.txt")"
+	else
+		echo "ERROR: no App Store API token — set API_TOKEN or create ${HOME}/.nextcloud/API_TOKEN.txt" >&2
+		return 1
+	fi
+}
+
+# Publish a release on the App Store (download URL + signature + nightly
+# flag). Posts the signature that is there, once it verifies; never signs.
+publish_appstore() {
+	local archive="$1"
+	local tmp sig
+	tmp="$(mktemp -d)"
+
+	command -v curl > /dev/null 2>&1 || { echo "ERROR: curl is required for --appstore." >&2; rm -rf "$tmp"; return 1; }
+
+	resolve_certificate "$tmp" || { rm -rf "$tmp"; return 1; }
+	echo "==> Verifying ${archive}.signature before publishing"
+	verify_signature "$archive" "$CERT_FILE" || { rm -rf "$tmp"; return 1; }
+
+	[ -n "${DOWNLOAD_URL:-}" ] || { echo "ERROR: DOWNLOAD_URL env var is required (public HTTPS link to the archive)." >&2; rm -rf "$tmp"; return 1; }
+
+	resolve_token || { rm -rf "$tmp"; return 1; }
+
+	sig="$(tr -d '[:space:]' < "${archive}.signature")"
+
+	echo "==> Publishing release '${APP_ID}' v${VERSION} on the App Store (nightly=${NIGHTLY})"
+
+	# The status is read rather than curl -f used, so that the store's answer
+	# - which says *why* it refused - is printed before the job fails.
+	response="$(curl -sS -X POST "https://apps.nextcloud.com/api/v1/apps/releases" \
+		-H "Authorization: Token ${TOKEN}" \
+		-H "Content-Type: application/json" \
+		-d "{\"download\":\"${DOWNLOAD_URL}\",\"signature\":\"${sig}\",\"nightly\":${NIGHTLY}}" \
+		-w "\n%{http_code}")" || { echo "ERROR: could not reach the App Store." >&2; rm -rf "$tmp"; return 1; }
+
+	status="${response##*$'\n'}"
+	body="${response%$'\n'*}"
+
+	[ -n "$body" ] && echo "$body"
+	echo "HTTP ${status}"
+
+	rm -rf "$tmp"
+
+	case "$status" in
+		2*) return 0 ;;
+		*)  echo "ERROR: the App Store refused the release (HTTP ${status})." >&2; return 1 ;;
+	esac
+}
+
+if [ "$VERIFY_ONLY" = true ]; then
+	if [ ! -f "$VERSIONED_ARTIFACT" ]; then
+		echo "ERROR: ${VERSIONED_ARTIFACT} not found — run package.sh first." >&2
+		exit 1
+	fi
+	verify_tmp="$(mktemp -d)"
+	resolve_certificate "$verify_tmp" || { rm -rf "$verify_tmp"; exit 1; }
+	echo "==> Verifying ${VERSIONED_ARTIFACT}.signature"
+	verify_status=0
+	verify_signature "$VERSIONED_ARTIFACT" "$CERT_FILE" || verify_status=$?
+	rm -rf "$verify_tmp"
+	exit "$verify_status"
+fi
+
+if [ "$APPSTORE" = true ]; then
+	if [ ! -f "$VERSIONED_ARTIFACT" ]; then
+		echo "ERROR: ${VERSIONED_ARTIFACT} not found — run package.sh first." >&2
+		exit 1
+	fi
+	publish_appstore "$VERSIONED_ARTIFACT"
+	exit $?
+fi
+
+if [ "$SIGN_ONLY" = true ]; then
+	if [ ! -f "$VERSIONED_ARTIFACT" ]; then
+		echo "ERROR: ${VERSIONED_ARTIFACT} not found — run package.sh first." >&2
+		exit 1
+	fi
+	sign_archive "$VERSIONED_ARTIFACT"
+	exit $?
+fi
+
+echo "==> Packaging ${APP_ID} v${VERSION}"
+
+# ---------------------------------------------------------------------------
+# 1. Frontend build
+# ---------------------------------------------------------------------------
+if [ -f package.json ]; then
+	if [ ! -d node_modules ]; then
+		echo "==> Installing frontend dependencies (npm ci)"
+		npm ci
+	fi
+	echo "==> Building frontend assets (npm run build)"
+	npm run build
+fi
+
+# ---------------------------------------------------------------------------
+# 2. Staging
+# ---------------------------------------------------------------------------
+echo "==> Preparing staging directory ${STAGING_DIR}"
+rm -rf "$STAGING_DIR"
+mkdir -p "$STAGING_DIR"
+
+echo "==> Copying app files (excluding entries from .nc.publish.ignore)"
+if [ ! -f .nc.publish.ignore ]; then
+	echo "ERROR: .nc.publish.ignore not found — refusing to package." >&2
+	exit 1
+fi
+rsync -a \
+	--exclude-from='.nc.publish.ignore' \
+	./ "$STAGING_DIR/"
+
+# ---------------------------------------------------------------------------
+# 3. Production dependencies
+# ---------------------------------------------------------------------------
+echo "==> Installing production Composer dependencies (PHP: ${PHP_BIN})"
+(
+	cd "$STAGING_DIR"
+	"$PHP_BIN" "$(command -v composer)" install --no-dev --no-scripts --optimize-autoloader --no-interaction
+)
+
+# ---------------------------------------------------------------------------
+# 4. Archive
+# ---------------------------------------------------------------------------
+echo "==> Creating archive ${ARTIFACT}"
+mkdir -p "$BUILD_DIR"
+tar -czf "$ARTIFACT" -C "$BUILD_DIR" "$APP_ID"
+cp "$ARTIFACT" "$VERSIONED_ARTIFACT"
+
+# The tarballs are what ship. Leaving the unpacked staging tree behind doubles
+# the size of build/ and of the CI artifact that publishes it. Set
+# KEEP_STAGING=1 to keep it for inspection.
+if [ "${KEEP_STAGING:-0}" = "1" ]; then
+	echo "==> Keeping staging directory ${STAGING_DIR} (KEEP_STAGING=1)"
+else
+	echo "==> Removing staging directory ${STAGING_DIR}"
+	rm -rf "$STAGING_DIR"
+fi
+
+echo "==> Done"
+echo "    ${ARTIFACT}"
+echo "    ${VERSIONED_ARTIFACT}"
+
+# ---------------------------------------------------------------------------
+# 5. Sign (if a key is available)
+# ---------------------------------------------------------------------------
+sign_archive "$VERSIONED_ARTIFACT"
