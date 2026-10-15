@@ -8,6 +8,8 @@ tests
 src/settings-admin/testState.ts
 vitest.config.ts
 vitest.setup.ts
+cypress.config.cjs
+cypress
 
 # Dependencies, build output and tooling
 vendor

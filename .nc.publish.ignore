@@ -86,3 +86,5 @@
 # Test tooling not covered above
 /vitest.config.ts
 /vitest.setup.ts
+/cypress.config.cjs
+/cypress

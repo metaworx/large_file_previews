@@ -25,4 +25,7 @@
 /js/
 /css/
 
+# Cypress's own output: failure screenshots and downloads.
+/cypress/
+
 /build/
