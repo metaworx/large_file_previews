@@ -1,0 +1,532 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Nextcloud package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Nextcloud 3.14159\n"
+"Report-Msgid-Bugs-To: translations\\@example.com\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#, php-format
+msgid "\"%s\" is not a file extension."
+msgstr ""
+
+#, php-format
+msgid "%1$s is not a setting of this app; the settings are %2$s."
+msgstr ""
+
+#, php-format
+msgid "%1$s must be at least %2$d."
+msgstr ""
+
+#, php-format
+msgid "%1$s must be between %2$d and %3$d."
+msgstr ""
+
+#, php-format
+msgid "%1$s must be one of %2$s."
+msgstr ""
+
+#, php-format
+msgid "%s is not a MIME type this app handles, so its files never reach it."
+msgstr ""
+
+#, php-format
+msgid "%s is not writable"
+msgstr ""
+
+#, php-format
+msgid "%s takes a whole number."
+msgstr ""
+
+#, php-format
+msgid "%s takes true or false."
+msgstr ""
+
+msgid "(Nextcloud's temporary directory)"
+msgstr ""
+
+msgid "(system config)"
+msgstr ""
+
+msgid "/dev/fd is missing; is /proc mounted?"
+msgstr ""
+
+msgid "A JPEG keeps no transparency: a transparent image is laid on this colour."
+msgstr ""
+
+msgid "A MIME type overrides the defaults, field by field: a minimum or maximum left empty follows the default."
+msgstr ""
+
+msgid "A TIFF whose copy would be larger is not copied, and stays a failure."
+msgstr ""
+
+msgid "A file that failed to render is left to Nextcloud's other providers for this many minutes, rather than tried again on every page that shows it; 0 tries it every time. A change to the file, or to a setting a render uses, tries it at once. Kept in the memory cache, so without one every request tries it."
+msgstr ""
+
+msgid "A page counts as scanned where one image covers it, each way, to at least the share set here. A 300 dpi A4 scan then gives a preview 3508 pixels tall rather than the full preview size."
+msgstr ""
+
+msgid "A program's path is found by Nextcloud, or set in system config only, never here; Advanced, below, shows each path and the command that sets it."
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Address space, MiB"
+msgstr ""
+
+msgid "Address-space and file-size caps"
+msgstr ""
+
+msgid "Adjustment, 0 to 1000"
+msgstr ""
+
+msgid "Advanced"
+msgstr ""
+
+msgid "An extension overrides its MIME type, field by field. Processing 'enabled' selects its files even where the MIME type is disabled; 'excluded' never selects them. A minimum or maximum set here replaces the MIME type's; one left empty follows it."
+msgstr ""
+
+msgid "As Nextcloud's preview_format"
+msgstr ""
+
+msgid "As Nextcloud's preview_format: WebP where that system setting says webp, JPEG otherwise. A PDF previewed as WebP is converted by libvips, and is a JPEG where libvips is not there."
+msgstr ""
+
+msgid "Background of a JPEG"
+msgstr ""
+
+msgid "Black"
+msgstr ""
+
+msgid "Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MiB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each. The file-size cap is the largest file a render may write: its preview, its messages, what libvips spills to disc."
+msgstr ""
+
+msgid "Command copied."
+msgstr ""
+
+msgid "Copy the command"
+msgstr ""
+
+msgid "Coverage, percent"
+msgstr ""
+
+msgid "Defaults"
+msgstr ""
+
+msgid "Detail"
+msgstr ""
+
+msgid "Everything the app needs is available."
+msgstr ""
+
+msgid "Extension"
+msgstr ""
+
+msgid "Extension, e.g. tif"
+msgstr ""
+
+msgid "Extensions"
+msgstr ""
+
+#, php-format
+msgid "Files .%1$s are %2$s, a type this app does not handle."
+msgstr ""
+
+msgid "Files that failed"
+msgstr ""
+
+msgid "Find programs again"
+msgstr ""
+
+msgid "For"
+msgstr ""
+
+msgid "Format"
+msgstr ""
+
+msgid "Found by"
+msgstr ""
+
+msgid "Found once and kept in the memory cache for a day, without one found on every request; found again on install, after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it."
+msgstr ""
+
+msgid "From the CRB repository, which must be enabled."
+msgstr ""
+
+msgid "From the community repository."
+msgstr ""
+
+msgid "Grace period, seconds"
+msgstr ""
+
+msgid "Help: {label}"
+msgstr ""
+
+msgid "Its decoder, {decoder}, is untrusted, and untrusted decoders are blocked"
+msgstr ""
+
+msgid "JPEG"
+msgstr ""
+
+msgid "JPEG quality: {quality}"
+msgstr ""
+
+msgid "Large File Previews"
+msgstr ""
+
+msgid "Large File Previews, v{version}"
+msgstr ""
+
+msgid "Large previews can be rendered."
+msgstr ""
+
+msgid "Largest copy, MiB"
+msgstr ""
+
+msgid "Largest file, MiB"
+msgstr ""
+
+msgid "Limits"
+msgstr ""
+
+msgid "MIME type"
+msgstr ""
+
+msgid "MIME types"
+msgstr ""
+
+msgid "Maximum"
+msgstr ""
+
+msgid "Maximum size, MiB (-1: none)"
+msgstr ""
+
+msgid "Maximum, MiB"
+msgstr ""
+
+msgid "Minimum"
+msgstr ""
+
+msgid "Minimum size, MiB"
+msgstr ""
+
+msgid "Minimum, MiB"
+msgstr ""
+
+msgid "Minutes"
+msgstr ""
+
+msgid "Needed"
+msgstr ""
+
+msgid "Nextcloud"
+msgstr ""
+
+msgid "Nextcloud stores a preview in the type it is given, and re-encodes it at its own quality, the app config preview jpeg_quality and webp_quality."
+msgstr ""
+
+msgid "Nextcloud's own"
+msgstr ""
+
+msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. Shown here, and changed with occ only, as Nextcloud has no page for them."
+msgstr ""
+
+msgid "No effect: its MIME type already selects it"
+msgstr ""
+
+msgid "No package brings it on RHEL or EPEL."
+msgstr ""
+
+msgid "No suitable renderer ({program})"
+msgstr ""
+
+msgid "Not a type this app handles"
+msgstr ""
+
+msgid "Nothing is processed: every MIME type is disabled."
+msgstr ""
+
+msgid "One thread was fastest for a preview, and each thread reserves memory under the cap."
+msgstr ""
+
+msgid "Out-of-memory score"
+msgstr ""
+
+msgid "PDF scanned pages"
+msgstr ""
+
+msgid "PNG"
+msgstr ""
+
+msgid "Path"
+msgstr ""
+
+msgid "Preview format: {format}"
+msgstr ""
+
+msgid "Previews"
+msgstr ""
+
+msgid "Previews of PDFs, Illustrator files and images too large for Nextcloud's own preview providers"
+msgstr ""
+
+msgid "Previews of files too large for Nextcloud's own providers, rendered from the file's local path: PDF and Illustrator by pdftoppm, images by libvips. Anything this app does not process goes to the next provider. Beneath each setting is the occ command that sets it."
+msgstr ""
+
+msgid "Processing"
+msgstr ""
+
+msgid "Program"
+msgstr ""
+
+msgid "Programs"
+msgstr ""
+
+msgid "Programs found again."
+msgstr ""
+
+msgid "Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker."
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Render a scanned page at its own resolution, not enlarged"
+msgstr ""
+
+msgid "Renderer"
+msgstr ""
+
+msgid ""
+"Renders previews of files too large for Nextcloud's own preview providers, by handing the file where it lies to a command-line renderer rather than loading it into PHP or sending it to a service.\n"
+"\n"
+"What you get:\n"
+"\n"
+"- **PDF and Illustrator previews** through `pdftoppm` (poppler), of the first page, at the full preview size, or a scanned page at its own resolution where that is smaller, for files of any size.\n"
+"- **Image previews** through `vipsthumbnail` (libvips): TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF and AVIF, each type off until it is switched on, read in strips or from a pyramid's nearest level; a TIFF in one large strip that runs out of memory gets a second chance through `tiffcp`.\n"
+"- **Limits around every render**: a timeout, address-space and file-size caps and a raised out-of-memory score, each with its value, the two caps switched together.\n"
+"- **Per type and per extension**: which files the app takes, and from which size up to which size; anything it declines goes to the next provider.\n"
+"\n"
+"Only files on local, unencrypted storage are rendered. Everything else is left to Nextcloud's other preview providers."
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save {label}"
+msgstr ""
+
+msgid "Saved."
+msgstr ""
+
+msgid "Scratch directory"
+msgstr ""
+
+msgid "Seconds"
+msgstr ""
+
+msgid "Set but not used: {problem}"
+msgstr ""
+
+msgid "Sizes are in MiB. A file is processed where its type is enabled and its size lies within the minimum and the maximum, both included. Anything this app does not process goes to Nextcloud's other preview providers."
+msgstr ""
+
+msgid "Some large previews are not rendered: something the app needs is missing. Install it, or switch off what needs it; see the list below, or run occ large-file-previews:check."
+msgstr ""
+
+#, php-format
+msgid "Some large previews cannot be rendered: %s. Install what is missing, or switch off what needs it; see occ large-file-previews:check."
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period. Every program one render runs shares the time."
+msgstr ""
+
+msgid "The command could not be copied; select it instead."
+msgstr ""
+
+#, php-format
+msgid "The last large preview that failed, at %1$s, was a file of type %2$s: %3$s."
+msgstr ""
+
+msgid "The last render that failed, at {time}, was a file of type {mime}: {reason}."
+msgstr ""
+
+msgid "The maximum size cannot be below -1, which means no limit."
+msgstr ""
+
+msgid "The minimum size cannot be above the maximum size."
+msgstr ""
+
+msgid "The minimum size cannot be below 0."
+msgstr ""
+
+msgid "The packages named are Alpine's."
+msgstr ""
+
+msgid "The packages named are Arch's."
+msgstr ""
+
+msgid "The packages named are Debian's and Ubuntu's."
+msgstr ""
+
+msgid "The packages named are Fedora's."
+msgstr ""
+
+msgid "The packages named are those of RHEL and its rebuilds."
+msgstr ""
+
+msgid "The programs could not be found again."
+msgstr ""
+
+msgid "The request is not valid."
+msgstr ""
+
+msgid "The setting could not be saved."
+msgstr ""
+
+msgid "The settings could not be loaded."
+msgstr ""
+
+msgid "This server's distribution is not one the app knows packages for; the README names each program's package."
+msgstr ""
+
+msgid "Threads per render"
+msgstr ""
+
+msgid "Timeout"
+msgstr ""
+
+#, php-format
+msgid "Unknown field %1$s; the fields are %2$s."
+msgstr ""
+
+msgid "Untrusted decoders"
+msgstr ""
+
+msgid "Untrusted decoders: allowed"
+msgstr ""
+
+msgid "Untrusted decoders: blocked"
+msgstr ""
+
+msgid "Version"
+msgstr ""
+
+msgid "WebP"
+msgstr ""
+
+msgid "WebP quality: {quality}"
+msgstr ""
+
+msgid "What each render runs under. The defaults suit most servers."
+msgstr ""
+
+msgid "What is processed"
+msgstr ""
+
+msgid "Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MiB more; the copy is gone once rendered."
+msgstr ""
+
+msgid "Which files"
+msgstr ""
+
+msgid "White"
+msgstr ""
+
+msgid "as MIME type"
+msgstr ""
+
+msgid "available"
+msgstr ""
+
+msgid "decoder blocked"
+msgstr ""
+
+msgid "default"
+msgstr ""
+
+msgid "disabled"
+msgstr ""
+
+msgid "enabled"
+msgstr ""
+
+msgid "excluded"
+msgstr ""
+
+msgid "extension"
+msgstr ""
+
+msgid "libvips"
+msgstr ""
+
+msgid "libvips counts some of its decoders as untrusted, not hardened against hostile files: with libvips 8.15, JPEG 2000, JPEG XL, PNM, and ImageMagick, which BMP needs. Blocked, those types go to Nextcloud's other providers. They are allowed in system config only, with the command beneath."
+msgstr ""
+
+msgid "libvips here has no decoder for it ({decoder})"
+msgstr ""
+
+msgid "libvips here is older than 8.13, or did not report its version, and cannot block them, so no image is rendered until it is upgraded or they are allowed."
+msgstr ""
+
+msgid "libvips here is older than 8.13, or did not report its version, and cannot block untrusted decoders, so no image is rendered with it"
+msgstr ""
+
+msgid "libvips too old"
+msgstr ""
+
+msgid "libvips, MiB"
+msgstr ""
+
+msgid "missing"
+msgstr ""
+
+msgid "no decoder"
+msgstr ""
+
+msgid "no limit"
+msgstr ""
+
+msgid "not available"
+msgstr ""
+
+msgid "not found"
+msgstr ""
+
+msgid "not handled"
+msgstr ""
+
+msgid "optional"
+msgstr ""
+
+msgid "system config"
+msgstr ""
+
+#, php-format
+msgid "the PHP extension %s is missing"
+msgstr ""
+
+#, php-format
+msgid "the PHP function %s is disabled"
+msgstr ""
+
+#, php-format
+msgid "the program %s is missing"
+msgstr ""
