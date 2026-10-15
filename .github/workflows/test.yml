@@ -171,3 +171,16 @@ jobs:
       - name: Run PHPUnit tests
         run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings
         working-directory: nextcloud/apps/large_file_previews
+
+  # A version tag whose tests passed is released: built, signed, installed
+  # from a fake store, posted to the App Store and watched until it is
+  # listed. Only the tag's run gets here; release-meta then refuses a tag
+  # whose commit is not on master, or whose version is not the manifest's.
+  publish:
+    name: Publish
+    needs: [ lint, phpunit ]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish.yml
+    secrets: inherit

@@ -1,0 +1,196 @@
+name: Publish to Nextcloud App Store
+
+# Called by the test workflow's last job, for a v* tag whose tests passed,
+# so every job here runs with the tag as its ref — which is what the
+# `signing` and `appstore` environments' tag rules are matched against. A
+# release is run again by hand with `gh workflow run publish.yml --ref <tag>`.
+#
+# Three jobs, one secret each at most: `build` runs the third-party code
+# (npm, Composer) and holds nothing; `sign` holds the key and runs none of
+# it; `store` holds the store token and can verify the signature but not
+# make one. The tarballs are named after the app id the manifest states,
+# which release-meta reads.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      app-id: ${{ steps.meta.outputs.app-id }}
+      version: ${{ steps.meta.outputs.version }}
+      kind: ${{ steps.meta.outputs.kind }}
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v5
+
+      - name: Release metadata
+        id: meta
+        uses: ./.github/actions/release-meta
+
+      - name: Node dependencies
+        uses: ./.github/actions/node-deps
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      # No key here: package.sh builds and packages, and leaves the signing
+      # to the job that holds the key.
+      - name: Build and package
+        run: bash package.sh
+
+      - name: Hand the tarballs to the next job
+        uses: actions/upload-artifact@v6
+        with:
+          name: tarballs
+          path: |
+            build/${{ steps.meta.outputs.app-id }}.tar.gz
+            build/${{ steps.meta.outputs.app-id }}-${{ steps.meta.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+  sign:
+    name: Sign and release
+    needs: build
+    if: needs.build.outputs.kind != 'skip'
+    runs-on: ubuntu-latest
+    environment: signing
+    permissions:
+      contents: write
+    env:
+      APP_ID: ${{ needs.build.outputs.app-id }}
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      # package.sh, the manifest it reads the version from, and the
+      # guidelines submodule for changelog.sh: this repository's code only.
+      - name: Checkout the tag
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: The tarballs the build made
+        uses: actions/download-artifact@v7
+        with:
+          name: tarballs
+          path: build
+
+      - name: Sign
+        env:
+          APPSTORE_KEY: ${{ secrets.APPSTORE_KEY }}
+          APPSTORE_CERT: ${{ vars.APPSTORE_CERT || secrets.APPSTORE_CERT }}
+        run: bash package.sh --sign-only
+
+      # The body a tag carries: the changelog section, nothing else.
+      - name: Release notes
+        run: bash GUIDELINES/shared/tools/changelog.sh notes "$VERSION" > build/release-notes.md
+
+      # What is published is what was signed.
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: ${{ needs.build.outputs.tag }}
+          body_path: build/release-notes.md
+          prerelease: ${{ needs.build.outputs.kind == 'nightly' }}
+          files: |
+            build/${{ needs.build.outputs.app-id }}.tar.gz
+            build/${{ needs.build.outputs.app-id }}-${{ needs.build.outputs.version }}.tar.gz
+            build/${{ needs.build.outputs.app-id }}-${{ needs.build.outputs.version }}.tar.gz.signature
+          fail_on_unmatched_files: true
+
+  store:
+    name: Publish to the App Store
+    needs: [ build, sign ]
+    runs-on: ubuntu-latest
+    environment: appstore
+    outputs:
+      uploaded: ${{ steps.upload.outputs.at }}
+    env:
+      APP_ID: ${{ needs.build.outputs.app-id }}
+      VERSION: ${{ needs.build.outputs.version }}
+      DOWNLOAD_URL: "https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/${{ needs.build.outputs.app-id }}-${{ needs.build.outputs.version }}.tar.gz"
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v5
+
+      # The watch after the upload takes an entry of this version last
+      # modified before this time for an earlier upload of the same version.
+      - name: The upload's time
+        id: upload
+        run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # Fetched the way the store fetches it: anonymously, from the release.
+      - name: Download the release's tarball and signature
+        run: |
+          mkdir -p build
+          curl -fsSL -o "build/${APP_ID}-${VERSION}.tar.gz" "$DOWNLOAD_URL"
+          curl -fsSL -o "build/${APP_ID}-${VERSION}.tar.gz.signature" "${DOWNLOAD_URL}.signature"
+
+      # --appstore verifies the signature against the certificate before it
+      # posts, and cannot sign: this job has no key.
+      - name: Verify and post the release to the App Store
+        env:
+          API_TOKEN: ${{ secrets.APPSTORE_TOKEN }}
+          APPSTORE_CERT: ${{ vars.APPSTORE_CERT || secrets.APPSTORE_CERT }}
+        run: |
+          NIGHTLY_FLAG=""
+          if [ "${{ needs.build.outputs.kind }}" = "nightly" ]; then
+            NIGHTLY_FLAG="--nightly"
+          fi
+          bash package.sh --appstore $NIGHTLY_FLAG
+
+  # After the upload nothing is installed again. Two steps, one fact each,
+  # each comparing the store's entry in apps.json with the upload: the
+  # store's own listing has it (published); the store's and that of every
+  # host its redirects lead to have it (clients can update). The second runs
+  # whatever the first found, and only it, on success, comments on the
+  # release commit: GitHub e-mails the mentioned maintainers, and mails about
+  # a failed run on its own.
+  listed:
+    name: Listed by the store
+    needs: [ build, store ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      DOWNLOAD_URL: "https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/${{ needs.build.outputs.app-id }}-${{ needs.build.outputs.version }}.tar.gz"
+      NIGHTLY: ${{ needs.build.outputs.kind == 'nightly' && '--nightly' || '' }}
+      UPLOADED: ${{ needs.store.outputs.uploaded }}
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v5
+
+      - name: The release's signature and certificate
+        id: material
+        env:
+          APPSTORE_CERT: ${{ vars.APPSTORE_CERT || secrets.APPSTORE_CERT }}
+        run: |
+          curl -fsSL -o /tmp/release.signature "${DOWNLOAD_URL}.signature"
+          printf '%s\n' "$APPSTORE_CERT" > /tmp/app.crt
+
+      - name: The store lists the upload
+        run: |
+          python3 tests/e2e/store/appstore.py watch --version "$VERSION" --download "$DOWNLOAD_URL" \
+            --signature /tmp/release.signature --certificate /tmp/app.crt $NIGHTLY --since "$UPLOADED" \
+            --timeout 30 --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Every host lists it
+        if: ${{ !cancelled() && steps.material.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTIFY: ${{ vars.RELEASE_NOTIFY || format('@{0}', github.actor) }}
+        run: |
+          python3 tests/e2e/store/appstore.py watch --mirrors --version "$VERSION" --download "$DOWNLOAD_URL" \
+            --signature /tmp/release.signature --certificate /tmp/app.crt $NIGHTLY --since "$UPLOADED" \
+            --timeout 300 --summary "$GITHUB_STEP_SUMMARY" --comment "$NOTIFY"
