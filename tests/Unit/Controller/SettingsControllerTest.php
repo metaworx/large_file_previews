@@ -126,6 +126,8 @@ class SettingsControllerTest
 
 	public function testActiveListsTheEnabledTypes(): void
 	{
+		$this->enableDocuments();
+
 		$active = $this->controller( '' )->get()->getData()['active'];
 
 		self::assertSame( [ 'application/pdf', 'application/illustrator' ], array_column( $active, 'mime' ) );
@@ -168,6 +170,7 @@ class SettingsControllerTest
 			'pdf' => [ 'enabled' => true ],
 			'ai'  => [ 'enabled' => false ],
 		];
+		$this->enableDocuments();
 
 		$data       = $this->controller( '' )->get()->getData();
 		$extensions = array_column( $data['extensions'], null, 'extension' );

@@ -20,9 +20,9 @@ function word(value: string, choices: string[]): Scalar<string> {
 function pdf(): MimeRow {
 	return {
 		mime: 'application/pdf',
-		rule: { enabled: true },
+		rule: { enabled: false },
 		stored: {},
-		default: { enabled: true },
+		default: { enabled: false },
 		renderer: { ...POPPLER },
 	}
 }
@@ -70,7 +70,8 @@ export function testState(): SettingsState {
 			preview_format: word('nextcloud', ['nextcloud', 'png', 'jpeg', 'webp']),
 			preview_background: word('white', ['white', 'black']),
 		},
-		active: [activePdf()],
+		// Every type ships off: nothing is processed.
+		active: [],
 		mimetypes: [pdf(), tiff()],
 		extensions: [],
 		prerequisites: [
@@ -91,4 +92,15 @@ export function testState(): SettingsState {
 		nextcloud: { preview_format: 'jpeg', jpeg_quality: 80, webp_quality: 80 },
 		platform: 'debian',
 	}
+}
+
+/** The state with PDF switched on, as an administrator does: stored, and processed. */
+export function withPdfOn(state: SettingsState = testState()): SettingsState {
+	const row = state.mimetypes.find((mime) => mime.mime === 'application/pdf')
+	if (row !== undefined) {
+		row.rule = { ...row.rule, enabled: true }
+		row.stored = { ...row.stored, enabled: true }
+	}
+	state.active.unshift(activePdf())
+	return state
 }

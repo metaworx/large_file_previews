@@ -294,9 +294,11 @@ class ConfigLexicon
 //  static methods
 
 	/**
-	 * What each MIME type has until it is set: PDF and Illustrator on,
-	 * every image type off and from the size given, 50 MB by default
-	 * (ConfigurationService::defaultMimeTypes() gives the server's).
+	 * What each MIME type has until it is set: every type off, so that an
+	 * installation changes nothing until an administrator enables what the
+	 * app is to take; an image type from the size given once it is on, 50 MB
+	 * by default (ConfigurationService::defaultMimeTypes() gives the
+	 * server's).
 	 *
 	 * @return array<string, array{enabled: bool, min_size_mb?: int}>
 	 */
@@ -306,7 +308,7 @@ class ConfigLexicon
 
 		foreach ( SupportedTypes::DOCUMENT_TYPES as $mime )
 		{
-			$types[ $mime ] = [ 'enabled' => true ];
+			$types[ $mime ] = [ 'enabled' => false ];
 		}
 
 		foreach ( SupportedTypes::IMAGE_TYPES as $mime )

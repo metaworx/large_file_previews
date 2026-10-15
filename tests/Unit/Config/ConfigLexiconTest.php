@@ -168,11 +168,18 @@ class ConfigLexiconTest
 		}
 	}
 
-	public function testOnlyDocumentsAreOnByDefault(): void
+	/**
+	 * Installed, the app takes nothing: an administrator enables each type.
+	 */
+	public function testEveryTypeIsOffByDefault(): void
 	{
-		foreach ( ConfigLexicon::defaultMimeTypes() as $mime => $stored )
+		$defaults = ConfigLexicon::defaultMimeTypes();
+
+		self::assertSame( SupportedTypes::all(), array_keys( $defaults ) );
+
+		foreach ( $defaults as $mime => $stored )
 		{
-			self::assertSame( in_array( $mime, SupportedTypes::DOCUMENT_TYPES, true ), $stored['enabled'], $mime );
+			self::assertFalse( $stored['enabled'], $mime );
 		}
 	}
 

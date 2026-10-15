@@ -3,8 +3,9 @@
 # The install steps of the app, checked on a server it was just installed
 # on from the app store, and a smoke test of the installed copy: the
 # version the server runs and records, no upgrade pending, the obsolete
-# settings gone, everything the app needs there (`lfp:check`), and a PDF's
-# preview rendered by `occ preview:generate`. Prints one line per check and
+# settings gone, nothing processed until switched on, everything the app
+# needs there (`lfp:check`), and, PDF switched on, a PDF's preview
+# rendered by `occ preview:generate`. Prints one line per check and
 # exits non-zero if any failed. The app id is the checkout's manifest's.
 #
 # Usage: tests/e2e/store/check-install.sh <nextcloud-dir> <version>
@@ -74,6 +75,19 @@ sys.exit(1 if 'vips_block_untrusted' in stored else 0)
 "
 }
 
+# Installed, the app takes nothing: every type ships off, and nothing is
+# stored that would switch one on.
+nothing_processed() {
+	local shown
+	shown="$(occ lfp:config:show --output=json)"
+	printf '%s' "$shown" | python3 -c "
+import sys, json
+on = [row['mime'] for row in json.load(sys.stdin)['resolved'] if row['enabled']['value']]
+print('enabled:', ', '.join(on) or 'none')
+sys.exit(1 if on else 0)
+"
+}
+
 # Everything the app needs is there: lfp:check exits 1 while something is
 # missing, and lists what.
 ready() {
@@ -81,12 +95,14 @@ ready() {
 }
 
 # A one-page PDF in the administrator's files, its preview made through
-# Nextcloud's preview generation, which asks this app first. pdftoppm
-# rebuilds the missing cross-reference table, as it does for many real
-# files. A render that fails leaves no PDF provider to fall back to, so
-# the preview fails with it; the app's last failure says why.
+# Nextcloud's preview generation, which asks this app first once PDF is
+# switched on, as an administrator does. pdftoppm rebuilds the missing
+# cross-reference table, as it does for many real files. A render that
+# fails leaves no PDF provider to fall back to, so the preview fails with
+# it; the app's last failure says why.
 preview_rendered() {
 	local data files
+	occ lfp:config:set --mime application/pdf --enabled=yes
 	data="$(occ config:system:get datadirectory)"
 	files="${data}/admin/files"
 	mkdir -p "$files"
@@ -109,6 +125,7 @@ check "the server runs ${VERSION}"                      enabled_version
 check "the server records ${VERSION} as installed"      recorded_version
 check "no upgrade is pending"                           no_upgrade_pending
 check "no obsolete setting is stored"                   no_obsolete_settings
+check "nothing is processed until switched on"          nothing_processed
 check "everything the app needs is there (lfp:check)"   ready
 check "a PDF's preview is rendered"                     preview_rendered
 

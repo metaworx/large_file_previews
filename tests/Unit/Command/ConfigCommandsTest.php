@@ -212,6 +212,7 @@ class ConfigCommandsTest
 
 	public function testGetWithoutASizeGivesNoVerdictForAnEnabledType(): void
 	{
+		$this->enableDocuments( $this->config );
 		$tester = new CommandTester( $this->get() );
 
 		$tester->execute( [ '--mime' => 'application/pdf' ] );
@@ -253,6 +254,7 @@ class ConfigCommandsTest
 		     ->willReturn( false )
 		;
 
+		$this->enableDocuments( $this->config );
 		$tester = new CommandTester( $this->get( [ '/alice/files/scan.pdf' => $file ] ) );
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--file' => '/alice/files/scan.pdf' ] ) );

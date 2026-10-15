@@ -41,7 +41,7 @@ class ConfigurationServiceTest
 		self::assertSame( 5, $limits->timeoutKillAfterSeconds );
 		self::assertSame( 512, $limits->prlimitAsMb );
 		self::assertSame( 1000, $limits->choomAdjust );
-		self::assertEquals( new TypeRule( true ), $service->mimeRules()['application/pdf'] );
+		self::assertEquals( new TypeRule( false ), $service->mimeRules()['application/pdf'] );
 		self::assertEquals( new TypeRule( false, 50 ), $service->mimeRules()['image/tiff'] );
 		self::assertSame( [], $service->extensionRules() );
 		self::assertSame( [], $service->problems() );

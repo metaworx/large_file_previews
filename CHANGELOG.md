@@ -19,9 +19,9 @@ the first stable release.
 - `img/app.svg` and `img/app-dark.svg`: the app's icon, a picture with
   an arrow enlarging it.
 
-- `README.md`, *What it does*: previews of PDF and Illustrator files by
-  `pdftoppm` and of images by `vipsthumbnail`; *What it does not do*:
-  storage that is not local, or encrypted.
+- `README.md`, *What it does*: PDF and Illustrator by `pdftoppm`, images
+  by `vipsthumbnail`, each type off until switched on; *What it does
+  not do*: storage that is not local, or encrypted.
 
 - `README.md`, *Requirements*: PHP's `gd` and process functions,
   `/dev/fd`, libvips 8.13, and which programs are optional.

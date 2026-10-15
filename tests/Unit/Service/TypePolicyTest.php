@@ -34,6 +34,7 @@ class TypePolicyTest
 			ConfigLexicon::MIN_SIZE_MB => 1,
 			ConfigLexicon::MAX_SIZE_MB => 900,
 		];
+		$this->enableDocuments();
 
 		$resolution = $this->policy()->resolve( 'application/pdf', null );
 
@@ -103,6 +104,7 @@ class TypePolicyTest
 	public function testTakesReadsTheFilesTypeNameAndSize(): void
 	{
 		$this->appValues = [ ConfigLexicon::EXTENSIONS => [ 'pdf' => [ 'max_size_mb' => 10 ] ] ];
+		$this->enableDocuments();
 
 		self::assertTrue( $this->policy()->takes( $this->file( 'application/pdf', 'Scan.PDF', 10 * Resolution::BYTES_PER_MB ) ) );
 		self::assertFalse( $this->policy()->takes( $this->file( 'application/pdf', 'Scan.PDF', 10 * Resolution::BYTES_PER_MB + 1 ) ) );

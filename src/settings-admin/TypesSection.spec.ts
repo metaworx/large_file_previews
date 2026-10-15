@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TypesSection from './TypesSection.vue'
-import { testState } from './testState'
+import { testState, withPdfOn } from './testState'
 import type { ExtensionRow, SettingsState } from './types'
 
 function section(state: SettingsState = testState()) {
@@ -97,7 +97,7 @@ describe('TypesSection', () => {
 	})
 
 	it('shows what is active, with each size\'s source, at the top', () => {
-		const active = section().find('.lfp-active')
+		const active = section(withPdfOn()).find('.lfp-active')
 
 		expect(active.text()).toContain('application/pdf')
 		expect(active.text()).toContain('pdftoppm')
@@ -105,7 +105,7 @@ describe('TypesSection', () => {
 	})
 
 	it('names a missing renderer\'s program, with a badge saying it is not available', () => {
-		const state = testState()
+		const state = withPdfOn()
 		state.active.push({
 			mime: 'image/tiff',
 			extension: 'tif',
@@ -134,15 +134,16 @@ describe('TypesSection', () => {
 		])
 	})
 
-	it('enables a MIME type, that field alone, and says so', async () => {
+	it('enables a MIME type, off as it ships, that field alone, and says so', async () => {
 		const wrapper = section()
 		const pdf = row(wrapper, '[data-mime="application/pdf"]')
 
-		expect(pdf.text()).toContain('enabled')
+		expect(pdf.text()).toContain('disabled')
 
-		await pdf.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', false)
+		await pdf.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', true)
 
-		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'application/pdf': { enabled: false } } }]])
+		expect(wrapper.emitted('save')).toEqual([[{ mimetypes: { 'application/pdf': { enabled: true } } }]])
+		expect(row(section(withPdfOn()), '[data-mime="application/pdf"]').text()).toContain('enabled')
 	})
 
 	it('shows only what is set at the level, nothing inherited', () => {
@@ -165,7 +166,7 @@ describe('TypesSection', () => {
 	})
 
 	it('says why libvips cannot decode a type, in its row and in the active table', () => {
-		const state = testState()
+		const state = withPdfOn()
 		state.mimetypes[1].renderer = { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'untrusted' } }
 		state.active.push({
 			mime: 'image/tiff',
@@ -182,7 +183,7 @@ describe('TypesSection', () => {
 	})
 
 	it('says where libvips is too old to block untrusted decoders', () => {
-		const state = testState()
+		const state = withPdfOn()
 		const unblockable = { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'unblockable' as const } }
 		state.mimetypes[1].renderer = unblockable
 		state.active.push({

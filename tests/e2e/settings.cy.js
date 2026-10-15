@@ -21,6 +21,7 @@ const clearRules = () => {
 		cy.occ( `lfp:config:unset --ext ${ extension }`, { failOnNonZeroExit: false, log: false } )
 	}
 	cy.occ( `lfp:config:unset --mime ${ MIME } --field min_size_mb`, { failOnNonZeroExit: false, log: false } )
+	cy.occ( 'lfp:config:unset --mime application/pdf', { failOnNonZeroExit: false, log: false } )
 }
 
 const openSettings = () => {
@@ -97,6 +98,10 @@ describe( 'The settings page', () => {
 	} )
 
 	it( 'says an extension its MIME type already selects has no effect', () => {
+		// Every type ships off: PDF is switched on first, as an administrator
+		// would.
+		cy.occ( 'lfp:config:set --mime application/pdf --enabled=yes' )
+		openSettings()
 		addExtension( 'pdf' )
 
 		cy.get( 'tr[data-extension="pdf"]', { timeout: FIND_TIMEOUT } )

@@ -68,6 +68,10 @@ class LargeFileProviderTest
 		$this->images = $this->createMock( ImageLoader::class );
 		$this->logger = $this->createMock( LoggerInterface::class );
 		$this->folder = sys_get_temp_dir() . '/lfp-provider-' . bin2hex( random_bytes( 4 ) );
+
+		// The PDFs these tests hand over are taken: an administrator has
+		// switched documents on, which ship off.
+		$this->enableDocuments();
 	}
 
 

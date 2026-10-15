@@ -10,6 +10,8 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit;
 
 use Closure;
+use OCA\LargeFilePreviews\Config\SupportedTypes;
+use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCP\IAppConfig;
@@ -58,6 +60,20 @@ trait MemoryAppConfig
 			$this->mimeDetector(),
 			$this->systemConfig(),
 		);
+	}
+
+	/**
+	 * PDF and Illustrator switched on, as an administrator does: every type
+	 * ships off. Through the service given, or one over the same values.
+	 */
+	protected function enableDocuments( ?ConfigurationService $service = null ): void
+	{
+		$service ??= $this->settings();
+
+		foreach ( SupportedTypes::DOCUMENT_TYPES as $mime )
+		{
+			$service->setMimeRule( $mime, new TypeRule( true ) );
+		}
 	}
 
 	/**

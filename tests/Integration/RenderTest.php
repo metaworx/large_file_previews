@@ -11,6 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Integration;
 
 use OCA\LargeFilePreviews\AppInfo\Application;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Preview\LargeFileProvider;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
@@ -48,6 +49,13 @@ class RenderTest
 		if ( Server::get( PrerequisitesService::class )->blocking() )
 		{
 			self::markTestSkipped( 'Something the app needs is missing here; see occ large-file-previews:check.' );
+		}
+
+		// Documents ship off; these tests render them, as an administrator
+		// who switched them on would have them rendered.
+		foreach ( SupportedTypes::DOCUMENT_TYPES as $mime )
+		{
+			$this->settings()->setMimeRule( $mime, new TypeRule( true ) );
 		}
 	}
 

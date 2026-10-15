@@ -8,9 +8,14 @@ and copied only to give a TIFF in one large strip a second chance.
 
 > **Status:**
 > in development, not yet released.
-> PDF and Illustrator previews are rendered, and images once switched on.
+> PDF and Illustrator previews are rendered, and images,
+> each type once switched on.
 
 ## What it does
+
+Nothing, until it is told to:
+every type below is off when the app is installed,
+and an administrator switches on the ones it is to take (see *Configuration*).
 
 - **PDF and Illustrator** (`.ai`, Illustrator 9 and later),
   through `pdftoppm` from poppler:
@@ -21,8 +26,7 @@ and copied only to give a TIFF in one large strip a second chance.
   not enlarged: a 300 dpi A4 scan gives a preview 3508 pixels tall, not 4096.
 - **Large images** through `vipsthumbnail` from libvips:
   TIFF, JPEG, PNG, WebP, GIF, HEIC and HEIF,
-  and AVIF where the server's libvips reads it,
-  each type switched off until it is switched on;
+  and AVIF where the server's libvips reads it;
   JPEG 2000, JPEG XL, BMP and PNM too,
   but libvips counts their decoders as untrusted,
   so only once system config allows those (see *Configuration*).
@@ -144,9 +148,11 @@ Each field is resolved on its own, the most specific level that sets it winning:
 the extension, then the MIME type, then the app's default,
 `min_size_mb` (0) and `max_size_mb` (-1, no limit), in MiB as every size here.
 The settings page calls a file the app takes *processed*.
-Out of the box, PDF and Illustrator files are taken at any size,
-and every image type is off;
-switched on, an image is taken from `preview_max_filesize_image` up,
+Out of the box every type is off,
+so installing the app changes nothing:
+an administrator switches on each MIME type or extension it is to take.
+Switched on, PDF and Illustrator files are taken at any size,
+and an image from `preview_max_filesize_image` up,
 50 MiB unless set, where Nextcloud's own image providers stop.
 A MIME type keeps only the fields set for it,
 so the rest follow its shipped default, the image minimum included,
