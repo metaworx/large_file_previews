@@ -7,6 +7,18 @@ the harness instance of this app while developing, a fresh server in CI.
 `appstore.py` serves a fake app store,
 `check-install.sh` checks an install by `occ`.
 
+## Specs
+
+Cypress runs them in alphabetical order.
+Each sets up what it needs and clears what it set, before and after,
+so any one of them runs alone.
+
+| Spec | What it checks |
+|------|----------------|
+| `app-enable.cy.js` | The app enabled and disabled on the Apps page, as `occ` sees it, and the settings showing the version the server runs; left enabled. |
+| `l10n-german.cy.js` | The settings page in `de` and in `de_DE`. Sets the administrator's language, and lifts `force_language` for its run; restores both. |
+| `settings.cy.js` | `7z` refused with the server's message; `heic`, whose type is off, added and listed in *What is processed*, then removed; `pdf` marked as having no effect; a stored minimum shown as stored after a reload, the shipped one as the placeholder, and `occ` reading the same; no help icon over a *Save* button. |
+
 ## Environment
 
 - `CYPRESS_baseUrl` - the server's URL;
