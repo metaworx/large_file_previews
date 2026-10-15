@@ -11,7 +11,11 @@
 	],
 	"autoload": {
 		"psr-4": {
-			"OCA\\LargeFilePreviews\\": "lib/",
+			"OCA\\LargeFilePreviews\\": "lib/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
 			"OCA\\LargeFilePreviews\\Tests\\": "tests/"
 		}
 	},
