@@ -9,6 +9,10 @@
 #
 # Usage: tests/e2e/store/check-install.sh <nextcloud-dir> <version>
 
+# Every check is a function check() calls by name, which shellcheck cannot
+# follow.
+# shellcheck disable=SC2317
+
 set -uo pipefail
 
 NC="${1:?the Nextcloud directory}"
