@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StatusSection from './StatusSection.vue'
-import { testState } from './testState'
+import { testState, withPdfOn } from './testState'
 
 describe('StatusSection', () => {
 	it('names the app\'s version first', () => {
@@ -12,9 +12,34 @@ describe('StatusSection', () => {
 	})
 
 	it('says when everything needed is there', () => {
-		const notes = mount(StatusSection, { props: { state: testState() } }).findAllComponents({ name: 'NcNoteCard' })
+		const notes = mount(StatusSection, { props: { state: withPdfOn() } }).findAllComponents({ name: 'NcNoteCard' })
 
 		expect(notes.map((note) => note.props('type'))).toEqual(['success'])
+	})
+
+	it('warns in amber while nothing is processed, as installed', () => {
+		const notes = mount(StatusSection, { props: { state: testState() } }).findAllComponents({ name: 'NcNoteCard' })
+
+		expect(notes.map((note) => note.props('type'))).toEqual(['success', 'warning'])
+		expect(notes[1].text()).toBe('Nothing is processed: every MIME type is disabled.')
+	})
+
+	it('counts an extension switched on alone as something processed', () => {
+		const state = testState()
+		state.active.push({
+			mime: 'image/tiff',
+			extension: 'tif',
+			processing: 'enabled',
+			renderer: { program: 'vipsthumbnail', available: true, unsupported: null },
+			min_size_mb: { value: 50, source: 'mime' },
+			max_size_mb: { value: -1, source: 'default' },
+		})
+		const wrapper = mount(StatusSection, { props: { state } })
+
+		expect(wrapper.find('.lfp-nothing-processed').exists()).toBe(false)
+
+		state.active[0].processing = 'excluded'
+		expect(mount(StatusSection, { props: { state } }).find('.lfp-nothing-processed').exists()).toBe(true)
 	})
 
 	it('says when something needed is missing, and lists it', () => {

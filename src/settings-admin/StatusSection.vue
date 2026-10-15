@@ -17,6 +17,9 @@ const props = defineProps<{
 	state: SettingsState
 }>()
 
+/** Whether anything is processed at all: a MIME type or an extension switched on. */
+const processing = computed(() => props.state.active.some((row) => row.processing === 'enabled'))
+
 const failureTime = computed(() => props.state.lastFailure === null
 	? ''
 	: new Date(props.state.lastFailure.time * 1000).toLocaleString())
@@ -63,6 +66,11 @@ function statusText(status: PrerequisiteItem['status']): string {
 		</NcNoteCard>
 		<NcNoteCard v-else type="error">
 			{{ t('large_file_previews', 'Some large previews are not rendered: something the app needs is missing. Install it, or switch off what needs it; see the list below, or run occ large-file-previews:check.') }}
+		</NcNoteCard>
+
+		<!-- Every type ships off: installed, the app takes nothing until told. -->
+		<NcNoteCard v-if="!processing" type="warning" class="lfp-nothing-processed">
+			{{ t('large_file_previews', 'Nothing is processed: every MIME type is disabled.') }}
 		</NcNoteCard>
 
 		<NcNoteCard v-if="state.lastFailure !== null" type="warning">

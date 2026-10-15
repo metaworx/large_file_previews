@@ -56,6 +56,15 @@ describe( 'The settings page', () => {
 		clearRules()
 	} )
 
+	it( 'warns in amber while nothing is processed, as installed', () => {
+		cy.get( '.lfp-nothing-processed' )
+			.should( 'contain', 'Nothing is processed: every MIME type is disabled.' )
+
+		cy.occ( 'lfp:config:set --mime application/pdf --enabled=yes' )
+		openSettings()
+		cy.get( '.lfp-nothing-processed' ).should( 'not.exist' )
+	} )
+
 	it( 'refuses an extension whose type the app does not handle', () => {
 		addExtension( '7z' )
 

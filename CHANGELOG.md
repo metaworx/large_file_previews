@@ -52,9 +52,9 @@ the first stable release.
   descriptors, a kept path checked before it runs, names and messages
   logged as text.
 
-- *Administration settings → Additional settings*: version, status,
-  files processed, previews, limits, failed files, libvips, programs,
-  each as stored, an empty size as inherited, with `occ` and ⓘ help.
+- *Administration settings → Additional settings*: version, status (amber
+  if nothing is processed), files processed, previews, limits, failures,
+  libvips, programs; as stored, empty sizes inherited; `occ`, ⓘ help.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   what a type or file resolves to, and validated changes, a MIME type's
