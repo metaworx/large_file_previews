@@ -115,6 +115,15 @@ jobs:
           GUIDELINES/shared/tools/detect-languages.sh --check
           GUIDELINES/shared/tools/check-versions.sh
 
+      # The template matches the texts, every language is complete, and
+      # l10n/ is what the .po files build: a changed text that was not
+      # merged and translated fails here. PHP runs Nextcloud's translation
+      # tool; gettext does the rest.
+      - name: Translations
+        run: |
+          sudo apt-get install -y -qq --no-install-recommends gettext
+          scripts/l10n.sh check
+
   phpunit:
     runs-on: ubuntu-latest
     if: *one-run-per-release
@@ -130,7 +139,7 @@ jobs:
     name: NC ${{ matrix.nextcloud-version }} / PHP ${{ matrix.php-version }}
 
     services:
-      mariadb:
+      mariadb: &mariadb
         image: mariadb:10.11
         env:
           MYSQL_ROOT_PASSWORD: root
@@ -172,13 +181,64 @@ jobs:
         run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings
         working-directory: nextcloud/apps/large_file_previews
 
+  # The browser tests (tests/e2e/) against the server PHP serves, with the
+  # frontend built into the app.
+  e2e:
+    runs-on: ubuntu-latest
+    if: *one-run-per-release
+    strategy:
+      fail-fast: false
+      matrix:
+        nextcloud-version: [ 'stable33', 'stable34', 'stable35' ]
+    name: Cypress / NC ${{ matrix.nextcloud-version }}
+
+    services:
+      mariadb: *mariadb
+
+    steps:
+      - name: Checkout app code
+        uses: actions/checkout@v5
+
+      # Every program the app runs, as in the PHPUnit job: a type whose
+      # renderer is missing cannot be changed on the page, and the specs
+      # change some, and read the status that says everything is there.
+      - name: poppler-utils, libvips-tools, libtiff-tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools
+
+      - name: Nextcloud server
+        uses: ./.github/actions/nextcloud-server
+        with:
+          nextcloud-version: ${{ matrix.nextcloud-version }}
+          e2e: 'true'
+
+      - name: Node dependencies
+        uses: ./.github/actions/node-deps
+
+      - name: App into the server
+        uses: ./.github/actions/app-into-server
+        with:
+          frontend: 'true'
+
+      - name: Serve Nextcloud
+        uses: ./.github/actions/nextcloud-serve
+
+      - name: Cypress
+        uses: ./.github/actions/cypress-run
+        with:
+          spec: tests/e2e/**/*.cy.js
+          artifact-name: cypress-${{ matrix.nextcloud-version }}
+        env:
+          CYPRESS_baseUrl: http://localhost:8081
+
   # A version tag whose tests passed is released: built, signed, installed
   # from a fake store, posted to the App Store and watched until it is
   # listed. Only the tag's run gets here; release-meta then refuses a tag
   # whose commit is not on master, or whose version is not the manifest's.
   publish:
     name: Publish
-    needs: [ lint, phpunit ]
+    needs: [ lint, phpunit, e2e ]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     permissions:
       contents: write

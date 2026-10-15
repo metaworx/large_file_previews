@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.3.0)
+# CI Conventions — Large File Previews (v1.4.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -39,20 +39,28 @@ and GitHub runs the matrix for free.
 
 | Trigger | Jobs |
 |---------|------|
-| push to any branch, pull request | upstream releases (reports only), lint, PHPUnit |
+| push to any branch, pull request | upstream releases (reports only), lint, PHPUnit, Cypress |
 | tag `vX.Y.Z` or `vX.Y.Z-suffix` | the same, then publish (§6) |
 | by hand, `install-check.yml` | the install check of a release that is out |
 
 - **Lint** runs the frontend's ESLint, `vue-tsc`, Stylelint, Vitest and build,
   then the PHP syntax check, ECS, Psalm,
-  the manifest against the app store's schema, and the guideline checks of §4.
+  the manifest against the app store's schema, the guideline checks of §4,
+  and `scripts/l10n.sh check`:
+  the template matches the texts, every language is complete,
+  and `l10n/` is what the `.po` files build.
   Vitest needs no server, so it runs here rather than in a job of its own.
 - **PHPUnit** runs both suites, on Nextcloud 33 and 34 with PHP 8.2 to 8.4,
   and on Nextcloud 35 with PHP 8.3 and 8.4;
   Nextcloud 35 refuses PHP 8.2.
+- **Cypress** runs the browser tests of `tests/e2e/` on Nextcloud 33 to 35,
+  against the server PHP's own web server serves,
+  with the frontend built into the app,
+  the server set up for them (English, no first-run wizard, jobs on cron),
+  and the screenshots of a failed run kept as an artifact.
 - A `[RELEASE]` commit pushed with its tag runs once, on the tag:
   the branch's run of the same commit is skipped.
-- A version tag's run publishes once lint and PHPUnit pass (§6).
+- A version tag's run publishes once lint, PHPUnit and Cypress pass (§6).
 
 ## 3. The Commands Are the Project's Commands
 
@@ -106,7 +114,7 @@ The upstream job reads `github.token`, which GitHub provides.
 
 ## 6. Releases
 
-A version tag whose lint and PHPUnit jobs pass runs `publish.yml`:
+A version tag whose lint, PHPUnit and Cypress jobs pass runs `publish.yml`:
 
 1. **build**
    runs `package.sh`, which builds the tarballs, with no secret;
@@ -137,21 +145,31 @@ so there is no install through the Apps page and no e2e smoke test.
 ## 7. Runner Constraints
 
 - **`poppler-utils`, `libvips-tools` and `libtiff-tools`
-  are installed in the PHPUnit job**:
+  are installed in the PHPUnit and Cypress jobs**:
   the integration tests run `pdftoppm`,
   libvips' `vipsthumbnail`, `vipsheader` and `vips`,
   and `tiffcp` for the one-strip TIFF fallback;
   the image tests are skipped where libvips is not there.
+  On the settings page a type whose renderer is missing cannot be changed,
+  and the browser tests change some.
   `timeout`, `prlimit` and `choom` come with the runner's coreutils and util-linux.
+- **`gettext` is installed in the lint job**, for `scripts/l10n.sh check`,
+  which runs PHP for Nextcloud's translation tool and gettext for the rest.
 - **`nextcloud/setup-server-action` is pinned to a commit**, not a release:
   its newest release, v0.5.0, still pins actions on Node 20.
   The upstream job fails, without failing the run, once a newer release is out,
   and the pin then goes back to a release tag.
 - **MariaDB is a service of the job**,
-  since a composite action cannot declare one;
+  since a composite action cannot declare one,
+  declared once in `test.yml` and shared by an anchor;
   the server action is told `database: mysql`.
 - **Node 24 and `npm ci`** come from `.github/actions/node-deps`,
-  with npm's cache keyed on the lock file.
+  with npm's cache keyed on the lock file,
+  and without Cypress's binary (`CYPRESS_INSTALL_BINARY=0`), about 500 MB:
+  `.github/actions/cypress-run` fetches it in the one job that runs it,
+  whether or not npm ran the package's install script.
+- **Cypress is pinned to an exact version** in `package.json`,
+  so that a developer's cached binary stays the one used.
 - **The lint job checks out the submodule and the whole history**:
   the guideline checks are the submodule's tools,
   and `check-versions.sh` reads each document's revision record

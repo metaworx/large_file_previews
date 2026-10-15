@@ -1,11 +1,15 @@
 name: App into the server
 description: >-
   The checkout copied into nextcloud/apps/large_file_previews and enabled,
-  optionally with its development dependencies (for PHPUnit).
+  optionally with its development dependencies (for PHPUnit) or its built
+  frontend (for Cypress; the node dependencies must be installed first).
 
 inputs:
   dev-dependencies:
     description: Install the Composer dependencies with dev and PHPUnit's bin (true or false)
+    default: 'false'
+  frontend:
+    description: Build the frontend and copy js/ and css/ into the app (true or false)
     default: 'false'
 
 runs:
@@ -24,6 +28,13 @@ runs:
       run: |
         composer install --no-interaction --no-scripts
         composer bin phpunit install --no-interaction
+
+    - name: Build the frontend into the app
+      if: inputs.frontend == 'true'
+      shell: bash
+      run: |
+        npm run build
+        rsync -a css js nextcloud/apps/large_file_previews/
 
     - name: Enable the app
       shell: bash

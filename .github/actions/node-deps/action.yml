@@ -10,6 +10,10 @@ runs:
         node-version: '24'
         cache: npm
 
+    # Without Cypress's binary, about 500 MB: the one job that runs Cypress
+    # fetches it (cypress-run).
     - name: Install frontend dependencies
       shell: bash
+      env:
+        CYPRESS_INSTALL_BINARY: '0'
       run: npm ci
