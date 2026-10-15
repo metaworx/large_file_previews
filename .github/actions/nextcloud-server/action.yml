@@ -18,6 +18,12 @@ inputs:
   app-store:
     description: With e2e, whether the server may reach the app store (true or false)
     default: 'false'
+  channel:
+    description: >-
+      With e2e, the update channel, when the server should be on one other
+      than the one its version file names; a git checkout is on `git`,
+      which shows nightlies. Empty leaves it.
+    default: ''
 
 runs:
   using: composite
@@ -45,3 +51,6 @@ runs:
         # A fresh install runs background jobs from every page a logged-in
         # user opens; on cron, they run only when something runs them.
         php occ background:cron
+        if [ -n "${{ inputs.channel }}" ]; then
+          php occ config:system:set updater.release.channel --value="${{ inputs.channel }}"
+        fi

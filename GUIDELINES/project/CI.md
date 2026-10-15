@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.4.0)
+# CI Conventions — Large File Previews (v1.5.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -126,21 +126,23 @@ A version tag whose lint, PHPUnit and Cypress jobs pass runs `publish.yml`:
    and makes the GitHub release, its notes the CHANGELOG section.
 3. **precheck**
    runs `install-check.yml`,
-   which installs the signed release by `occ app:install` on Nextcloud 33 to 35,
+   which installs the signed release on Nextcloud 33 to 35 the two ways
+   an administrator can, by `occ app:install`
+   and through the Apps page (`tests/e2e/store/install-from-apps-page.cy.js`),
    from a fake store that lists it (`tests/e2e/store/appstore.py fake`);
    `tests/e2e/store/check-install.sh` checks the install
-   and renders a PDF's preview through it.
+   and renders a PDF's preview through it,
+   and the settings page's browser tests run against the installed copy.
    Before the first release the fake store lists the app
    from its manifest and certificate.
+   A nightly installed through the Apps page puts the server on the `daily` channel,
+   the one on which the Apps page lists nightlies.
 4. **store**
    posts the release to the App Store with `APPSTORE_TOKEN`,
    after verifying its signature.
 5. **listed**
    watches the store, and every host it redirects to,
    until they list the upload (`appstore.py watch`).
-
-The app has no browser tests,
-so there is no install through the Apps page and no e2e smoke test.
 
 ## 7. Runner Constraints
 

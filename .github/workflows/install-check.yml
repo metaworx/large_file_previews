@@ -1,12 +1,12 @@
 name: Install check
 
-# Installs a release on fresh servers the way an administrator does at the
-# console - `occ app:install` - then checks that every install step
-# happened and runs a smoke test of the installed copy: the shipped
-# tarball, built frontend, no dev packages, verified by the server against
-# the app's certificate, and a PDF's preview rendered by `occ`
-# (tests/e2e/store/check-install.sh). The app has no browser tests, so
-# there is no install through the Apps page here.
+# Installs a release on fresh servers the two ways an administrator can -
+# `occ app:install`, and the Apps page's Download and enable - then checks
+# that every install step happened, a PDF's preview rendered by `occ`
+# (tests/e2e/store/check-install.sh), and runs the browser tests of the
+# settings page against the installed copy: the shipped tarball, built
+# frontend, no dev packages, verified by the server against the app's
+# certificate.
 #
 # Against the fake store: the real store's full listing with the release
 # added from its GitHub release, or, before the app's first release, an
@@ -49,13 +49,14 @@ permissions:
 
 jobs:
   install:
-    name: occ / NC ${{ matrix.nextcloud-version }}
+    name: ${{ matrix.mode }} / NC ${{ matrix.nextcloud-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         nextcloud-version: [ 'stable33', 'stable34', 'stable35' ]
+        mode: [ 'occ', 'web' ]
 
     services:
       mariadb:
@@ -82,17 +83,25 @@ jobs:
         with:
           ref: ${{ inputs.tag != '' && inputs.tag || format('v{0}', inputs.version) }}
 
-      # What the smoke test renders with; timeout, prlimit and choom are
-      # coreutils and util-linux, already on the runner.
-      - name: poppler-utils
+      # What the preview check renders with, and what the settings page's
+      # tests need to change a type; timeout, prlimit and choom are coreutils
+      # and util-linux, already on the runner.
+      - name: poppler-utils, libvips-tools, libtiff-tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends poppler-utils
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools
 
-      - name: Nextcloud server
+      # A git checkout of the server is on the `git` channel, which shows
+      # nightlies to everyone; a server as its administrator runs it is on
+      # `stable`. Only a nightly's Apps-page install moves it to `daily`,
+      # the one channel on which the Apps page lists nightlies.
+      - name: Nextcloud with the app store
         uses: ./.github/actions/nextcloud-server
         with:
           nextcloud-version: ${{ matrix.nextcloud-version }}
+          e2e: 'true'
+          app-store: 'true'
+          channel: ${{ (inputs.kind == 'nightly' && matrix.mode == 'web') && 'daily' || 'stable' }}
 
       # The certificate lists the app in the fake store before its first
       # release, when the real store has no entry for it to extend.
@@ -104,18 +113,49 @@ jobs:
           version: ${{ inputs.version }}
           kind: ${{ inputs.kind }}
           tag: ${{ inputs.tag != '' && inputs.tag || format('v{0}', inputs.version) }}
-          occ-install: 'true'
+          occ-install: ${{ matrix.mode == 'occ' }}
+
+      - name: Node dependencies
+        uses: ./.github/actions/node-deps
+
+      - name: Serve Nextcloud
+        uses: ./.github/actions/nextcloud-serve
+
+      - name: Install through the Apps page
+        if: matrix.mode == 'web'
+        uses: ./.github/actions/cypress-run
+        with:
+          spec: tests/e2e/store/install-from-apps-page.cy.js
+          artifact-name: install-${{ matrix.nextcloud-version }}
+        env:
+          CYPRESS_baseUrl: http://localhost:8081
+          CYPRESS_storeInstall: ${{ inputs.version }}
 
       - name: The install steps happened, and a preview renders
+        id: check
         run: bash tests/e2e/store/check-install.sh nextcloud "$VERSION"
 
-      # The server's side of a failure: the logs say why. Here rather than in
-      # an action, which comes from the release's checkout and so cannot be
-      # added afterwards.
+      # Whenever the check ran, pass or fail: a missing install step and a
+      # broken page are two findings, and one should not hide the other.
+      - name: Smoke test
+        if: ${{ !cancelled() && steps.check.outcome != 'skipped' }}
+        uses: ./.github/actions/cypress-run
+        with:
+          spec: tests/e2e/settings.cy.js,tests/e2e/l10n-german.cy.js
+          artifact-name: smoke-${{ matrix.mode }}-${{ matrix.nextcloud-version }}
+        env:
+          CYPRESS_baseUrl: http://localhost:8081
+
+      # The server's side of a failure: the Apps page shows a spinner and a
+      # status code, the logs say why. Here rather than in an action, which
+      # comes from the release's checkout and so cannot be added afterwards.
       - name: Server logs
         if: failure()
         working-directory: nextcloud
         run: |
+          echo "::group::PHP's web server"
+          cat /tmp/nc-http.log || true
+          echo "::endgroup::"
           log="$(php occ config:system:get datadirectory)/nextcloud.log"
           echo "::group::$log"
           tail -n 300 "$log" || true
