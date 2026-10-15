@@ -22,6 +22,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
+use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCP\App\IAppManager;
@@ -61,6 +62,7 @@ class SettingsController
 		private readonly VipsLoaders          $vips,
 		private readonly IAppManager          $apps,
 		private readonly IL10N                $l10n,
+		private readonly ProviderChain        $providers,
 	)
 	{
 		parent::__construct( Application::APP_ID, $request );
@@ -264,6 +266,8 @@ class SettingsController
 				'stored'   => ( $stored[ $mime ] ?? new TypeRule() )->toArray(),
 				'default'  => $defaults[ $mime ],
 				'renderer' => $renderer,
+				// The preview providers Nextcloud tries for it, in order.
+				'providers' => $this->providers->forMime( $mime ),
 			];
 
 			if ( $resolution->enabled )

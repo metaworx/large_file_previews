@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Integration;
 
 use OCA\LargeFilePreviews\Preview\LargeFileProvider;
+use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCP\IPreview;
 use OCP\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -43,6 +44,20 @@ class ProviderOrderTest
 		}
 
 		self::assertInstanceOf( LargeFileProvider::class, $first, 'The first provider for ' . $mime );
+	}
+
+	/**
+	 * What the settings page lists for a type says the same: this app's
+	 * provider first, nothing before it.
+	 */
+	#[DataProvider( 'types' )]
+	public function testTheChainListsTheAppFirst( string $mime ): void
+	{
+		$chain = Server::get( ProviderChain::class )->forMime( $mime );
+
+		self::assertSame( ProviderChain::OURS, $chain[0]['name'] ?? null, $mime );
+		self::assertSame( LargeFileProvider::class, $chain[0]['class'], $mime );
+		self::assertNotContains( true, array_column( $chain, 'before' ), $mime );
 	}
 
 

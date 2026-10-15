@@ -14,6 +14,7 @@ use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use Symfony\Component\Console\Helper\Table;
@@ -38,6 +39,7 @@ class ConfigShow
 		private readonly TypePolicy           $policy,
 		private readonly BinaryLocator        $binaries,
 		private readonly ScratchDirectory     $scratch,
+		private readonly ProviderChain        $providers,
 	)
 	{
 		parent::__construct();
@@ -77,6 +79,12 @@ class ConfigShow
 		$untrusted = $this->config->untrustedAllowed();
 		$resolved  = $this->resolved();
 		$problems  = [ ...$this->config->problems(), ...$this->binaries->problems(), ...array_filter( [ $this->scratch->overrideProblem() ] ) ];
+		$providers = [];
+
+		foreach ( SupportedTypes::all() as $mime )
+		{
+			$providers[ $mime ] = $this->providers->forMime( $mime );
+		}
 
 		if ( $this->writeJson(
 			$output,
@@ -92,6 +100,7 @@ class ConfigShow
 					): array => $resolution->toArray(),
 					$resolved,
 				),
+				'providers'        => $providers,
 				'problems'         => $problems,
 			],
 		) )
@@ -150,6 +159,18 @@ class ConfigShow
 		foreach ( $resolved as $resolution )
 		{
 			$table->addRow( [ $resolution->mime ?? '-', $resolution->extension ?? '', ...self::fields( $resolution ) ] );
+		}
+
+		$table->render();
+
+		$output->writeln( '' );
+		$output->writeln( '<info>Providers</info> (in the order Nextcloud tries them; ! is asked before this app)' );
+		$table = new Table( $output );
+		$table->setHeaders( [ 'MIME type', 'Providers' ] );
+
+		foreach ( $providers as $mime => $chain )
+		{
+			$table->addRow( [ $mime, self::chain( $chain ) ] );
 		}
 
 		$table->render();
@@ -252,6 +273,30 @@ class ConfigShow
 
 
 //  static methods
+
+	/**
+	 * A type's providers in one cell, in order; one asked before this app's
+	 * marked with !.
+	 *
+	 * @param list<array{name: string, class: string, ours: bool, before: bool}> $chain
+	 */
+	private static function chain( array $chain ): string
+	{
+		if ( $chain === [] )
+		{
+			return '-';
+		}
+
+		return implode(
+			' > ',
+			array_map(
+				static fn(
+					array $provider,
+				): string => ( $provider['before'] ? '!' : '' ) . $provider['name'],
+				$chain,
+			),
+		);
+	}
 
 	private static function text( mixed $value ): string
 	{

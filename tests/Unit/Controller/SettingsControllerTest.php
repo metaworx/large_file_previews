@@ -10,7 +10,9 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Controller;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Controller\SettingsController;
+use OCA\LargeFilePreviews\Preview\LargeFileProvider;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\Renderers;
@@ -19,6 +21,7 @@ use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
+use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Settings\Admin;
@@ -28,9 +31,11 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
+use OCP\IPreview;
 use OCP\IRequest;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionMethod;
 
@@ -122,6 +127,19 @@ class SettingsControllerTest
 
 		self::assertSame( [ 'enabled' => true, 'min_size_mb' => 50 ], $tiff['rule'] );
 		self::assertSame( [ 'enabled' => true ], $tiff['stored'] );
+	}
+
+	public function testEachTypeCarriesItsProviders(): void
+	{
+		$mimeTypes = $this->controller( '' )->get()->getData()['mimetypes'];
+
+		self::assertCount( count( SupportedTypes::all() ), $mimeTypes );
+
+		foreach ( $mimeTypes as $row )
+		{
+			self::assertSame( [ ProviderChain::OURS ], array_column( $row['providers'], 'name' ), $row['mime'] );
+			self::assertSame( [ false ], array_column( $row['providers'], 'before' ), $row['mime'] );
+		}
 	}
 
 	public function testActiveListsTheEnabledTypes(): void
@@ -325,6 +343,13 @@ class SettingsControllerTest
 		     ->willReturn( '0.1.0' )
 		;
 
+		// The server's providers: this app's for every type it handles.
+		$ours     = $this->createMock( LargeFileProvider::class );
+		$previews = $this->createMock( IPreview::class );
+		$previews->method( 'getProviders' )
+		         ->willReturn( [ SupportedTypes::MIME_REGEX => [ static fn(): LargeFileProvider => $ours ] ] )
+		;
+
 		return new class (
 			$body,
 			$this->createMock( IRequest::class ),
@@ -340,6 +365,7 @@ class SettingsControllerTest
 			$loaders,
 			$apps,
 			$this->markingL10n(),
+			new ProviderChain( $previews, $this->createMock( LoggerInterface::class ) ),
 		)
 		    extends
 		    SettingsController

@@ -14,9 +14,12 @@ use OCA\LargeFilePreviews\Command\ConfigSet;
 use OCA\LargeFilePreviews\Command\ConfigShow;
 use OCA\LargeFilePreviews\Command\ConfigUnset;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\TypeRule;
+use OCA\LargeFilePreviews\Preview\LargeFileProvider;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
+use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
@@ -25,8 +28,11 @@ use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\Storage\IStorage;
+use OCP\IPreview;
 use OCP\ITempManager;
+use OCP\Preview\IProviderV2;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -269,19 +275,39 @@ class ConfigCommandsTest
 	{
 		$this->appValues[ ConfigLexicon::EXTENSIONS ] = [ 'tif' => [ 'enabled' => true ], 'BAD' => [] ];
 
+		// This app's provider for every type it handles, and the server's
+		// own after it for PNG.
+		$ours     = $this->createMock( LargeFileProvider::class );
+		$png      = $this->getMockBuilder( IProviderV2::class )
+		                 ->setMockClassName( 'PNG' )
+		                 ->getMock()
+		;
+		$previews = $this->createMock( IPreview::class );
+		$previews->method( 'getProviders' )
+		         ->willReturn(
+			         [
+				         SupportedTypes::MIME_REGEX => [ static fn(): LargeFileProvider => $ours ],
+				         '/image\\/png/'            => [ static fn(): IProviderV2 => $png ],
+			         ],
+		         )
+		;
+
 		$tester = new CommandTester(
 			new ConfigShow(
 				$this->config,
 				new TypePolicy( $this->config ),
 				$this->binaries,
 				$this->scratch,
+				new ProviderChain( $previews, $this->createMock( LoggerInterface::class ) ),
 			),
 		);
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [ '--output' => 'json' ] ) );
 		$result = json_decode( $tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR );
 
-		self::assertSame( [ 'stored', 'programs', 'scratch', 'untrustedAllowed', 'resolved', 'problems' ], array_keys( $result ) );
+		self::assertSame( [ 'stored', 'programs', 'scratch', 'untrustedAllowed', 'resolved', 'providers', 'problems' ], array_keys( $result ) );
+		self::assertSame( SupportedTypes::all(), array_keys( $result['providers'] ) );
+		self::assertSame( [ 'Large File Previews', 'PNG' ], array_column( $result['providers']['image/png'], 'name' ) );
 		self::assertSame( [ 'path' => rtrim( sys_get_temp_dir(), '/' ), 'source' => 'temporary directory' ], $result['scratch'] );
 		self::assertFalse( $result['untrustedAllowed'] );
 		self::assertTrue( $result['stored']['extensions']['stored'] );
@@ -294,6 +320,7 @@ class ConfigCommandsTest
 
 		self::assertSame( Command::SUCCESS, $tester->execute( [] ) );
 		self::assertStringContainsString( 'Set but not used', $tester->getDisplay() );
+		self::assertMatchesRegularExpression( '/image\\/png +\\| Large File Previews > PNG/', $tester->getDisplay() );
 	}
 
 	/**
