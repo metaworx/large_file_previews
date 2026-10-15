@@ -69,6 +69,9 @@
 # Build artifacts
 /build
 /dist
+# Source maps: a production build makes none, but js/ is not emptied
+# between builds, so one left by `npm run dev` would ship
+*.map
 
 # Local-only working directories. These are gitignored, so they never show up
 # in `git status`, but rsync copies them into the package all the same — the
