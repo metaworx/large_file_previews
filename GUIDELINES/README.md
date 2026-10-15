@@ -48,7 +48,7 @@ Editing a generated file is wasted work — change the fragment and re-run
 ---
 
 
-# Large File Previews — Project Contract (v1.2.2)
+# Large File Previews — Project Contract (v1.2.3)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `GUIDELINES/README.md` for people,
@@ -173,7 +173,16 @@ A text a person reads - a setup check's message, the settings page, a refusal it
 goes through `IL10N` in PHP and `t()` in the frontend (`src/l10n.ts`),
 and ESLint's `vue/no-bare-strings-in-template` holds the templates to it.
 Logs and command output stay English.
-No translations ship yet: adding them is tooling, not a change to the code.
+German ships, as `de` (du) and `de_DE` (Sie),
+built into `l10n/` from `translationfiles/` by `scripts/l10n.sh`:
+`update` merges a changed text into each language,
+`build` writes `l10n/`,
+and `check` fails while either is out of date or incomplete.
+A language's terms and registers are in `translationfiles/<lang>/GLOSSARY.md`,
+which a new text follows.
+`appinfo/info.xml` carries its summary and description in German itself (`lang="de"`),
+so the tool leaves both out of the template and `check` cannot see them:
+a change to the English changes the German in the same commit.
 
 ### 3.5 CHANGELOG.md is mandatory here
 

@@ -4,6 +4,7 @@
 	<id>large_file_previews</id>
 	<name>Large File Previews</name>
 	<summary>Previews of PDFs, Illustrator files and images too large for Nextcloud's own preview providers</summary>
+	<summary lang="de">Vorschauen von PDFs, Illustrator-Dateien und Bildern, die für die Vorschau-Anbieter von Nextcloud zu groß sind</summary>
 	<description>Renders previews of files too large for Nextcloud's own preview providers, by handing the file where it lies to a command-line renderer rather than loading it into PHP or sending it to a service.
 
 What you get:
@@ -14,6 +15,17 @@ What you get:
 - **Per type and per extension**: which files the app takes, and from which size up to which size; anything it declines goes to the next provider.
 
 Only files on local, unencrypted storage are rendered. Everything else is left to Nextcloud's other preview providers.
+</description>
+	<description lang="de">Rendert Vorschauen von Dateien, die für die Vorschau-Anbieter von Nextcloud zu groß sind, indem die Datei dort, wo sie liegt, an einen Kommandozeilen-Renderer übergeben wird, statt sie in PHP zu laden oder an einen Dienst zu senden.
+
+Was du bekommst:
+
+- **PDF- und Illustrator-Vorschauen** über `pdftoppm` (poppler), von der ersten Seite, in voller Vorschaugröße oder, bei einer gescannten Seite, in deren eigener Auflösung, wo diese kleiner ist, für Dateien jeder Größe.
+- **Bildvorschauen** über `vipsthumbnail` (libvips): TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF und AVIF, jeder Typ ausgeschaltet, bis er eingeschaltet wird, in Streifen oder aus der nächstgelegenen Ebene einer Pyramide gelesen; ein TIFF in einem einzigen großen Streifen, dem der Speicher ausgeht, bekommt über `tiffcp` eine zweite Chance.
+- **Grenzen um jeden Rendervorgang**: ein Timeout, Obergrenzen für Adressraum und Dateigröße und ein erhöhter Out-of-Memory-Score, jeweils mit eigenem Wert, die beiden Obergrenzen gemeinsam geschaltet.
+- **Pro Typ und pro Dateiendung**: welche Dateien die App übernimmt, und ab welcher bis zu welcher Größe; was sie ablehnt, geht an den nächsten Anbieter.
+
+Nur Dateien auf lokalem, unverschlüsseltem Speicher werden gerendert. Alles andere bleibt den anderen Vorschau-Anbietern von Nextcloud überlassen.
 </description>
 	<version>0.0.0</version>
 	<licence>AGPL-3.0-or-later</licence>

@@ -62,3 +62,7 @@ the first stable release.
 
 - `occ lfp:config:set binaries.<program>`: a program's path in system
   config, overriding the one Nextcloud finds.
+
+- `l10n/`: German, as `de` (du) and `de_DE` (Sie): the settings page,
+  the setup check and the refusals; `appinfo/info.xml`: the app's
+  summary and description in German.

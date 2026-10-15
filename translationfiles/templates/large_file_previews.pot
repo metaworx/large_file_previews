@@ -278,9 +278,6 @@ msgstr ""
 msgid "Previews"
 msgstr ""
 
-msgid "Previews of PDFs, Illustrator files and images too large for Nextcloud's own preview providers"
-msgstr ""
-
 msgid "Previews of files too large for Nextcloud's own providers, rendered from the file's local path: PDF and Illustrator by pdftoppm, images by libvips. Anything this app does not process goes to the next provider. Beneath each setting is the occ command that sets it."
 msgstr ""
 
@@ -306,19 +303,6 @@ msgid "Render a scanned page at its own resolution, not enlarged"
 msgstr ""
 
 msgid "Renderer"
-msgstr ""
-
-msgid ""
-"Renders previews of files too large for Nextcloud's own preview providers, by handing the file where it lies to a command-line renderer rather than loading it into PHP or sending it to a service.\n"
-"\n"
-"What you get:\n"
-"\n"
-"- **PDF and Illustrator previews** through `pdftoppm` (poppler), of the first page, at the full preview size, or a scanned page at its own resolution where that is smaller, for files of any size.\n"
-"- **Image previews** through `vipsthumbnail` (libvips): TIFF, JPEG, PNG, WebP, GIF, HEIC, HEIF and AVIF, each type off until it is switched on, read in strips or from a pyramid's nearest level; a TIFF in one large strip that runs out of memory gets a second chance through `tiffcp`.\n"
-"- **Limits around every render**: a timeout, address-space and file-size caps and a raised out-of-memory score, each with its value, the two caps switched together.\n"
-"- **Per type and per extension**: which files the app takes, and from which size up to which size; anything it declines goes to the next provider.\n"
-"\n"
-"Only files on local, unencrypted storage are rendered. Everything else is left to Nextcloud's other preview providers."
 msgstr ""
 
 msgid "Reset"
