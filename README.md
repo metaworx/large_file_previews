@@ -57,8 +57,8 @@ HEIC through its extension, and `.tif` excluded:
 
 ![What is processed][shot-processed]
 
-The MIME types, each with its `occ` command;
-JPEG 2000 and JPEG XL blocked, their decoders untrusted:
+The MIME types, each with the preview providers Nextcloud tries for it,
+this app's first, and its `occ` command:
 
 ![The MIME types][shot-mime]
 
@@ -150,7 +150,8 @@ the extension, then the MIME type, then the app's default,
 The settings page calls a file the app takes *processed*.
 Out of the box every type is off,
 so installing the app changes nothing:
-an administrator switches on each MIME type or extension it is to take.
+an administrator switches on each MIME type or extension it is to take,
+and until one is, the settings page says so in amber.
 Switched on, PDF and Illustrator files are taken at any size,
 and an image from `preview_max_filesize_image` up,
 50 MiB unless set, where Nextcloud's own image providers stop.
@@ -187,11 +188,21 @@ occ lfp:config:set timeout_seconds 60
 ```
 
 `config:show` lists everything, stored and resolved,
-and what is set but not used;
+each type's preview providers, and what is set but not used;
 `config:get` says what one MIME type, extension or file resolves to,
 at a size where one is given, and why;
 `config:unset` returns a setting or a rule to its default.
 Each command is `large-file-previews:<name>`, with `lfp:<name>` as its alias.
+
+The providers of a type are the ones Nextcloud tries for it, in its order:
+the regex they are registered under, longest first.
+This app's is normally first for every type it handles;
+one that comes before it is shown in amber on the page,
+and marked `!` by `config:show`,
+since it is asked first and may take a file the app would have taken.
+Each name on the page carries the provider's class as its tooltip.
+What is listed is what is registered:
+whether a provider takes a particular file is known per file only.
 
 Each render runs under three limits, each switchable, all on by default.
 Sizes are in MiB, as the caps count them.

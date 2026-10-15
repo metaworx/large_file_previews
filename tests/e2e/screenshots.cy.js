@@ -22,13 +22,20 @@ const FIND_TIMEOUT = 60000
  */
 const VIEWPORT = { width: 1600, height: 900 }
 
-/** The rules the shots show, set by occ and cleared after. */
+/**
+ * The rules the shots show, set by occ and cleared after: every type ships
+ * off, so PDF and Illustrator are switched on as an administrator would.
+ */
 const RULES = [
+	'lfp:config:set --mime application/pdf --enabled=yes',
+	'lfp:config:set --mime application/illustrator --enabled=yes',
 	'lfp:config:set --mime image/tiff --enabled=yes',
 	'lfp:config:set --ext heic --enabled=yes --min=20',
 	'lfp:config:set --ext tif --enabled=no',
 ]
 const CLEAR = [
+	'lfp:config:unset --mime application/pdf',
+	'lfp:config:unset --mime application/illustrator',
 	'lfp:config:unset --mime image/tiff',
 	'lfp:config:unset --ext heic',
 	'lfp:config:unset --ext tif',
@@ -150,11 +157,11 @@ describe( 'Screenshots', () => {
 		shotBetween( 'What-Is-Processed', '.lfp-types h3', '.lfp-active' )
 	} )
 
-	// Down to JPEG XL, whose decoder libvips counts as untrusted: the whole
-	// table is taller than the viewport.
+	// Down to HEIC: the whole table, each type with its providers, is
+	// taller than the viewport.
 	it( 'MIME-Types', () => {
 		openSettings()
-		shotBetween( 'MIME-Types', '.lfp-types h4:contains("MIME types")', 'tr[data-mime="image/jxl"]', 16, 1 )
+		shotBetween( 'MIME-Types', '.lfp-types h4:contains("MIME types")', 'tr[data-mime="image/heic"]', 16, 1 )
 	} )
 
 	it( 'Extensions', () => {
