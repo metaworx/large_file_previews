@@ -3,17 +3,19 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * One rule's row, a MIME type's or an extension's: whether its files are
- * processed, its minimum and maximum, and a reset or a removal. A switch
- * saves on click, a size on its own button; a row whose type has no usable
- * renderer is shown, and cannot be changed.
+ * One rule, a MIME type's or an extension's, in four rows: its name, whether
+ * its files are processed and a reset or a removal, beside its providers;
+ * its minimum beside its maximum; a note, where it has one; its command.
+ * The list it is in lays them out (settings-admin.css). A switch saves on
+ * click, a size on its own button; a rule whose type has no usable renderer
+ * is shown, and cannot be changed.
  *
  * A MIME type is enabled or disabled, and resets to what it ships with; an
  * extension is enabled, excluded, or as its MIME type, and is removed.
  *
  * A size field shows what is set at this level, and where nothing is, what
- * it inherits as its placeholder: "50 (inherited)". The column header names
- * the field, so its label stays off it, where it would cover the placeholder.
+ * it inherits as its placeholder: "50 (inherited)". Its label is above it,
+ * where it does not cover the placeholder.
  */
 import { computed } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -97,70 +99,66 @@ function fieldId(field: string): string {
 </script>
 
 <template>
-	<tr :class="{ 'lfp-unavailable': !renderer.available }">
-		<td class="lfp-rule-name">
-			<template v-if="kind === 'ext'">
-				.{{ name }}
-				<span class="lfp-hint">{{ mime ?? '' }}</span>
-			</template>
-			<template v-else>
-				{{ name }}
-			</template>
-			<span v-if="providers !== null" class="lfp-hint lfp-rule-providers">
-				{{ t('large_file_previews', 'Providers:') }}
-				<ProviderList :providers="providers" />
+	<li class="lfp-rule" :class="['lfp-rule--' + kind, { 'lfp-unavailable': !renderer.available }]">
+		<div class="lfp-rule__head">
+			<span class="lfp-rule__name">
+				<template v-if="kind === 'ext'">
+					.{{ name }}
+					<span class="lfp-hint">{{ mime ?? '' }}</span>
+				</template>
+				<template v-else>
+					{{ name }}
+				</template>
 			</span>
-			<span v-if="rendererProblem(renderer) !== null" class="lfp-note lfp-note--error">{{ rendererProblem(renderer)?.text }}</span>
-			<span v-else-if="noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
-			<OccCommand :command="ruleCommand(kind, name, own)" />
-		</td>
-		<td>
-			<NcCheckboxRadioSwitch type="switch"
-				:model-value="rule.enabled === true"
-				:disabled="saving || !renderer.available"
-				@update:model-value="emit('save', { enabled: $event as boolean })">
-				{{ switchText() }}
-			</NcCheckboxRadioSwitch>
-		</td>
-		<td>
-			<NumberField :id="fieldId('min')"
-				:label="t('large_file_previews', 'Minimum')"
-				:value="own.min_size_mb ?? null"
-				:placeholder="inherited('min_size_mb')"
-				:min="0"
-				clearable
-				narrow
-				label-outside
-				:disabled="saving || !renderer.available"
-				@save="emit('save', { min_size_mb: $event })" />
-		</td>
-		<td>
-			<NumberField :id="fieldId('max')"
-				:label="t('large_file_previews', 'Maximum')"
-				:value="own.max_size_mb ?? null"
-				:placeholder="inherited('max_size_mb')"
-				:min="-1"
-				clearable
-				narrow
-				label-outside
-				:disabled="saving || !renderer.available"
-				@save="emit('save', { max_size_mb: $event })" />
-		</td>
-		<td>
-			<NcButton v-if="kind === 'ext'"
-				class="lfp-remove"
-				variant="tertiary"
-				:disabled="saving"
-				@click="emit('save', null)">
-				{{ t('large_file_previews', 'Remove') }}
-			</NcButton>
-			<NcButton v-else-if="shipped !== null && differs(rule, shipped)"
-				class="lfp-reset"
-				variant="tertiary"
-				:disabled="saving || !renderer.available"
-				@click="emit('save', null)">
-				{{ t('large_file_previews', 'Reset') }}
-			</NcButton>
-		</td>
-	</tr>
+			<span class="lfp-rule__state">
+				<NcCheckboxRadioSwitch type="switch"
+					:model-value="rule.enabled === true"
+					:disabled="saving || !renderer.available"
+					@update:model-value="emit('save', { enabled: $event as boolean })">
+					{{ switchText() }}
+				</NcCheckboxRadioSwitch>
+				<NcButton v-if="kind === 'ext'"
+					class="lfp-remove"
+					variant="secondary"
+					:disabled="saving"
+					@click="emit('save', null)">
+					{{ t('large_file_previews', 'Remove') }}
+				</NcButton>
+				<NcButton v-else-if="shipped !== null && differs(rule, shipped)"
+					class="lfp-reset"
+					variant="secondary"
+					:disabled="saving || !renderer.available"
+					@click="emit('save', null)">
+					{{ t('large_file_previews', 'Reset') }}
+				</NcButton>
+			</span>
+		</div>
+		<div v-if="providers !== null" class="lfp-hint lfp-rule-providers">
+			{{ t('large_file_previews', 'Providers:') }}
+			<ProviderList :providers="providers" />
+		</div>
+		<NumberField :id="fieldId('min')"
+			class="lfp-rule__size"
+			:label="t('large_file_previews', 'Minimum, MiB')"
+			:value="own.min_size_mb ?? null"
+			:placeholder="inherited('min_size_mb')"
+			:min="0"
+			clearable
+			label-outside
+			:disabled="saving || !renderer.available"
+			@save="emit('save', { min_size_mb: $event })" />
+		<NumberField :id="fieldId('max')"
+			class="lfp-rule__size"
+			:label="t('large_file_previews', 'Maximum, MiB')"
+			:value="own.max_size_mb ?? null"
+			:placeholder="inherited('max_size_mb')"
+			:min="-1"
+			clearable
+			label-outside
+			:disabled="saving || !renderer.available"
+			@save="emit('save', { max_size_mb: $event })" />
+		<span v-if="rendererProblem(renderer) !== null" class="lfp-note lfp-note--error">{{ rendererProblem(renderer)?.text }}</span>
+		<span v-else-if="noEffect" class="lfp-note lfp-note--warning lfp-no-effect">{{ t('large_file_previews', 'No effect: its MIME type already selects it') }}</span>
+		<OccCommand class="lfp-rule__occ" :command="ruleCommand(kind, name, own)" />
+	</li>
 </template>

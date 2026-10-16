@@ -10,8 +10,8 @@
  * placeholder. Its help, where it has one, is an ⓘ after the button.
  *
  * A label inside the field covers the placeholder until the field has the
- * focus; where a column header names the field, `labelOutside` drops the
- * label, which then names the field to assistive technology only.
+ * focus; `labelOutside` puts it above the field instead, where the
+ * placeholder shows.
  */
 import { computed, ref, watch } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -26,8 +26,7 @@ const props = withDefaults(defineProps<{
 	min?: number | null
 	max?: number | null
 	clearable?: boolean
-	narrow?: boolean
-	/** No visible label, so that the placeholder shows: a column header names the field. */
+	/** The label above the field rather than in it, so that the placeholder shows. */
 	labelOutside?: boolean
 	disabled?: boolean
 	/** What applies where the field is empty: the value of the level below. */
@@ -38,7 +37,6 @@ const props = withDefaults(defineProps<{
 	min: null,
 	max: null,
 	clearable: false,
-	narrow: false,
 	labelOutside: false,
 	disabled: false,
 	placeholder: null,
@@ -74,47 +72,54 @@ function save(): void {
 </script>
 
 <template>
-	<div class="lfp-number" :class="{ 'lfp-number--narrow': narrow }">
-		<NcTextField :id="id"
-			v-model="draft"
-			class="lfp-number__field"
-			type="number"
-			:label="label"
-			:label-outside="labelOutside"
-			:aria-label="labelOutside ? label : undefined"
-			:placeholder="placeholder ?? undefined"
-			:min="min ?? undefined"
-			:max="max ?? undefined"
-			:disabled="disabled"
-			:error="parsed === undefined"
-			@keyup.enter="save" />
-		<NcButton class="lfp-number__save"
-			:variant="dirty ? 'primary' : 'secondary'"
-			:disabled="disabled || !dirty"
-			:aria-label="t('large_file_previews', 'Save {label}', { label })"
-			@click="save">
-			{{ t('large_file_previews', 'Save') }}
-		</NcButton>
-		<HelpPopover v-if="help" :text="help" :label="label" />
+	<div class="lfp-number" :class="{ 'lfp-number--outside': labelOutside }">
+		<label v-if="labelOutside" :for="id" class="lfp-number__label">{{ label }}</label>
+		<div class="lfp-number__row">
+			<NcTextField :id="id"
+				v-model="draft"
+				class="lfp-number__field"
+				type="number"
+				:label="label"
+				:label-outside="labelOutside"
+				:placeholder="placeholder ?? undefined"
+				:min="min ?? undefined"
+				:max="max ?? undefined"
+				:disabled="disabled"
+				:error="parsed === undefined"
+				@keyup.enter="save" />
+			<NcButton class="lfp-number__save"
+				:variant="dirty ? 'primary' : 'secondary'"
+				:disabled="disabled || !dirty"
+				:aria-label="t('large_file_previews', 'Save {label}', { label })"
+				@click="save">
+				{{ t('large_file_previews', 'Save') }}
+			</NcButton>
+			<HelpPopover v-if="help" :text="help" :label="label" />
+		</div>
 	</div>
 </template>
 
 <style scoped>
 .lfp-number {
 	display: inline-flex;
+	flex-direction: column;
+}
+
+.lfp-number__row {
+	display: flex;
 	align-items: flex-end;
 	gap: calc(var(--default-grid-baseline) * 2);
+}
+
+.lfp-number__label {
+	color: var(--color-text-maxcontrast);
+	font-size: var(--font-size-small, 13px);
 }
 
 /* Wide enough for its label, which the field would otherwise cut. */
 .lfp-number__field {
 	flex: 0 0 auto;
 	width: 16rem;
-}
-
-/* A rule's size: wide enough for what it inherits, "no limit (inherited)". */
-.lfp-number--narrow .lfp-number__field {
-	width: 12rem;
 }
 
 .lfp-number__save {

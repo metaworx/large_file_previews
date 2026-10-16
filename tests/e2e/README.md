@@ -18,7 +18,7 @@ so any one of them runs alone.
 | `app-enable.cy.js` | The app enabled and disabled on the Apps page, as `occ` sees it, and the settings showing the version the server runs; left enabled. |
 | `l10n-german.cy.js` | The settings page in `de` and in `de_DE`. Sets the administrator's language, and lifts `force_language` for its run; restores both. |
 | `screenshots.cy.js` | Not a test: the screenshot set of `docs/Screenshots/`, as a spec. Skips itself unless `CYPRESS_capture=1`; see *Taking the screenshots*. |
-| `settings.cy.js` | `7z` refused with the server's message; `heic`, whose type is off, added and listed in *What is processed*, then removed; `pdf` marked as having no effect; a stored minimum shown as stored after a reload, the shipped one as the placeholder, and `occ` reading the same; no help icon over a *Save* button. |
+| `settings.cy.js` | `7z` refused with the server's message; `heic`, whose type is off, added and listed in *What is processed*, then removed; `pdf` marked as having no effect; a stored minimum shown as stored after a reload, the shipped one as the placeholder, and `occ` reading the same; every type's providers on a row of their own once one chain is too long; no help icon over a *Save* button. |
 | `store/install-from-apps-page.cy.js` | The install check's: the release installed through the Apps page from the store the server is pointed at, until `occ` reports it enabled at the version under test. Skips itself unless `CYPRESS_storeInstall` names that version. |
 
 ## Environment

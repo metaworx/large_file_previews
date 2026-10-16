@@ -6,12 +6,12 @@
  * Which files the app processes: what is processed, then the defaults,
  * scanned pages, each MIME type and each extension.
  *
- * Each table shows only what is set at its own level; an empty size field
+ * Each list shows only what is set at its own level; an empty size field
  * is not set there, and its placeholder says what it inherits: a MIME type
  * what it ships with, an extension its MIME type's size, each else the
  * default. What applies in the end is the table at the top, "What
- * is processed". Each rule's row is a RuleRow; what each part means is
- * behind its ⓘ.
+ * is processed". Each rule is a RuleRow; what each part means is behind
+ * its ⓘ.
  */
 import { computed, ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -25,6 +25,7 @@ import RuleRow from './RuleRow.vue'
 import { scalarCommand } from './occ'
 import { t } from '../l10n'
 import { scalarChange } from './types'
+import { useProvidersRow } from './useProvidersRow'
 import type { Changes, Inherited, Provider, Rule, RuleChange, SettingsState } from './types'
 
 const props = defineProps<{
@@ -37,6 +38,9 @@ const emit = defineEmits<{
 }>()
 
 const newExtension = ref('')
+
+const mimeList = ref<HTMLElement | null>(null)
+const providersOwnRow = useProvidersRow(mimeList, () => props.state.mimetypes)
 
 /** What a rule's empty size fields inherit: the level below's sizes, else the defaults. */
 function inheritsFrom(below: Rule | null): Inherited {
@@ -138,63 +142,41 @@ function addExtension(): void {
 			<HelpPopover :text="t('large_file_previews', 'A MIME type overrides the defaults, field by field: a minimum or maximum left empty follows the default.')"
 				:label="t('large_file_previews', 'MIME types')" />
 		</h4>
-		<table class="lfp-table">
-			<thead>
-				<tr>
-					<th>{{ t('large_file_previews', 'MIME type') }}</th>
-					<th>{{ t('large_file_previews', 'Processing') }}</th>
-					<th>{{ t('large_file_previews', 'Minimum') }}</th>
-					<th>{{ t('large_file_previews', 'Maximum') }}</th>
-					<th />
-				</tr>
-			</thead>
-			<tbody>
-				<RuleRow v-for="row in state.mimetypes"
-					:key="row.mime"
-					:data-mime="row.mime"
-					kind="mime"
-					:name="row.mime"
-					:rule="row.rule"
-					:stored="row.stored"
-					:shipped="row.default"
-					:inherits="inheritsFrom(row.default)"
-					:providers="row.providers"
-					:renderer="row.renderer"
-					:saving="saving"
-					@save="saveMime(row.mime, $event)" />
-			</tbody>
-		</table>
+		<ul ref="mimeList" class="lfp-rules" :class="{ 'lfp-rules--providers-own-row': providersOwnRow }">
+			<RuleRow v-for="row in state.mimetypes"
+				:key="row.mime"
+				:data-mime="row.mime"
+				kind="mime"
+				:name="row.mime"
+				:rule="row.rule"
+				:stored="row.stored"
+				:shipped="row.default"
+				:inherits="inheritsFrom(row.default)"
+				:providers="row.providers"
+				:renderer="row.renderer"
+				:saving="saving"
+				@save="saveMime(row.mime, $event)" />
+		</ul>
 
 		<h4 class="lfp-named">
 			{{ t('large_file_previews', 'Extensions') }}
 			<HelpPopover :text="t('large_file_previews', 'An extension overrides its MIME type, field by field. Processing \'enabled\' selects its files even where the MIME type is disabled; \'excluded\' never selects them. A minimum or maximum set here replaces the MIME type\'s; one left empty follows it.')"
 				:label="t('large_file_previews', 'Extensions')" />
 		</h4>
-		<table v-if="state.extensions.length > 0" class="lfp-table">
-			<thead>
-				<tr>
-					<th>{{ t('large_file_previews', 'Extension') }}</th>
-					<th>{{ t('large_file_previews', 'Processing') }}</th>
-					<th>{{ t('large_file_previews', 'Minimum') }}</th>
-					<th>{{ t('large_file_previews', 'Maximum') }}</th>
-					<th />
-				</tr>
-			</thead>
-			<tbody>
-				<RuleRow v-for="row in state.extensions"
-					:key="row.extension"
-					:data-extension="row.extension"
-					kind="ext"
-					:name="row.extension"
-					:mime="row.mime"
-					:rule="row.rule"
-					:inherits="inheritsFrom(mimeRule(row.mime))"
-					:renderer="row.renderer"
-					:no-effect="row.noEffect"
-					:saving="saving"
-					@save="saveExtension(row.extension, $event)" />
-			</tbody>
-		</table>
+		<ul v-if="state.extensions.length > 0" class="lfp-rules">
+			<RuleRow v-for="row in state.extensions"
+				:key="row.extension"
+				:data-extension="row.extension"
+				kind="ext"
+				:name="row.extension"
+				:mime="row.mime"
+				:rule="row.rule"
+				:inherits="inheritsFrom(mimeRule(row.mime))"
+				:renderer="row.renderer"
+				:no-effect="row.noEffect"
+				:saving="saving"
+				@save="saveExtension(row.extension, $event)" />
+		</ul>
 		<form class="lfp-row" @submit.prevent="addExtension">
 			<NcTextField id="lfp-new-extension"
 				v-model="newExtension"

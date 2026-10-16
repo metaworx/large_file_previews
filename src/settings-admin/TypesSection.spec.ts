@@ -73,11 +73,22 @@ describe('TypesSection', () => {
 		expect(placeholders(wrapper, '[data-extension="7z"]')).toEqual(['0 (inherited)', 'no limit (inherited)'])
 	})
 
-	it('keeps a rule\'s size labels off its fields, where they would cover the placeholder', () => {
+	it('puts a rule\'s size labels above its fields, where they do not cover the placeholder', () => {
+		const labels: string[] = []
 		for (const field of row(section(), '[data-mime="application/pdf"]').findAllComponents({ name: 'NumberField' })) {
 			expect(field.props('labelOutside')).toBe(true)
-			expect(field.find('input').attributes('aria-label')).toBe(field.props('label'))
+			labels.push(field.find('.lfp-number__label').text())
 		}
+		expect(labels).toEqual(['Minimum, MiB', 'Maximum, MiB'])
+	})
+
+	it('lays each rule out in its parts: head, providers, sizes, command', () => {
+		const pdf = row(section(), 'li[data-mime="application/pdf"]')
+
+		expect(pdf.element.parentElement?.classList.contains('lfp-rules')).toBe(true)
+		expect([...pdf.element.children].map((part) => part.classList[0]))
+			.toEqual(['lfp-rule__head', 'lfp-hint', 'lfp-number', 'lfp-number', 'lfp-occ'])
+		expect(pdf.find('.lfp-rule__head').findComponent({ name: 'NcCheckboxRadioSwitch' }).exists()).toBe(true)
 	})
 
 	it('gives an extension the command for its rule', () => {

@@ -69,7 +69,7 @@ describe( 'The settings page', () => {
 		addExtension( '7z' )
 
 		cy.get( TOAST ).should( 'contain', 'Files .7z are application/x-7z-compressed, a type this app does not handle.' )
-		cy.get( 'tr[data-extension="7z"]' ).should( 'not.exist' )
+		cy.get( 'li[data-extension="7z"]' ).should( 'not.exist' )
 		cy.get( '.lfp-active' ).should( 'not.contain', '.7z' )
 		resolved().then( ( rows ) => {
 			expect( rows.map( ( row ) => row.extension ) ).not.to.include( '7z' )
@@ -82,7 +82,7 @@ describe( 'The settings page', () => {
 		cy.get( '.lfp-active' ).should( 'not.contain', '.heic' )
 		addExtension( 'heic' )
 
-		cy.get( 'tr[data-extension="heic"]', { timeout: FIND_TIMEOUT } )
+		cy.get( 'li[data-extension="heic"]', { timeout: FIND_TIMEOUT } )
 			.should( 'contain', 'image/heic' )
 			.and( 'contain', 'enabled' )
 		// Its sizes are empty, and inherit HEIC's: a minimum of 50 MiB, no
@@ -98,8 +98,8 @@ describe( 'The settings page', () => {
 		} )
 
 		// Removed, it is gone from both tables, and from what occ reads.
-		cy.get( 'tr[data-extension="heic"]' ).contains( 'button', 'Remove' ).click()
-		cy.get( 'tr[data-extension="heic"]' ).should( 'not.exist' )
+		cy.get( 'li[data-extension="heic"]' ).contains( 'button', 'Remove' ).click()
+		cy.get( 'li[data-extension="heic"]' ).should( 'not.exist' )
 		cy.get( '.lfp-active' ).should( 'not.contain', '.heic' )
 		resolved().then( ( rows ) => {
 			expect( rows.map( ( row ) => row.extension ) ).not.to.include( 'heic' )
@@ -113,7 +113,7 @@ describe( 'The settings page', () => {
 		openSettings()
 		addExtension( 'pdf' )
 
-		cy.get( 'tr[data-extension="pdf"]', { timeout: FIND_TIMEOUT } )
+		cy.get( 'li[data-extension="pdf"]', { timeout: FIND_TIMEOUT } )
 			.find( '.lfp-no-effect' )
 			.should( 'contain', 'No effect: its MIME type already selects it' )
 	} )
@@ -136,7 +136,7 @@ describe( 'The settings page', () => {
 		} )
 
 		// Reset: back to what the type ships with, the field empty again.
-		cy.get( `tr[data-mime="${ MIME }"]` ).find( '.lfp-reset' ).click()
+		cy.get( `li[data-mime="${ MIME }"]` ).find( '.lfp-reset' ).click()
 		cy.get( field ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', SHIPPED_MIN )
 		cy.occ( `lfp:config:get --mime ${ MIME } --output=json` ).then( ( { stdout } ) => {
 			expect( JSON.parse( stdout ).min_size_mb ).to.deep.equal( { value: 50, source: 'mime' } )
@@ -144,11 +144,33 @@ describe( 'The settings page', () => {
 	} )
 
 	it( 'lists the providers Nextcloud tries for a type, this app first', () => {
-		cy.get( `tr[data-mime="${ MIME }"] .lfp-rule-providers .lfp-provider` ).first()
+		cy.get( `li[data-mime="${ MIME }"] .lfp-rule-providers .lfp-provider` ).first()
 			.should( 'have.text', 'Large File Previews' )
 			.and( 'have.attr', 'title', 'OCA\\LargeFilePreviews\\Preview\\LargeFileProvider' )
 			.and( 'not.have.class', 'lfp-provider--before' )
 		cy.get( '.lfp-provider--before' ).should( 'not.exist' )
+	} )
+
+	it( 'moves every type\'s providers to a row of their own once one chain no longer fits', () => {
+		cy.get( '.lfp-rules' ).first().as( 'list' )
+			.should( 'not.have.class', 'lfp-rules--providers-own-row' )
+
+		// The server's chains are short: one is lengthened here, as a server
+		// with more providers would have it, and the window resized, on which
+		// the list measures again.
+		cy.get( '@list' ).find( '.lfp-rule-providers' ).first().then( ( $providers ) => {
+			$providers.append( ' › A provider with a long name › Another one as long › And a third one' )
+		} )
+		cy.viewport( 1270, 800 )
+
+		cy.get( '@list' ).should( 'have.class', 'lfp-rules--providers-own-row' )
+		// Every type's, not only the long one's: each beneath its name.
+		cy.get( '@list' ).find( '.lfp-rule' ).each( ( $rule ) => {
+			const head = $rule.find( '.lfp-rule__head' )[ 0 ].getBoundingClientRect()
+			const providers = $rule.find( '.lfp-rule-providers' )[ 0 ].getBoundingClientRect()
+			expect( providers.top ).to.be.at.least( head.bottom )
+			expect( providers.left ).to.equal( head.left )
+		} )
 	} )
 
 	it( 'keeps every help icon clear of every Save button', () => {

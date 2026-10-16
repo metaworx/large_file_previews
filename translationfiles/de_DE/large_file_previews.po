@@ -206,17 +206,11 @@ msgstr "MIME-Typ"
 msgid "MIME types"
 msgstr "MIME-Typen"
 
-msgid "Maximum"
-msgstr "Maximum"
-
 msgid "Maximum size, MiB (-1: none)"
 msgstr "Maximale Größe, MiB (-1: keine)"
 
 msgid "Maximum, MiB"
 msgstr "Maximum, MiB"
-
-msgid "Minimum"
-msgstr "Minimum"
 
 msgid "Minimum size, MiB"
 msgstr "Minimale Größe, MiB"

@@ -61,17 +61,22 @@ describe('NumberField', () => {
 		expect(help.props('text')).toBe('What it does.')
 		expect(help.props('label')).toBe('Seconds')
 		// After the Save button, in the field's own row.
-		expect(wrapper.element.lastElementChild?.classList.contains('lfp-help')).toBe(true)
+		expect(wrapper.find('.lfp-number__row').element.lastElementChild?.classList.contains('lfp-help')).toBe(true)
 	})
 
-	it('drops its visible label where it is outside, and stays named by it', () => {
+	it('puts its label above the field where it is outside, naming the field', () => {
 		const inside = field({ value: null, placeholder: '50 (inherited)' }).wrapper
 		const outside = field({ value: null, placeholder: '50 (inherited)', labelOutside: true }).wrapper
 
+		expect(inside.find('.lfp-number__label').exists()).toBe(false)
 		expect(inside.find('label').text()).toBe('Seconds')
-		expect(inside.find('input').attributes('aria-label')).toBeUndefined()
-		expect(outside.find('label').exists()).toBe(false)
-		expect(outside.find('input').attributes('aria-label')).toBe('Seconds')
+
+		const label = outside.find('label')
+		expect(label.classes()).toContain('lfp-number__label')
+		expect(label.text()).toBe('Seconds')
+		expect(label.attributes('for')).toBe('f')
+		expect(outside.find('input').attributes('id')).toBe('f')
+		expect(outside.findAll('label')).toHaveLength(1)
 		expect(outside.find('input').attributes('placeholder')).toBe('50 (inherited)')
 	})
 
