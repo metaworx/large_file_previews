@@ -86,12 +86,12 @@ class ConfigurationServiceTest
 	 */
 	public function testNextcloudsOwnPreviewSettings(): void
 	{
-		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80 ], $this->service()->nextcloudPreview() );
+		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80, 'preview_max_filesize_image' => 50 ], $this->service()->nextcloudPreview() );
 
-		$this->systemValues = [ 'preview_format' => 'webp' ];
+		$this->systemValues = [ 'preview_format' => 'webp', 'preview_max_filesize_image' => -1 ];
 		$this->appValues    = [ 'jpeg_quality' => 5, 'webp_quality' => 65 ];
 
-		self::assertSame( [ 'preview_format' => 'webp', 'jpeg_quality' => 10, 'webp_quality' => 65 ], $this->service()->nextcloudPreview() );
+		self::assertSame( [ 'preview_format' => 'webp', 'jpeg_quality' => 10, 'webp_quality' => 65, 'preview_max_filesize_image' => -1 ], $this->service()->nextcloudPreview() );
 	}
 
 	public function testThePreviewFormat(): void
@@ -126,6 +126,25 @@ class ConfigurationServiceTest
 		$this->appValues = [ ConfigLexicon::MIMETYPES => [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 10 ] ] ];
 
 		self::assertEquals( new TypeRule( true, 10 ), $this->service()->mimeRules()['image/tiff'] );
+	}
+
+	/**
+	 * Switched on, an image ships no minimum of its own and follows the
+	 * default, as PDF does; a write of the switch is seen by the same
+	 * service at once.
+	 */
+	public function testTheDefaultMinimumAppliesToImagesWhereSwitchedOn(): void
+	{
+		$this->appValues = [ ConfigLexicon::MIN_SIZE_MB => 5 ];
+		$service         = $this->service();
+
+		self::assertSame( 50, $service->shippedMimeRules()['image/tiff']->minSizeMb );
+
+		$service->setScalar( ConfigLexicon::MIN_SIZE_ALL_TYPES, true );
+
+		self::assertArrayNotHasKey( 'min_size_mb', $service->defaultMimeTypes()['image/tiff'] );
+		self::assertNull( $service->shippedMimeRules()['image/tiff']->minSizeMb );
+		self::assertSame( 50, $service->imageLimitMb() );
 	}
 
 	/**

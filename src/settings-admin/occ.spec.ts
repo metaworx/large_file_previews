@@ -24,6 +24,7 @@ describe('occ commands', () => {
 
 	it('sets Nextcloud\'s own settings with its own commands', () => {
 		expect(systemCommand('preview_format', 'webp')).toBe('occ config:system:set preview_format --value=webp')
+		expect(systemCommand('preview_max_filesize_image', 50)).toBe('occ config:system:set preview_max_filesize_image --value=50 --type=integer')
 		expect(appConfigCommand('preview', 'jpeg_quality', 80)).toBe('occ config:app:set preview jpeg_quality --value=80')
 	})
 

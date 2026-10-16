@@ -40,6 +40,7 @@ class ConfigLexiconTest
 			[
 				'min_size_mb',
 				'max_size_mb',
+				'min_size_all_types',
 				'timeout_enabled',
 				'timeout_seconds',
 				'timeout_kill_after_seconds',

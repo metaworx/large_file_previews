@@ -34,8 +34,8 @@ the first stable release.
   next provider for `failure_retry_minutes`.
 
 - `README.md`, *Configuration*: files taken by type, extension and
-  size, images from `preview_max_filesize_image`; scans; each render's
-  limits; libvips' untrusted decoders, blocked by default, and threads.
+  size, images from `preview_max_filesize_image` or `min_size_all_types`;
+  scans; render limits; libvips' untrusted decoders, blocked, threads.
 
 - `README.md`, *Configuration*: untrusted decoders allowed in system
   config only (`vips_allow_untrusted`); before libvips 8.13, no images.

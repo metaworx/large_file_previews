@@ -55,9 +55,13 @@ export function untrustedCommand(allowed: boolean): string {
 		: [SET, 'vips_allow_untrusted', 'true'].join(' ')
 }
 
-/** One of Nextcloud's own system settings, as it stands. */
+/** One of Nextcloud's own system settings, as it stands; a number stored as one. */
 export function systemCommand(key: string, value: string | number): string {
-	return ['occ config:system:set', key, '--value=' + quoted(String(value))].join(' ')
+	const command = ['occ config:system:set', key, '--value=' + quoted(String(value))]
+	if (typeof value === 'number') {
+		command.push('--type=integer')
+	}
+	return command.join(' ')
 }
 
 /** One of Nextcloud's own app settings, as it stands. */

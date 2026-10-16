@@ -22,7 +22,7 @@ import HelpPopover from './HelpPopover.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import RuleRow from './RuleRow.vue'
-import { scalarCommand } from './occ'
+import { scalarCommand, systemCommand } from './occ'
 import { t } from '../l10n'
 import { scalarChange } from './types'
 import { useProvidersRow } from './useProvidersRow'
@@ -56,6 +56,17 @@ function inheritsFrom(below: Rule | null, shipped = false): Inherited {
 	}
 	return { min_size_mb: size('min_size_mb'), max_size_mb: size('max_size_mb') }
 }
+
+/**
+ * Where Nextcloud's own image providers stop, read only: where an image type
+ * of this app's starts, unless the minimum applies to images too.
+ */
+const imageLimitText = computed(() => {
+	const limit = props.state.nextcloud.preview_max_filesize_image
+	return limit > 0
+		? t('large_file_previews', 'Nextcloud\'s own image providers take images up to {size} MiB (preview_max_filesize_image).', { size: limit })
+		: t('large_file_previews', 'Nextcloud\'s own image providers take images of any size (preview_max_filesize_image).')
+})
 
 /** Each MIME type's preview providers, for the rows of what is processed. */
 const providersByMime = computed<Record<string, Provider[]>>(() => Object.fromEntries(
@@ -114,6 +125,23 @@ function addExtension(): void {
 					:disabled="saving"
 					@save="emit('save', scalarChange('max_size_mb', $event))" />
 				<OccCommand :command="scalarCommand('max_size_mb', state.scalars.max_size_mb.value)" />
+			</div>
+			<div data-setting="min_size_all_types">
+				<div class="lfp-named">
+					<NcCheckboxRadioSwitch type="switch"
+						:model-value="state.scalars.min_size_all_types.value"
+						:disabled="saving"
+						@update:model-value="emit('save', scalarChange('min_size_all_types', $event as boolean))">
+						{{ t('large_file_previews', 'The minimum applies to images too') }}
+					</NcCheckboxRadioSwitch>
+					<HelpPopover :text="t('large_file_previews', 'Off, an image type starts where Nextcloud\'s own image providers stop, and leaves smaller images to them. On, images follow the minimum above, as PDF and Illustrator do: at 0, this app renders every image of a type that is switched on, ahead of Nextcloud\'s own providers.')"
+						:label="t('large_file_previews', 'The minimum applies to images too')" />
+				</div>
+				<OccCommand :command="scalarCommand('min_size_all_types', state.scalars.min_size_all_types.value)" />
+				<p class="lfp-hint lfp-image-limit" data-nextcloud="preview_max_filesize_image">
+					{{ imageLimitText }}
+				</p>
+				<OccCommand :command="systemCommand('preview_max_filesize_image', state.nextcloud.preview_max_filesize_image)" />
 			</div>
 		</div>
 

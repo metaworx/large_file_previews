@@ -77,15 +77,31 @@ class ConfigurationService
 
 	/**
 	 * What each MIME type has until it is set, its images from where
-	 * Nextcloud's image providers stop (`preview_max_filesize_image`).
+	 * Nextcloud's image providers stop (`preview_max_filesize_image`), or,
+	 * where `min_size_all_types` is on, from the default minimum as every
+	 * other type.
 	 *
 	 * @return array<string, array{enabled: bool, min_size_mb?: int}>
 	 */
 	public function defaultMimeTypes(): array
 	{
+		if ( $this->getBool( ConfigLexicon::MIN_SIZE_ALL_TYPES ) )
+		{
+			return ConfigLexicon::defaultMimeTypes( null );
+		}
+
+		return ConfigLexicon::defaultMimeTypes( $this->imageLimitMb() );
+	}
+
+	/**
+	 * Where Nextcloud's own image providers stop, `preview_max_filesize_image`
+	 * in MB; Nextcloud's default, 50, where it has no limit or none is set.
+	 */
+	public function imageLimitMb(): int
+	{
 		$limit = $this->system->getSystemValueInt( ConfigLexicon::IMAGE_LIMIT_SYSTEM_KEY, ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB );
 
-		return ConfigLexicon::defaultMimeTypes( $limit > 0 ? $limit : ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB );
+		return $limit > 0 ? $limit : ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB;
 	}
 
 	public function minSizeMb(): int
@@ -153,17 +169,20 @@ class ConfigurationService
 	 * Nextcloud's own preview settings, as Nextcloud reads them: the type
 	 * Imaginary writes (system `preview_format`), and the quality every
 	 * JPEG and WebP preview is re-encoded at (`preview` `jpeg_quality`,
-	 * `webp_quality`, 80 unless set, held to 10 to 100). Shown on the page,
-	 * never written by this app.
+	 * `webp_quality`, 80 unless set, held to 10 to 100), and the largest
+	 * image its own image providers take (system `preview_max_filesize_image`,
+	 * in MB, 50 unless set, -1 for none), where an image type of this app's
+	 * starts. Shown on the page, never written by this app.
 	 *
-	 * @return array{preview_format: string, jpeg_quality: int, webp_quality: int}
+	 * @return array{preview_format: string, jpeg_quality: int, webp_quality: int, preview_max_filesize_image: int}
 	 */
 	public function nextcloudPreview(): array
 	{
 		return [
-			'preview_format' => $this->system->getSystemValueString( 'preview_format', 'jpeg' ),
-			'jpeg_quality'   => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'jpeg_quality', 80 ) ) ),
-			'webp_quality'   => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'webp_quality', 80 ) ) ),
+			'preview_format'             => $this->system->getSystemValueString( 'preview_format', 'jpeg' ),
+			'jpeg_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'jpeg_quality', 80 ) ) ),
+			'webp_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'webp_quality', 80 ) ) ),
+			'preview_max_filesize_image' => $this->system->getSystemValueInt( ConfigLexicon::IMAGE_LIMIT_SYSTEM_KEY, ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB ),
 		];
 	}
 
@@ -467,6 +486,12 @@ class ConfigurationService
 				is_int( $value )  => $this->appConfig->setValueInt( Application::APP_ID, $key, $value ),
 				default           => $this->appConfig->setValueString( Application::APP_ID, $key, $value ),
 			};
+		}
+
+		// What a type ships with follows min_size_all_types.
+		if ( $values !== [] )
+		{
+			$this->forget();
 		}
 
 		if ( $mimeRules !== [] )

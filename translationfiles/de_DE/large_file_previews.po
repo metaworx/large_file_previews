@@ -233,6 +233,12 @@ msgstr "Nextcloud speichert eine Vorschau in dem Format, in dem sie geliefert wi
 msgid "Nextcloud's own"
 msgstr "Von Nextcloud"
 
+msgid "Nextcloud's own image providers take images of any size (preview_max_filesize_image)."
+msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder jeder Größe (preview_max_filesize_image)."
+
+msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
+msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder bis {size} MiB (preview_max_filesize_image)."
+
 msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. Shown here, and changed with occ only, as Nextcloud has no page for them."
 msgstr "Die Vorschau-Einstellungen von Nextcloud selbst, die für jede Vorschau gelten, nicht nur für die dieser App. Hier angezeigt und nur mit occ geändert, da Nextcloud keine Seite dafür hat."
 
@@ -250,6 +256,9 @@ msgstr "Kein Typ, den diese App behandelt"
 
 msgid "Nothing is processed: every MIME type is disabled."
 msgstr "Nichts wird verarbeitet: Jeder MIME-Typ ist deaktiviert."
+
+msgid "Off, an image type starts where Nextcloud's own image providers stop, and leaves smaller images to them. On, images follow the minimum above, as PDF and Illustrator do: at 0, this app renders every image of a type that is switched on, ahead of Nextcloud's own providers."
+msgstr "Ausgeschaltet beginnt ein Bildtyp dort, wo die Bild-Vorschau-Anbieter von Nextcloud selbst aufhören, und überlässt ihnen kleinere Bilder. Eingeschaltet folgen Bilder dem Minimum oben, wie PDF und Illustrator: Bei 0 rendert diese App jedes Bild eines aktivierten Typs, noch vor den Vorschau-Anbietern von Nextcloud selbst."
 
 msgid "One thread was fastest for a preview, and each thread reserves memory under the cap."
 msgstr "Ein Thread war für eine Vorschau am schnellsten, und jeder Thread reserviert Speicher unter der Obergrenze."
@@ -354,6 +363,9 @@ msgstr "Der letzte fehlgeschlagene Rendervorgang, am {time}, betraf eine Datei v
 
 msgid "The maximum size cannot be below -1, which means no limit."
 msgstr "Die maximale Größe kann nicht unter -1 liegen, was keine Grenze bedeutet."
+
+msgid "The minimum applies to images too"
+msgstr "Das Minimum gilt auch für Bilder"
 
 msgid "The minimum size cannot be above the maximum size."
 msgstr "Die minimale Größe kann nicht über der maximalen liegen."

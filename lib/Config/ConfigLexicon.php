@@ -37,6 +37,8 @@ class ConfigLexicon
 
 	public const MAX_SIZE_MB = 'max_size_mb';
 
+	public const MIN_SIZE_ALL_TYPES = 'min_size_all_types';
+
 	public const MIMETYPES = 'mimetypes';
 
 	public const EXTENSIONS = 'extensions';
@@ -126,6 +128,12 @@ class ConfigLexicon
 				'min'        => -1,
 				'max'        => null,
 				'definition' => 'Largest file, in MB, the app takes where neither its MIME type nor its extension says otherwise; -1 means no limit.',
+			],
+			// Off, an image type ships a minimum of its own, where Nextcloud's
+			// image providers stop; on, every type follows min_size_mb.
+			self::MIN_SIZE_ALL_TYPES         => [
+				'default'    => false,
+				'definition' => 'Whether min_size_mb applies to images too; off, an image type starts at preview_max_filesize_image, where Nextcloud\'s own image providers stop.',
 			],
 			self::TIMEOUT_ENABLED            => [
 				'default'    => true,
@@ -298,11 +306,11 @@ class ConfigLexicon
 	 * installation changes nothing until an administrator enables what the
 	 * app is to take; an image type from the size given once it is on, 50 MB
 	 * by default (ConfigurationService::defaultMimeTypes() gives the
-	 * server's).
+	 * server's), and with no minimum of its own where none is given.
 	 *
 	 * @return array<string, array{enabled: bool, min_size_mb?: int}>
 	 */
-	public static function defaultMimeTypes( int $imageMinSizeMb = self::IMAGE_DEFAULT_MIN_SIZE_MB ): array
+	public static function defaultMimeTypes( ?int $imageMinSizeMb = self::IMAGE_DEFAULT_MIN_SIZE_MB ): array
 	{
 		$types = [];
 
@@ -313,10 +321,12 @@ class ConfigLexicon
 
 		foreach ( SupportedTypes::IMAGE_TYPES as $mime )
 		{
-			$types[ $mime ] = [
-				'enabled'     => false,
-				'min_size_mb' => $imageMinSizeMb,
-			];
+			$types[ $mime ] = $imageMinSizeMb === null
+				? [ 'enabled' => false ]
+				: [
+					'enabled'     => false,
+					'min_size_mb' => $imageMinSizeMb,
+				];
 		}
 
 		return $types;

@@ -86,6 +86,19 @@ class TypePolicyTest
 		self::assertSame( [ 50, Source::MIME ], [ $stored->minSizeMb, $stored->minSource ] );
 	}
 
+	public function testAnImageFollowsTheDefaultMinimumWhereSwitchedOn(): void
+	{
+		$this->appValues = [
+			ConfigLexicon::MIN_SIZE_MB        => 5,
+			ConfigLexicon::MIN_SIZE_ALL_TYPES => true,
+			ConfigLexicon::MIMETYPES          => [ 'image/tiff' => [ 'enabled' => true ] ],
+		];
+
+		$tiff = $this->policy()->resolve( 'image/tiff', null );
+
+		self::assertSame( [ 5, Source::DEFAULT ], [ $tiff->minSizeMb, $tiff->minSource ] );
+	}
+
 	public function testAnExtensionCanSwitchOffAnEnabledType(): void
 	{
 		$this->appValues = [ ConfigLexicon::EXTENSIONS => [ 'ai' => [ 'enabled' => false ] ] ];

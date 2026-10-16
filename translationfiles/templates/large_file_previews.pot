@@ -233,6 +233,12 @@ msgstr ""
 msgid "Nextcloud's own"
 msgstr ""
 
+msgid "Nextcloud's own image providers take images of any size (preview_max_filesize_image)."
+msgstr ""
+
+msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
+msgstr ""
+
 msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. Shown here, and changed with occ only, as Nextcloud has no page for them."
 msgstr ""
 
@@ -249,6 +255,9 @@ msgid "Not a type this app handles"
 msgstr ""
 
 msgid "Nothing is processed: every MIME type is disabled."
+msgstr ""
+
+msgid "Off, an image type starts where Nextcloud's own image providers stop, and leaves smaller images to them. On, images follow the minimum above, as PDF and Illustrator do: at 0, this app renders every image of a type that is switched on, ahead of Nextcloud's own providers."
 msgstr ""
 
 msgid "One thread was fastest for a preview, and each thread reserves memory under the cap."
@@ -353,6 +362,9 @@ msgid "The last render that failed, at {time}, was a file of type {mime}: {reaso
 msgstr ""
 
 msgid "The maximum size cannot be below -1, which means no limit."
+msgstr ""
+
+msgid "The minimum applies to images too"
 msgstr ""
 
 msgid "The minimum size cannot be above the maximum size."

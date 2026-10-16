@@ -58,6 +58,7 @@ export function testState(): SettingsState {
 		scalars: {
 			min_size_mb: scalar(0, 0),
 			max_size_mb: scalar(-1, -1),
+			min_size_all_types: scalar(false),
 			timeout_enabled: scalar(true),
 			timeout_seconds: scalar(30, 1, 600),
 			timeout_kill_after_seconds: scalar(5, 1, 60),
@@ -94,7 +95,7 @@ export function testState(): SettingsState {
 		scratch: { path: '/var/tmp/nextcloud', overridden: false },
 		untrusted: { allowed: false, blockable: true },
 		version: '0.1.0',
-		nextcloud: { preview_format: 'jpeg', jpeg_quality: 80, webp_quality: 80 },
+		nextcloud: { preview_format: 'jpeg', jpeg_quality: 80, webp_quality: 80, preview_max_filesize_image: 50 },
 		platform: 'debian',
 	}
 }

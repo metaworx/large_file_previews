@@ -55,7 +55,7 @@ describe('PreviewsSection', () => {
 
 	it('shows Nextcloud\'s own preview settings, read only', () => {
 		const state = testState()
-		state.nextcloud = { preview_format: 'webp', jpeg_quality: 90, webp_quality: 65 }
+		state.nextcloud = { ...state.nextcloud, preview_format: 'webp', jpeg_quality: 90, webp_quality: 65 }
 		const own = section(state).find('[data-setting="nextcloud"]')
 
 		expect(own.find('[data-nextcloud="preview_format"]').text()).toContain('Preview format: webp')

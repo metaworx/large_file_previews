@@ -158,6 +158,9 @@ and until one is, the settings page says so in amber.
 Switched on, PDF and Illustrator files are taken at any size,
 and an image from `preview_max_filesize_image` up,
 50 MiB unless set, where Nextcloud's own image providers stop.
+With `min_size_all_types` on, images follow `min_size_mb` as every other type does:
+at 0, the app renders every image of a type switched on,
+ahead of Nextcloud's own providers.
 A MIME type keeps only the fields set for it,
 so the rest follow its shipped default, the image minimum included,
 and a field cleared returns to it.

@@ -174,6 +174,25 @@ describe('TypesSection', () => {
 		expect(rows[1].find('.lfp-badge').text()).toBe('not available')
 	})
 
+	it('applies the minimum to images too where switched on, beside Nextcloud\'s own image limit', async () => {
+		const wrapper = section()
+		const setting = row(wrapper, '[data-setting="min_size_all_types"]')
+
+		await setting.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', true)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { min_size_all_types: true } }]])
+		expect(setting.find('[data-nextcloud="preview_max_filesize_image"]').text())
+			.toBe('Nextcloud\'s own image providers take images up to 50 MiB (preview_max_filesize_image).')
+		const commands: unknown[] = []
+		for (const command of setting.findAllComponents({ name: 'OccCommand' })) {
+			commands.push(command.props('command'))
+		}
+		expect(commands).toEqual([
+			'occ lfp:config:set min_size_all_types false',
+			'occ config:system:set preview_max_filesize_image --value=50 --type=integer',
+		])
+	})
+
 	it('switches the scan sizing off, and sets its coverage', async () => {
 		const wrapper = section()
 		const scan = row(wrapper, '[data-setting="scan"]')
