@@ -109,3 +109,13 @@ export function withPdfOn(state: SettingsState = testState()): SettingsState {
 	state.active.unshift(activePdf())
 	return state
 }
+
+/**
+ * A table's column headers, and each body row's cell labels, which a row
+ * stacked on a narrow page shows: none on the first cell, its heading.
+ */
+export function cellLabels(table: Element): { headers: (string | null)[], rows: (string | null)[][] } {
+	const headers = [...table.querySelectorAll('thead th')].map((header, index) => index === 0 ? null : header.textContent?.trim() ?? '')
+	const rows = [...table.querySelectorAll('tbody tr')].map((row) => [...row.querySelectorAll('td')].map((cell) => cell.getAttribute('data-label')))
+	return { headers, rows }
+}

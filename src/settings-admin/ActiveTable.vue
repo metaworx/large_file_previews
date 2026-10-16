@@ -21,6 +21,17 @@ withDefaults(defineProps<{
 	providers: () => ({}),
 })
 
+/** The table's column headers, each also the label of its cells where a row stacks. */
+const COLUMNS = {
+	mime: t('large_file_previews', 'MIME type'),
+	extension: t('large_file_previews', 'Extension'),
+	processing: t('large_file_previews', 'Processing'),
+	renderer: t('large_file_previews', 'Renderer'),
+	min: t('large_file_previews', 'Minimum, MiB'),
+	max: t('large_file_previews', 'Maximum, MiB'),
+	providers: t('large_file_previews', 'Providers'),
+}
+
 function sizeText(value: number): string {
 	return value === -1 ? t('large_file_previews', 'no limit') : String(value)
 }
@@ -49,40 +60,52 @@ function processingText(processing: ActiveRow['processing']): string {
 </script>
 
 <template>
-	<table class="lfp-table lfp-active">
-		<thead>
-			<tr>
-				<th>{{ t('large_file_previews', 'MIME type') }}</th>
-				<th>{{ t('large_file_previews', 'Extension') }}</th>
-				<th>{{ t('large_file_previews', 'Processing') }}</th>
-				<th>{{ t('large_file_previews', 'Renderer') }}</th>
-				<th>{{ t('large_file_previews', 'Minimum, MiB') }}</th>
-				<th>{{ t('large_file_previews', 'Maximum, MiB') }}</th>
-				<th>{{ t('large_file_previews', 'Providers') }}</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr v-for="row in rows"
-				:key="(row.mime ?? '') + '|' + (row.extension ?? '')"
-				:class="'lfp-active--' + row.processing">
-				<td>{{ row.mime ?? '' }}</td>
-				<td>{{ row.extension === null ? '' : '.' + row.extension }}</td>
-				<td>{{ processingText(row.processing) }}</td>
-				<td>
-					{{ row.renderer.program ?? '' }}
-					<span v-if="rendererProblem(row.renderer) !== null" class="lfp-badge">{{ rendererProblem(row.renderer)?.badge }}</span>
-				</td>
-				<td>{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span></td>
-				<td>{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span></td>
-				<td><ProviderList :providers="providers[row.mime ?? ''] ?? []" /></td>
-			</tr>
-			<tr v-if="rows.length === 0">
-				<td colspan="7" class="lfp-hint">
-					{{ t('large_file_previews', 'Nothing is processed: every MIME type is disabled.') }}
-				</td>
-			</tr>
-		</tbody>
-	</table>
+	<div class="lfp-table-wrap">
+		<table class="lfp-table lfp-active">
+			<thead>
+				<tr>
+					<th>{{ COLUMNS.mime }}</th>
+					<th>{{ COLUMNS.extension }}</th>
+					<th>{{ COLUMNS.processing }}</th>
+					<th>{{ COLUMNS.renderer }}</th>
+					<th>{{ COLUMNS.min }}</th>
+					<th>{{ COLUMNS.max }}</th>
+					<th>{{ COLUMNS.providers }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr v-for="row in rows"
+					:key="(row.mime ?? '') + '|' + (row.extension ?? '')"
+					:class="'lfp-active--' + row.processing">
+					<td>{{ row.mime ?? '' }}</td>
+					<td :data-label="COLUMNS.extension" :class="{ 'lfp-cell--empty': row.extension === null }">
+						{{ row.extension === null ? '' : '.' + row.extension }}
+					</td>
+					<td :data-label="COLUMNS.processing">
+						{{ processingText(row.processing) }}
+					</td>
+					<td :data-label="COLUMNS.renderer">
+						{{ row.renderer.program ?? '' }}
+						<span v-if="rendererProblem(row.renderer) !== null" class="lfp-badge">{{ rendererProblem(row.renderer)?.badge }}</span>
+					</td>
+					<td :data-label="COLUMNS.min">
+						{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span>
+					</td>
+					<td :data-label="COLUMNS.max">
+						{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span>
+					</td>
+					<td :data-label="COLUMNS.providers">
+						<ProviderList :providers="providers[row.mime ?? ''] ?? []" />
+					</td>
+				</tr>
+				<tr v-if="rows.length === 0">
+					<td colspan="7" class="lfp-hint">
+						{{ t('large_file_previews', 'Nothing is processed: every MIME type is disabled.') }}
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
 </template>
 
 <style scoped>

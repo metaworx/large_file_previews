@@ -17,6 +17,19 @@ const props = defineProps<{
 	state: SettingsState
 }>()
 
+/** The table's column headers, each also the label of its cells where a row stacks. */
+const COLUMNS = {
+	needed: t('large_file_previews', 'Needed'),
+	status: t('large_file_previews', 'Status'),
+	for: t('large_file_previews', 'For'),
+	detail: t('large_file_previews', 'Detail'),
+}
+
+/** Whether a prerequisite shows how to install it: where it is not available. */
+function hinted(item: PrerequisiteItem): boolean {
+	return item.status !== 'ok' && item.install !== null
+}
+
 /** Whether anything is processed at all: a MIME type or an extension switched on. */
 const processing = computed(() => props.state.active.some((row) => row.processing === 'enabled'))
 
@@ -81,27 +94,33 @@ function statusText(status: PrerequisiteItem['status']): string {
 			{{ t('large_file_previews', 'Set but not used: {problem}', { problem }) }}
 		</NcNoteCard>
 
-		<table class="lfp-table">
-			<thead>
-				<tr>
-					<th>{{ t('large_file_previews', 'Needed') }}</th>
-					<th>{{ t('large_file_previews', 'Status') }}</th>
-					<th>{{ t('large_file_previews', 'For') }}</th>
-					<th>{{ t('large_file_previews', 'Detail') }}</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="item in state.prerequisites" :key="item.group + item.name" :class="'lfp-status--' + item.status">
-					<td>{{ item.name }}</td>
-					<td>{{ statusText(item.status) }}</td>
-					<td>{{ item.needed_for }}</td>
-					<td>
-						{{ item.detail }}
-						<InstallHint v-if="item.status !== 'ok' && item.install !== null" :install="item.install" />
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<div class="lfp-table-wrap">
+			<table class="lfp-table">
+				<thead>
+					<tr>
+						<th>{{ COLUMNS.needed }}</th>
+						<th>{{ COLUMNS.status }}</th>
+						<th>{{ COLUMNS.for }}</th>
+						<th>{{ COLUMNS.detail }}</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr v-for="item in state.prerequisites" :key="item.group + item.name" :class="'lfp-status--' + item.status">
+						<td>{{ item.name }}</td>
+						<td :data-label="COLUMNS.status">
+							{{ statusText(item.status) }}
+						</td>
+						<td :data-label="COLUMNS.for">
+							{{ item.needed_for }}
+						</td>
+						<td :data-label="COLUMNS.detail" :class="{ 'lfp-cell--empty': item.detail === '' && !hinted(item) }">
+							{{ item.detail }}
+							<InstallHint v-if="hinted(item) && item.install !== null" :install="item.install" />
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
 		<p class="lfp-hint lfp-platform">
 			{{ platformText }}
 		</p>

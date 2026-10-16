@@ -30,6 +30,14 @@ const emit = defineEmits<{
 	refresh: []
 }>()
 
+/** The programs' column headers, each also the label of its cells where a row stacks. */
+const COLUMNS = {
+	program: t('large_file_previews', 'Program'),
+	path: t('large_file_previews', 'Path'),
+	foundBy: t('large_file_previews', 'Found by'),
+	version: t('large_file_previews', 'Version'),
+}
+
 function foundBy(program: ProgramRow): string {
 	return program.source === 'override'
 		? t('large_file_previews', 'system config')
@@ -75,31 +83,37 @@ function foundBy(program: ProgramRow): string {
 			<HelpPopover :text="t('large_file_previews', 'Found once and kept in the memory cache for a day, without one found on every request; found again on install, after an upgrade, with the button below, or with occ lfp:check --refresh. A path is set in system config only, with the command beneath it.')"
 				:label="t('large_file_previews', 'Programs')" />
 		</h4>
-		<table class="lfp-table lfp-programs">
-			<thead>
-				<tr>
-					<th>{{ t('large_file_previews', 'Program') }}</th>
-					<th>{{ t('large_file_previews', 'Path') }}</th>
-					<th>{{ t('large_file_previews', 'Found by') }}</th>
-					<th>{{ t('large_file_previews', 'Version') }}</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="program in state.programs" :key="program.name" :data-program="program.name">
-					<td>{{ program.name }}</td>
-					<td>
-						<template v-if="program.path !== null">
-							{{ program.path }}
-						</template>
-						<span v-else class="lfp-hint">{{ program.problem ?? t('large_file_previews', 'not found') }}</span>
-						<InstallHint v-if="program.path === null && program.install !== null" :install="program.install" />
-						<OccCommand :command="binaryCommand(program.name, program.path ?? '/path/to/' + program.name)" />
-					</td>
-					<td>{{ foundBy(program) }}</td>
-					<td>{{ program.version ?? '' }}</td>
-				</tr>
-			</tbody>
-		</table>
+		<div class="lfp-table-wrap">
+			<table class="lfp-table lfp-programs">
+				<thead>
+					<tr>
+						<th>{{ COLUMNS.program }}</th>
+						<th>{{ COLUMNS.path }}</th>
+						<th>{{ COLUMNS.foundBy }}</th>
+						<th>{{ COLUMNS.version }}</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr v-for="program in state.programs" :key="program.name" :data-program="program.name">
+						<td>{{ program.name }}</td>
+						<td :data-label="COLUMNS.path">
+							<template v-if="program.path !== null">
+								{{ program.path }}
+							</template>
+							<span v-else class="lfp-hint">{{ program.problem ?? t('large_file_previews', 'not found') }}</span>
+							<InstallHint v-if="program.path === null && program.install !== null" :install="program.install" />
+							<OccCommand :command="binaryCommand(program.name, program.path ?? '/path/to/' + program.name)" />
+						</td>
+						<td :data-label="COLUMNS.foundBy">
+							{{ foundBy(program) }}
+						</td>
+						<td :data-label="COLUMNS.version" :class="{ 'lfp-cell--empty': program.version === null }">
+							{{ program.version ?? '' }}
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
 		<NcButton class="lfp-refresh" :disabled="saving" @click="emit('refresh')">
 			{{ t('large_file_previews', 'Find programs again') }}
 		</NcButton>

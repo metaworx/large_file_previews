@@ -2,13 +2,23 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AdvancedSection from './AdvancedSection.vue'
 import OccCommand from './OccCommand.vue'
-import { testState } from './testState'
+import { cellLabels, testState } from './testState'
 
 function section(state = testState()) {
 	return mount(AdvancedSection, { props: { state, saving: false } })
 }
 
 describe('AdvancedSection', () => {
+	it('labels each program\'s cells with their column, for a row stacked on a narrow page', () => {
+		const { headers, rows } = cellLabels(section().find('.lfp-programs').element)
+
+		expect(headers).toEqual([null, 'Path', 'Found by', 'Version'])
+		expect(rows.length).toBeGreaterThan(0)
+		for (const row of rows) {
+			expect(row).toEqual(headers)
+		}
+	})
+
 	it('shows the untrusted decoders read only, with the command that changes them', () => {
 		const blocked = section().find('[data-setting="vips_allow_untrusted"]')
 

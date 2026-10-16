@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TypesSection from './TypesSection.vue'
-import { OURS, testState, withPdfOn } from './testState'
+import { cellLabels, OURS, testState, withPdfOn } from './testState'
 import type { ExtensionRow, SettingsState } from './types'
 
 function section(state: SettingsState = testState()) {
@@ -114,6 +114,13 @@ describe('TypesSection', () => {
 		expect(active.text()).toContain('pdftoppm')
 		expect(active.text()).toContain('no limit (default)')
 		expect(active.find('tbody tr').findComponent({ name: 'ProviderList' }).props('providers')).toEqual([OURS])
+	})
+
+	it('labels each cell of what is processed with its column, for a row stacked on a narrow page', () => {
+		const { headers, rows } = cellLabels(section(withPdfOn()).find('.lfp-active').element)
+
+		expect(headers).toEqual([null, 'Extension', 'Processing', 'Renderer', 'Minimum, MiB', 'Maximum, MiB', 'Providers'])
+		expect(rows).toEqual([headers])
 	})
 
 	it('lists a MIME type\'s providers beneath its name, amber where one comes before this app', () => {

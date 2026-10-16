@@ -20,15 +20,66 @@
 	margin-block: calc(var(--default-grid-baseline) * 2);
 }
 
+/* Nextcloud sets tables nowrap, which held them at their widest line. */
 .lfp-settings .lfp-table th,
 .lfp-settings .lfp-table td {
 	padding: var(--default-grid-baseline) calc(var(--default-grid-baseline) * 2);
 	text-align: start;
 	vertical-align: middle;
+	white-space: normal;
 }
 
 .lfp-settings .lfp-table tbody tr {
 	border-top: 1px solid var(--color-border);
+}
+
+/*
+ * Below 40rem of the table's container, each row is a block: its first cell
+ * as its heading, each other a line of its own after its column's header
+ * (data-label), an empty one left out. The header row stays, for assistive
+ * technology, out of sight.
+ */
+.lfp-settings .lfp-table-wrap {
+	container-type: inline-size;
+}
+
+@container (max-width: 40rem) {
+	.lfp-settings .lfp-table,
+	.lfp-settings .lfp-table tbody,
+	.lfp-settings .lfp-table tr,
+	.lfp-settings .lfp-table td {
+		display: block;
+	}
+
+	.lfp-settings .lfp-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+
+	.lfp-settings .lfp-table tbody tr {
+		padding-block: calc(var(--default-grid-baseline) * 2);
+	}
+
+	.lfp-settings .lfp-table td {
+		padding-block: 0;
+	}
+
+	.lfp-settings .lfp-table td:first-child:not([colspan]) {
+		font-weight: bold;
+	}
+
+	.lfp-settings .lfp-table td[data-label]::before {
+		content: attr(data-label) ': ';
+		color: var(--color-text-maxcontrast);
+		font-weight: normal;
+	}
+
+	.lfp-settings .lfp-table td.lfp-cell--empty {
+		display: none;
+	}
 }
 
 /*

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StatusSection from './StatusSection.vue'
-import { testState, withPdfOn } from './testState'
+import { cellLabels, testState, withPdfOn } from './testState'
 
 describe('StatusSection', () => {
 	it('names the app\'s version first', () => {
@@ -84,6 +84,16 @@ describe('StatusSection', () => {
 
 		expect(text).toContain('was a file of type application/pdf: timed out (exit status 124).')
 		expect(text).toContain('Set but not used: extensions.TIF')
+	})
+
+	it('labels each cell with its column, for a row stacked on a narrow page', () => {
+		const { headers, rows } = cellLabels(mount(StatusSection, { props: { state: testState() } }).find('table').element)
+
+		expect(headers).toEqual([null, 'Status', 'For', 'Detail'])
+		expect(rows.length).toBeGreaterThan(0)
+		for (const row of rows) {
+			expect(row).toEqual(headers)
+		}
 	})
 
 	it('says where a program\'s path is set, and that it is not here', () => {
