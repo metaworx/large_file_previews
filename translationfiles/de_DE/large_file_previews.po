@@ -437,6 +437,9 @@ msgstr "Weiß"
 msgid "as MIME type"
 msgstr "wie MIME-Typ"
 
+msgid "as shipped"
+msgstr "wie ausgeliefert"
+
 msgid "available"
 msgstr "vorhanden"
 
@@ -514,6 +517,9 @@ msgstr "die PHP-Funktion %s ist deaktiviert"
 #, php-format
 msgid "the program %s is missing"
 msgstr "das Programm %s fehlt"
+
+msgid "{value} (as shipped)"
+msgstr "{value} (wie ausgeliefert)"
 
 msgid "{value} (inherited)"
 msgstr "{value} (geerbt)"

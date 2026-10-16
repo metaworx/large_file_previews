@@ -16,8 +16,9 @@ use OCA\LargeFilePreviews\Config\TypeRule;
 use OCP\Files\FileInfo;
 
 /**
- * Which files the app takes: the app's defaults, then the MIME type's rule,
- * then the extension's, field by field, the most specific value set winning.
+ * Which files the app takes: the app's defaults, then what the MIME type
+ * ships with, then what is stored for it, then the extension's rule, field
+ * by field, the most specific value set winning.
  *
  * An extension is the finer level because Nextcloud derives the MIME type
  * mostly from it, so "TIFF, but not .tif" or ".tif only above 200 MB" can
@@ -58,7 +59,8 @@ class TypePolicy
 		$maxSource     = Source::DEFAULT;
 
 		$levels = [
-			Source::MIME->value      => $mime === null ? null : ( $this->config->mimeRules()[ $mime ] ?? null ),
+			Source::SHIPPED->value   => $mime === null ? null : ( $this->config->shippedMimeRules()[ $mime ] ?? null ),
+			Source::MIME->value      => $mime === null ? null : ( $this->config->storedMimeRules()[ $mime ] ?? null ),
 			Source::EXTENSION->value => $extension === null ? null : ( $this->config->extensionRules()[ $extension ] ?? null ),
 		];
 

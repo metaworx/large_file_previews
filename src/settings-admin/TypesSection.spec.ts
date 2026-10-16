@@ -52,8 +52,22 @@ describe('TypesSection', () => {
 		const fields = row(section(state), '[data-mime="image/tiff"]').findAllComponents({ name: 'NumberField' })
 
 		expect(fields[0].props('value')).toBeNull()
-		expect(fields[0].props('placeholder')).toBe('50 (inherited)')
+		expect(fields[0].props('placeholder')).toBe('50 (as shipped)')
 		expect(fields[1].props('value')).toBe(900)
+	})
+
+	it('says a size the type ships with is shipped, in what is processed', () => {
+		const state = withPdfOn()
+		state.active.push({
+			mime: 'image/tiff',
+			extension: null,
+			processing: 'enabled',
+			renderer: { program: 'vipsthumbnail', available: true, unsupported: null },
+			min_size_mb: { value: 50, source: 'shipped' },
+			max_size_mb: { value: -1, source: 'default' },
+		})
+
+		expect(section(state).findAll('.lfp-active tbody tr')[1].text()).toContain('50 (as shipped)')
 	})
 
 	it('shows what a MIME type\'s empty fields inherit: what it ships with, else the default', () => {
@@ -212,7 +226,7 @@ describe('TypesSection', () => {
 			extension: null,
 			processing: 'enabled',
 			renderer: { program: 'vipsthumbnail', available: false, unsupported: { decoder: 'tiffload', problem: 'missing' } },
-			min_size_mb: { value: 50, source: 'mime' },
+			min_size_mb: { value: 50, source: 'shipped' },
 			max_size_mb: { value: -1, source: 'default' },
 		})
 		const wrapper = section(state)
@@ -230,7 +244,7 @@ describe('TypesSection', () => {
 			extension: null,
 			processing: 'enabled',
 			renderer: unblockable,
-			min_size_mb: { value: 50, source: 'mime' },
+			min_size_mb: { value: 50, source: 'shipped' },
 			max_size_mb: { value: -1, source: 'default' },
 		})
 		const wrapper = section(state)

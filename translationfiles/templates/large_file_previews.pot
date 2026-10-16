@@ -437,6 +437,9 @@ msgstr ""
 msgid "as MIME type"
 msgstr ""
 
+msgid "as shipped"
+msgstr ""
+
 msgid "available"
 msgstr ""
 
@@ -513,6 +516,9 @@ msgstr ""
 
 #, php-format
 msgid "the program %s is missing"
+msgstr ""
+
+msgid "{value} (as shipped)"
 msgstr ""
 
 msgid "{value} (inherited)"

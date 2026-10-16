@@ -137,6 +137,7 @@ OC.L10N.register(
     "Which files" : "Welche Dateien",
     "White" : "Weiß",
     "as MIME type" : "wie MIME-Typ",
+    "as shipped" : "wie ausgeliefert",
     "available" : "vorhanden",
     "decoder blocked" : "Decoder gesperrt",
     "default" : "Standard",
@@ -162,6 +163,7 @@ OC.L10N.register(
     "the PHP extension %s is missing" : "die PHP-Erweiterung %s fehlt",
     "the PHP function %s is disabled" : "die PHP-Funktion %s ist deaktiviert",
     "the program %s is missing" : "das Programm %s fehlt",
+    "{value} (as shipped)" : "{value} (wie ausgeliefert)",
     "{value} (inherited)" : "{value} (geerbt)"
 },
 "nplurals=2; plural=(n != 1);");

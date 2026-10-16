@@ -42,12 +42,19 @@ const newExtension = ref('')
 const mimeList = ref<HTMLElement | null>(null)
 const providersOwnRow = useProvidersRow(mimeList, () => props.state.mimetypes)
 
-/** What a rule's empty size fields inherit: the level below's sizes, else the defaults. */
-function inheritsFrom(below: Rule | null): Inherited {
-	return {
-		min_size_mb: below?.min_size_mb ?? props.state.scalars.min_size_mb.value,
-		max_size_mb: below?.max_size_mb ?? props.state.scalars.max_size_mb.value,
+/**
+ * What a rule's empty size fields inherit: the level below's sizes, else the
+ * defaults. Below a MIME type is what it ships with, and a size from there
+ * is said to be shipped.
+ */
+function inheritsFrom(below: Rule | null, shipped = false): Inherited {
+	function size(field: 'min_size_mb' | 'max_size_mb'): Inherited[typeof field] {
+		const own = below?.[field]
+		return own === undefined
+			? { value: props.state.scalars[field].value, shipped: false }
+			: { value: own, shipped }
 	}
+	return { min_size_mb: size('min_size_mb'), max_size_mb: size('max_size_mb') }
 }
 
 /** Each MIME type's preview providers, for the rows of what is processed. */
@@ -151,7 +158,7 @@ function addExtension(): void {
 				:rule="row.rule"
 				:stored="row.stored"
 				:shipped="row.default"
-				:inherits="inheritsFrom(row.default)"
+				:inherits="inheritsFrom(row.default, true)"
 				:providers="row.providers"
 				:renderer="row.renderer"
 				:saving="saving"

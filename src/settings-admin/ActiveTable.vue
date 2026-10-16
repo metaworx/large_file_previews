@@ -42,6 +42,8 @@ function sourceText(source: Sourced<number>['source']): string {
 		return t('large_file_previews', 'extension')
 	case 'mime':
 		return t('large_file_previews', 'MIME type')
+	case 'shipped':
+		return t('large_file_previews', 'as shipped')
 	default:
 		return t('large_file_previews', 'default')
 	}

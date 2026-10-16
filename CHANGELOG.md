@@ -57,8 +57,8 @@ the first stable release.
   failures, libvips, programs; down to a phone's width; `occ`, ⓘ help.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
-  each type's preview providers, what a type or file resolves to, and
-  validated changes, a MIME type's laid over its shipped default.
+  each type's providers, what a type or file resolves to and from which
+  level, shipped included; validated changes over the shipped default.
 
 - `occ lfp:config:set binaries.<program>`: a program's path in system
   config, overriding the one Nextcloud finds.

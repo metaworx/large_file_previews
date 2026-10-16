@@ -10,7 +10,7 @@ const EXTENSIONS = [ '7z', 'heic', 'pdf' ]
 // A type that ships a minimum of its own, 50 MiB: the field shows what is
 // stored, and the shipped value only as its placeholder.
 const MIME = 'image/tiff'
-const SHIPPED_MIN = '50 (inherited)'
+const SHIPPED_MIN = '50 (as shipped)'
 
 // @nextcloud/dialogs' toast container; its class is a CSS-module hash, so
 // it is matched by the stable half of the name, as src/toast.css does.
@@ -139,7 +139,7 @@ describe( 'The settings page', () => {
 		cy.get( `li[data-mime="${ MIME }"]` ).find( '.lfp-reset' ).click()
 		cy.get( field ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', SHIPPED_MIN )
 		cy.occ( `lfp:config:get --mime ${ MIME } --output=json` ).then( ( { stdout } ) => {
-			expect( JSON.parse( stdout ).min_size_mb ).to.deep.equal( { value: 50, source: 'mime' } )
+			expect( JSON.parse( stdout ).min_size_mb ).to.deep.equal( { value: 50, source: 'shipped' } )
 		} )
 	} )
 

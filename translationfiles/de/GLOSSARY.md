@@ -31,6 +31,7 @@ and in `appinfo/info.xml` where its summary or description has it.
 | PHP extension | PHP-Erweiterung | |
 | default, defaults | Standard, Standardwerte | |
 | inherited | geerbt | a size field's placeholder: „50 (geerbt)“ |
+| as shipped | wie ausgeliefert | what a type has until set: „50 (wie ausgeliefert)“ |
 | override | Vorrang haben | „hat Feld für Feld Vorrang vor“; not *übersteuern*, which is Swiss usage |
 | enabled / disabled / excluded | aktiviert / deaktiviert / ausgeschlossen | a rule's processing, and how the help text quotes it |
 | limit, limits | Grenze, Grenzen | the section; „keine Grenze“ for no limit |

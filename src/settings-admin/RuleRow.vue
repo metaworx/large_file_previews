@@ -87,10 +87,11 @@ function inherited(field: keyof Inherited): string | null {
 	if (props.inherits === null) {
 		return null
 	}
-	const value = props.inherits[field]
-	return t('large_file_previews', '{value} (inherited)', {
-		value: value === -1 ? t('large_file_previews', 'no limit') : String(value),
-	})
+	const { value, shipped } = props.inherits[field]
+	const text = value === -1 ? t('large_file_previews', 'no limit') : String(value)
+	return shipped
+		? t('large_file_previews', '{value} (as shipped)', { value: text })
+		: t('large_file_previews', '{value} (inherited)', { value: text })
 }
 
 function fieldId(field: string): string {

@@ -48,6 +48,12 @@ class ConfigurationService
 	/** @var array<string, TypeRule>|null */
 	private ?array $mimeRules = null;
 
+	/** @var array<string, TypeRule>|null what each MIME type ships with */
+	private ?array $shippedMimeRules = null;
+
+	/** @var array<string, TypeRule>|null what is stored for each, where in force */
+	private ?array $storedMimeRules = null;
+
 	/** @var array<string, TypeRule>|null */
 	private ?array $extensionRules = null;
 
@@ -211,6 +217,18 @@ class ConfigurationService
 	}
 
 	/**
+	 * What each MIME type ships with, before anything is stored for it.
+	 *
+	 * @return array<string, TypeRule>
+	 */
+	public function shippedMimeRules(): array
+	{
+		$this->load();
+
+		return $this->shippedMimeRules ?? [];
+	}
+
+	/**
 	 * What is stored for each MIME type, its own fields only, where it is
 	 * valid and in force: the fields a command must set to reproduce it.
 	 *
@@ -218,20 +236,9 @@ class ConfigurationService
 	 */
 	public function storedMimeRules(): array
 	{
-		$rules = [];
+		$this->load();
 
-		foreach ( $this->storedMap( ConfigLexicon::MIMETYPES ) as $mime => $stored )
-		{
-			$mime = (string) $mime;
-			$rule = TypeRule::fromArray( $stored );
-
-			if ( $rule instanceof TypeRule && SupportedTypes::matches( $mime ) && $this->shippedRule( $mime )->with( $rule )->problem() === null )
-			{
-				$rules[ $mime ] = $rule;
-			}
-		}
-
-		return $rules;
+		return $this->storedMimeRules ?? [];
 	}
 
 	/**
@@ -305,8 +312,10 @@ class ConfigurationService
 	 */
 	public function forget(): void
 	{
-		$this->mimeRules      = null;
-		$this->extensionRules = null;
+		$this->mimeRules        = null;
+		$this->shippedMimeRules = null;
+		$this->storedMimeRules  = null;
+		$this->extensionRules   = null;
 	}
 
 	/**
@@ -767,6 +776,9 @@ class ConfigurationService
 			}
 		}
 
+		$shipped = $mimeRules;
+		$inForce = [];
+
 		foreach ( $this->storedMap( ConfigLexicon::MIMETYPES ) as $mime => $stored )
 		{
 			$mime = (string) $mime;
@@ -795,6 +807,7 @@ class ConfigurationService
 			}
 
 			$mimeRules[ $mime ] = ( $mimeRules[ $mime ] ?? new TypeRule() )->with( $rule );
+			$inForce[ $mime ]   = $rule;
 		}
 
 		$extensionRules = [];
@@ -835,8 +848,10 @@ class ConfigurationService
 			$extensionRules[ $extension ] = $rule;
 		}
 
-		$this->mimeRules      = $mimeRules;
-		$this->extensionRules = $extensionRules;
+		$this->mimeRules        = $mimeRules;
+		$this->shippedMimeRules = $shipped;
+		$this->storedMimeRules  = $inForce;
+		$this->extensionRules   = $extensionRules;
 	}
 
 	/**
@@ -874,8 +889,7 @@ class ConfigurationService
 			$this->appConfig->setValueArray( Application::APP_ID, $key, $map );
 		}
 
-		$this->mimeRules      = null;
-		$this->extensionRules = null;
+		$this->forget();
 	}
 
 	/**

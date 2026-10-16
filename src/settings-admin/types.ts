@@ -78,7 +78,7 @@ export interface Renderer {
 
 export interface Sourced<T> {
 	value: T
-	source: 'default' | 'mime' | 'ext'
+	source: 'default' | 'shipped' | 'mime' | 'ext'
 }
 
 /** One row of what the configuration resolves to. */
@@ -106,11 +106,17 @@ export interface Provider {
 /**
  * What a rule's size fields fall back to where nothing is set at its level:
  * for a MIME type, what it ships with, else the default; for an extension,
- * its MIME type's size in force, else the default.
+ * its MIME type's size in force, else the default. Shipped where it is the
+ * value the MIME type ships with, which its placeholder says.
  */
+export interface InheritedSize {
+	value: number
+	shipped: boolean
+}
+
 export interface Inherited {
-	min_size_mb: number
-	max_size_mb: number
+	min_size_mb: InheritedSize
+	max_size_mb: InheritedSize
 }
 
 export interface MimeRow {

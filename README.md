@@ -145,8 +145,11 @@ Which files the app takes is set per MIME type and per extension:
 whether it takes them, and from which size up to which size.
 Anything it declines goes to Nextcloud's next preview provider.
 Each field is resolved on its own, the most specific level that sets it winning:
-the extension, then the MIME type, then the app's default,
+the extension, then what is stored for the MIME type,
+then what the MIME type ships with, then the app's default,
 `min_size_mb` (0) and `max_size_mb` (-1, no limit), in MiB as every size here.
+The page and `config:get` name the level each value comes from:
+`ext`, `mime`, `shipped` or `default`.
 The settings page calls a file the app takes *processed*.
 Out of the box every type is off,
 so installing the app changes nothing:

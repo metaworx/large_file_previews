@@ -64,6 +64,28 @@ class TypePolicyTest
 		self::assertSame( 'tif', $resolution->extension );
 	}
 
+	/**
+	 * An image's minimum, set by nobody, is what the type ships with; it is
+	 * the MIME type's only once it is stored for it.
+	 */
+	public function testWhatATypeShipsWithIsShippedNotTheMimeTypes(): void
+	{
+		$this->appValues = [ ConfigLexicon::MIMETYPES => [ 'image/tiff' => [ 'enabled' => true ] ] ];
+
+		$tiff = $this->policy()->resolve( 'image/tiff', null );
+		$png  = $this->policy()->resolve( 'image/png', null );
+
+		self::assertSame( [ true, Source::MIME ], [ $tiff->enabled, $tiff->enabledSource ] );
+		self::assertSame( [ 50, Source::SHIPPED ], [ $tiff->minSizeMb, $tiff->minSource ] );
+		self::assertSame( [ false, Source::SHIPPED ], [ $png->enabled, $png->enabledSource ] );
+
+		$this->appValues[ ConfigLexicon::MIMETYPES ]['image/tiff']['min_size_mb'] = 50;
+
+		$stored = $this->policy()->resolve( 'image/tiff', null );
+
+		self::assertSame( [ 50, Source::MIME ], [ $stored->minSizeMb, $stored->minSource ] );
+	}
+
 	public function testAnExtensionCanSwitchOffAnEnabledType(): void
 	{
 		$this->appValues = [ ConfigLexicon::EXTENSIONS => [ 'ai' => [ 'enabled' => false ] ] ];

@@ -31,7 +31,7 @@ describe('StatusSection', () => {
 			extension: 'tif',
 			processing: 'enabled',
 			renderer: { program: 'vipsthumbnail', available: true, unsupported: null },
-			min_size_mb: { value: 50, source: 'mime' },
+			min_size_mb: { value: 50, source: 'shipped' },
 			max_size_mb: { value: -1, source: 'default' },
 		})
 		const wrapper = mount(StatusSection, { props: { state } })
