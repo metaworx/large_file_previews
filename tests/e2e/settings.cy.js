@@ -173,6 +173,25 @@ describe( 'The settings page', () => {
 		} )
 	} )
 
+	it( 'fits a phone\'s width: nothing on the page is wider than it', () => {
+		// An extension too, so that both lists of rules are on the page.
+		cy.occ( 'lfp:config:set --ext heic --enabled=yes' )
+		cy.viewport( 400, 800 )
+		cy.reload()
+		cy.get( 'li[data-extension="heic"]', { timeout: FIND_TIMEOUT } )
+
+		cy.get( '#lfp-admin-settings' ).should( ( $page ) => {
+			const page = $page[ 0 ]
+			const right = page.getBoundingClientRect().right
+			const outside = [ ...page.querySelectorAll( 'td, button, input, code' ) ]
+				.filter( ( element ) => element.getBoundingClientRect().right > right + 1 )
+				.map( ( element ) => `${ element.tagName } "${ element.textContent.trim().slice( 0, 40 ) }"` )
+
+			expect( outside ).to.deep.equal( [] )
+			expect( page.scrollWidth ).to.be.at.most( page.clientWidth )
+		} )
+	} )
+
 	it( 'keeps every help icon clear of every Save button', () => {
 		cy.get( '.lfp-help-icon' ).should( 'have.length.greaterThan', 0 )
 		cy.get( '.lfp-number__save' ).should( 'have.length.greaterThan', 0 )
