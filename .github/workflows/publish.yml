@@ -4,6 +4,10 @@ name: Publish to Nextcloud App Store
 # so every job here runs with the tag as its ref — which is what the
 # `signing` and `appstore` environments' tag rules are matched against. A
 # release is run again by hand with `gh workflow run publish.yml --ref <tag>`.
+# Where the tag's tests failed and master fixed them, the test workflow is
+# started on master instead, `gh workflow run test.yml --ref master`: it
+# tests master, then publishes the tag, whose code master must not have
+# changed (release-meta); the environments allow master for that alone.
 #
 # Three jobs, one secret each at most: `build` runs the third-party code
 # (npm, Composer) and holds nothing; `sign` holds the key and runs none of

@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.6.0)
+# CI Conventions — Large File Previews (v1.7.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -41,6 +41,7 @@ and GitHub runs the matrix for free.
 |---------|------|
 | push to any branch, pull request | upstream releases (reports only), lint, PHPUnit, Cypress |
 | tag `vX.Y.Z` or `vX.Y.Z-suffix` | the same, then publish (§6) |
+| by hand, `test.yml` on master | the same, then publish the manifest's release, where its tag's tests failed (§6) |
 | by hand, `install-check.yml` | the install check of a release that is out |
 
 - **Lint** runs the frontend's ESLint, `vue-tsc`, Stylelint, Vitest and build,
@@ -59,7 +60,8 @@ and GitHub runs the matrix for free.
   the server set up for them (English, no first-run wizard, jobs on cron),
   and the screenshots of a failed run kept as an artifact.
 - A `[RELEASE]` commit pushed with its tag runs once, on the tag:
-  the branch's run of the same commit is skipped.
+  the branch's run of the same commit is skipped,
+  so master runs no CI on a `[RELEASE]` of its own.
 - A version tag's run publishes once lint, PHPUnit and Cypress pass (§6).
 
 ## 3. The Commands Are the Project's Commands
@@ -107,7 +109,9 @@ each in the environment of the job that uses it:
 | `APPSTORE_TOKEN` | secret | `appstore` | `store`: posts the release |
 | `RELEASE_NOTIFY` | variable, optional | repository | `listed`: whom the comment on the release commit mentions; the tag's pusher otherwise |
 
-The `signing` and `appstore` environments allow version tags only.
+The `signing` and `appstore` environments allow version tags,
+and master for the one case of §6 where a release is published from it;
+`appstore` waits for a maintainer's approval besides.
 The upstream job reads `github.token`, which GitHub provides.
 
 ## 6. Releases
@@ -141,6 +145,16 @@ A version tag whose lint, PHPUnit and Cypress jobs pass runs `publish.yml`:
 5. **listed**
    watches the store, and every host it redirects to,
    until they list the upload (`appstore.py watch`).
+
+A tag is how a release is published, and the only way where its code changes.
+**Where a tag's tests failed and only the tests needed fixing**,
+master fixes them, and `gh workflow run test.yml --ref master`
+tests master and then publishes the release the manifest names.
+`release-meta` takes its tag from the manifest's version,
+and refuses unless that tag exists below master's head
+and master differs from it only where neither the package nor its build reads:
+tests, docs, CI, the guidelines and the lint and test configurations.
+What is built from master is then what the tag holds.
 
 ## 7. Runner Constraints
 

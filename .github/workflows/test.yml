@@ -1,11 +1,14 @@
 name: Nextcloud App Testing Matrix
 # Every branch, every pull request, and tags shaped like a version: the
 # lists under `push` are alternatives, not conditions that must all hold.
+# By hand, on master, it tests and then publishes the release the manifest
+# names, whose tag's run failed in its tests only (CI.md §6).
 on:
   push:
     branches: [ '**' ]
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*' ]
   pull_request:
+  workflow_dispatch:
 jobs:
   # .github/actions/nextcloud-server pins nextcloud/setup-server-action to a
   # commit on its main branch, because its newest release, v0.5.0, still pins
@@ -241,12 +244,16 @@ jobs:
 
   # A version tag whose tests passed is released: built, signed, installed
   # from a fake store, posted to the App Store and watched until it is
-  # listed. Only the tag's run gets here; release-meta then refuses a tag
-  # whose commit is not on master, or whose version is not the manifest's.
+  # listed. Only the tag's run gets here, or a run started by hand on master
+  # for a release whose tests only needed fixing; release-meta then refuses
+  # a tag whose commit is not on master, or whose version is not the
+  # manifest's, and a master that differs from the tag where it ships.
   publish:
     name: Publish
     needs: [ lint, phpunit, e2e ]
-    if: github.event_name == 'push' && github.ref_type == 'tag'
+    if: >-
+      (github.event_name == 'push' && github.ref_type == 'tag')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
     permissions:
       contents: write
     uses: ./.github/workflows/publish.yml
