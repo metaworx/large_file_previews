@@ -157,11 +157,11 @@ describe( 'Screenshots', () => {
 		shotBetween( 'What-Is-Processed', '.lfp-types h3', '.lfp-active' )
 	} )
 
-	// Down to HEIC: the whole table, each type with its providers, is
-	// taller than the viewport.
+	// Down to JPEG, the first with a provider after this app's: the whole
+	// list, each type in four rows, is taller than the viewport.
 	it( 'MIME-Types', () => {
 		openSettings()
-		shotBetween( 'MIME-Types', '.lfp-types h4:contains("MIME types")', 'tr[data-mime="image/heic"]', 16, 1 )
+		shotBetween( 'MIME-Types', '.lfp-types h4:contains("MIME types")', 'li[data-mime="image/jpeg"]', 16, 1 )
 	} )
 
 	it( 'Extensions', () => {
