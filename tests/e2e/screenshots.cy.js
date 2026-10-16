@@ -171,8 +171,8 @@ describe( 'Screenshots', () => {
 
 	it( 'Limits', () => {
 		openSettings()
-		// Down to the last limit's command: the section goes on with the
-		// failed files.
-		shotBetween( 'Limits', '.lfp-limits', '.lfp-limits .lfp-occ:contains("choom_adjust")' )
+		// Down to the caps' last command: the section, each field with its
+		// label above it, is taller than the viewport.
+		shotBetween( 'Limits', '.lfp-limits', '.lfp-limits .lfp-occ:contains("prlimit_fsize_mb")' )
 	} )
 } )
