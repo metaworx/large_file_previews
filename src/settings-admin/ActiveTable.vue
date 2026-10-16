@@ -89,10 +89,11 @@ function processingText(processing: ActiveRow['processing']): string {
 						<span v-if="rendererProblem(row.renderer) !== null" class="lfp-badge">{{ rendererProblem(row.renderer)?.badge }}</span>
 					</td>
 					<td :data-label="COLUMNS.min">
-						{{ sizeText(row.min_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.min_size_mb.source) }})</span>
+						<!-- On one line: the space between them is where they break. -->
+						<span class="lfp-unbroken">{{ sizeText(row.min_size_mb.value) }}</span> <span class="lfp-hint lfp-unbroken">({{ sourceText(row.min_size_mb.source) }})</span>
 					</td>
 					<td :data-label="COLUMNS.max">
-						{{ sizeText(row.max_size_mb.value) }} <span class="lfp-hint">({{ sourceText(row.max_size_mb.source) }})</span>
+						<span class="lfp-unbroken">{{ sizeText(row.max_size_mb.value) }}</span> <span class="lfp-hint lfp-unbroken">({{ sourceText(row.max_size_mb.source) }})</span>
 					</td>
 					<td :data-label="COLUMNS.providers">
 						<ProviderList :providers="providers[row.mime ?? ''] ?? []" />

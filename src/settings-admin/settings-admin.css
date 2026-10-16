@@ -25,8 +25,19 @@
 .lfp-settings .lfp-table td {
 	padding: var(--default-grid-baseline) calc(var(--default-grid-baseline) * 2);
 	text-align: start;
-	vertical-align: middle;
+	vertical-align: top;
 	white-space: normal;
+}
+
+/* A value, or its source: either whole, on a line of its own where both do
+   not fit. */
+.lfp-settings .lfp-table .lfp-unbroken {
+	white-space: nowrap;
+}
+
+/* The space before it is the gap, and no indent where it wraps. */
+.lfp-settings .lfp-table td .lfp-hint.lfp-unbroken {
+	margin-inline-start: 0;
 }
 
 .lfp-settings .lfp-table tbody tr {
