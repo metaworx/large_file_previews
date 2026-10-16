@@ -107,13 +107,20 @@ jobs:
           curl -fsSL -o info.xsd https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd
           xmllint --noout --schema info.xsd appinfo/info.xml
 
-      # The checks that hold today, by name; GUIDELINES/project/CI.md §4 says
-      # which are left out and why.
+      # Every guideline check, GUIDELINES/project/CI.md §4; the commit
+      # messages over what the event brought: a push's new commits, a pull
+      # request's own (its head, not the merge GitHub makes of it). A tag,
+      # a new branch or a dispatch has no range, and check says so.
       - name: Guideline checks
+        env:
+          FROM: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
-          GUIDELINES/shared/tools/sync-docs.sh --check
-          GUIDELINES/shared/tools/detect-languages.sh --check
-          GUIDELINES/shared/tools/check-versions.sh
+          if [ -n "$FROM" ]; then
+            GUIDELINES/shared/tools/check --commit-range "$FROM..$TO"
+          else
+            GUIDELINES/shared/tools/check
+          fi
 
       # The template matches the texts, every language is complete, and
       # l10n/ is what the .po files build: a changed text that was not

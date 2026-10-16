@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.5.1)
+# CI Conventions — Large File Previews (v1.6.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -76,26 +76,24 @@ CI runs the commands of the contract's facts table, with these differences:
 
 ## 4. Guideline Gates
 
-The lint job runs three of them, by name:
+The lint job runs all of them, as one command,
+with the commit messages over what the event brought:
 
 ```bash
-GUIDELINES/shared/tools/sync-docs.sh --check
-GUIDELINES/shared/tools/detect-languages.sh --check
-GUIDELINES/shared/tools/check-versions.sh
+GUIDELINES/shared/tools/check --commit-range "$FROM..$TO"
 ```
 
-Left out, for now:
+- **A push** hands it `github.event.before..github.sha`, its new commits.
+- **A pull request** hands it its base and its head,
+  not the merge commit GitHub makes of them, whose message is GitHub's.
+- **A tag, a new branch or a dispatch** has no previous commit:
+  `before` is forty zeros, or empty,
+  and the commit-message check says so and reads nothing.
+  Every other check still runs.
 
-- **`changelog.sh check`**, because it reports `appinfo/info.xml`'s version
-  as a bump without a cut for as long as nothing has been released.
-  It joins the job with the first release.
-- **The line-break check** (`reflow.sh`),
-  because `GUIDELINES/shared/tools/check` chooses its files and runs no check alone.
-  It joins with the changelog check,
-  when the first release lets the job run `check` whole.
-- **Commit messages**, which need the push's range,
-  as `GUIDELINES/shared/tools/check` explains;
-  they are checked before each commit instead.
+A warning, such as a line the line-break check would rewrap, does not fail the job;
+a finding does.
+`GUIDELINES/shared/tools/check --list` names each check and its fix.
 
 ## 5. Secrets and Variables
 
