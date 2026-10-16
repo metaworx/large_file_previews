@@ -3,8 +3,9 @@
  * @copyright Copyright (c) 2026 metaworx
  * @license   AGPL-3.0-or-later
  *
- * The occ command for a setting, in a small grey line beneath it, copied
- * with one click.
+ * The occ command for a setting, in a shaded box beneath it, copied with
+ * the button at its end. As wide as the command, or as its parent where the
+ * parent stretches it (a rule's).
  */
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
@@ -32,7 +33,7 @@ async function copy(): Promise<void> {
 	<div class="lfp-occ">
 		<code class="lfp-occ__command">{{ command }}</code>
 		<NcButton class="lfp-occ__copy"
-			variant="tertiary-no-background"
+			variant="secondary"
 			size="small"
 			:aria-label="t('large_file_previews', 'Copy the command')"
 			:title="t('large_file_previews', 'Copy the command')"
@@ -47,18 +48,24 @@ async function copy(): Promise<void> {
 <style scoped>
 /* A long command wraps between its arguments, never inside one, unless a
    single argument - a path - is wider than the line; the copy button stays
-   beside its first line. */
+   beside its first line. On a line of its own, as wide as the command. */
 .lfp-occ {
 	display: flex;
 	align-items: flex-start;
-	gap: var(--default-grid-baseline);
-	color: var(--color-text-maxcontrast);
+	gap: calc(var(--default-grid-baseline) * 2);
+	width: fit-content;
+	max-width: 100%;
+	margin-block-start: var(--default-grid-baseline);
 	font-size: var(--font-size-small, 13px);
 }
 
 .lfp-occ__command {
+	flex: 1 1 auto;
 	min-width: 0;
-	padding-block-start: 0.5em;
+	padding: var(--default-grid-baseline) calc(var(--default-grid-baseline) * 2);
+	border-radius: var(--border-radius, 3px);
+	background-color: var(--color-background-dark);
+	color: var(--color-main-text);
 	font-family: var(--font-face-monospace, monospace);
 	white-space: normal;
 	overflow-wrap: break-word;

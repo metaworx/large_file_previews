@@ -161,6 +161,11 @@
 	grid-column: 1 / -1;
 }
 
+/* A rule's command, the width of the rule, as its other rows. */
+.lfp-settings .lfp-rule .lfp-rule__occ {
+	width: auto;
+}
+
 /* A size fills its column. */
 .lfp-settings .lfp-rule .lfp-rule__size .lfp-number__field {
 	flex: 1 1 auto;
