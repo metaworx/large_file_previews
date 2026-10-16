@@ -98,6 +98,7 @@ OC.L10N.register(
     "Render a scanned page at its own resolution, not enlarged" : "Eine gescannte Seite in ihrer eigenen Auflösung rendern, nicht vergrößert",
     "Renderer" : "Renderer",
     "Reset" : "Zurücksetzen",
+    "Reset {label}" : "{label} zurücksetzen",
     "Save" : "Speichern",
     "Save {label}" : "{label} speichern",
     "Saved." : "Gespeichert.",
@@ -168,6 +169,7 @@ OC.L10N.register(
     "the PHP function %s is disabled" : "die PHP-Funktion %s ist deaktiviert",
     "the program %s is missing" : "das Programm %s fehlt",
     "{value} (as shipped)" : "{value} (wie ausgeliefert)",
+    "{value} (default)" : "{value} (Standard)",
     "{value} (inherited)" : "{value} (geerbt)"
 },
 "nplurals=2; plural=(n != 1);");

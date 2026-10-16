@@ -174,6 +174,22 @@ describe('TypesSection', () => {
 		expect(rows[1].find('.lfp-badge').text()).toBe('not available')
 	})
 
+	it('resets a default once it is stored, back to what it ships with', async () => {
+		const resettable = (state: SettingsState) => section(state).find('#lfp-min-size').element.closest('.lfp-number')?.querySelector('.lfp-number__reset') !== null
+
+		expect(resettable(testState())).toBe(false)
+
+		const state = testState()
+		state.scalars.min_size_mb = { ...state.scalars.min_size_mb, value: 10, stored: true }
+		const wrapper = section(state)
+
+		expect(resettable(state)).toBe(true)
+
+		await wrapper.findAllComponents({ name: 'NumberField' })[0].vm.$emit('reset')
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { min_size_mb: null } }]])
+	})
+
 	it('applies the minimum to images too where switched on, beside Nextcloud\'s own image limit', async () => {
 		const wrapper = section()
 		const setting = row(wrapper, '[data-setting="min_size_all_types"]')

@@ -170,6 +170,9 @@ which also shows whether previews can be rendered and the last render that faile
 or with `occ`; both check a value the same way.
 Beneath each setting the page shows the `occ` command that sets it,
 copied with one click.
+A number field shows what is stored, and its default as its placeholder where nothing is:
+emptied and saved, it follows the default again.
+The defaults themselves show their value, with a Reset while one is stored.
 Under *Advanced* it shows each program's path and version,
 and the scratch directory, which only `occ` sets.
 

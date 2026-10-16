@@ -22,7 +22,8 @@ import HelpPopover from './HelpPopover.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import RuleRow from './RuleRow.vue'
-import { scalarCommand, systemCommand } from './occ'
+import { scalarCommand, storedScalarCommand, systemCommand } from './occ'
+import { defaultPlaceholder, storedNumber } from './scalarField'
 import { t } from '../l10n'
 import { scalarChange } from './types'
 import { useProvidersRow } from './useProvidersRow'
@@ -113,8 +114,11 @@ function addExtension(): void {
 					:label="t('large_file_previews', 'Minimum size, MiB')"
 					:value="state.scalars.min_size_mb.value"
 					:min="0"
+					label-outside
+					:resettable="state.scalars.min_size_mb.stored"
 					:disabled="saving"
-					@save="emit('save', scalarChange('min_size_mb', $event))" />
+					@save="emit('save', scalarChange('min_size_mb', $event))"
+					@reset="emit('save', scalarChange('min_size_mb', null))" />
 				<OccCommand :command="scalarCommand('min_size_mb', state.scalars.min_size_mb.value)" />
 			</div>
 			<div>
@@ -122,8 +126,11 @@ function addExtension(): void {
 					:label="t('large_file_previews', 'Maximum size, MiB (-1: none)')"
 					:value="state.scalars.max_size_mb.value"
 					:min="-1"
+					label-outside
+					:resettable="state.scalars.max_size_mb.stored"
 					:disabled="saving"
-					@save="emit('save', scalarChange('max_size_mb', $event))" />
+					@save="emit('save', scalarChange('max_size_mb', $event))"
+					@reset="emit('save', scalarChange('max_size_mb', null))" />
 				<OccCommand :command="scalarCommand('max_size_mb', state.scalars.max_size_mb.value)" />
 			</div>
 			<div data-setting="min_size_all_types">
@@ -162,12 +169,15 @@ function addExtension(): void {
 				<div>
 					<NumberField id="lfp-scan-coverage"
 						:label="t('large_file_previews', 'Coverage, percent')"
-						:value="state.scalars.scan_coverage_percent.value"
+						:value="storedNumber(state.scalars.scan_coverage_percent)"
+						:placeholder="defaultPlaceholder(state.scalars.scan_coverage_percent)"
 						:min="state.scalars.scan_coverage_percent.min"
 						:max="state.scalars.scan_coverage_percent.max"
+						clearable
+						label-outside
 						:disabled="saving || !state.scalars.scan_native_enabled.value"
 						@save="emit('save', scalarChange('scan_coverage_percent', $event))" />
-					<OccCommand :command="scalarCommand('scan_coverage_percent', state.scalars.scan_coverage_percent.value)" />
+					<OccCommand :command="storedScalarCommand('scan_coverage_percent', state.scalars.scan_coverage_percent)" />
 				</div>
 			</div>
 		</div>

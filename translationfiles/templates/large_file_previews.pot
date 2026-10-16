@@ -317,6 +317,9 @@ msgstr ""
 msgid "Reset"
 msgstr ""
 
+msgid "Reset {label}"
+msgstr ""
+
 msgid "Save"
 msgstr ""
 
@@ -531,6 +534,9 @@ msgid "the program %s is missing"
 msgstr ""
 
 msgid "{value} (as shipped)"
+msgstr ""
+
+msgid "{value} (default)"
 msgstr ""
 
 msgid "{value} (inherited)"

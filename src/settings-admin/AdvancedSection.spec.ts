@@ -71,7 +71,8 @@ describe('AdvancedSection', () => {
 
 		const copy = wrapper.find('[data-setting="tiff_restrip_max_mb"]')
 
-		expect(copy.text()).toContain('occ lfp:config:set tiff_restrip_max_mb 4096')
+		expect(copy.findComponent({ name: 'NumberField' }).props('placeholder')).toBe('4096 (default)')
+		expect(copy.text()).toContain('occ lfp:config:unset tiff_restrip_max_mb')
 
 		await copy.findComponent({ name: 'NumberField' }).vm.$emit('save', 8192)
 

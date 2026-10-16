@@ -7,7 +7,8 @@
  * what is saved. Where `clearable`, an empty field saves as null: the value
  * is not set at this level. The field shows only what is set here, never a
  * value from another level; what applies where it is empty may be its
- * placeholder. Its help, where it has one, is an ⓘ after the button.
+ * placeholder. Where `resettable`, a Reset button after Save asks for the
+ * value it ships with. Its help, where it has one, is an ⓘ after the buttons.
  *
  * A label inside the field covers the placeholder until the field has the
  * focus; `labelOutside` puts it above the field instead, where the
@@ -33,6 +34,8 @@ const props = withDefaults(defineProps<{
 	placeholder?: string | null
 	/** What the field means, behind an ⓘ after its Save button. */
 	help?: string | null
+	/** A Reset button after Save, which asks for the value it ships with. */
+	resettable?: boolean
 }>(), {
 	min: null,
 	max: null,
@@ -41,10 +44,12 @@ const props = withDefaults(defineProps<{
 	disabled: false,
 	placeholder: null,
 	help: null,
+	resettable: false,
 })
 
 const emit = defineEmits<{
 	save: [value: number | null]
+	reset: []
 }>()
 
 const draft = ref(props.value === null ? '' : String(props.value))
@@ -94,6 +99,14 @@ function save(): void {
 				@click="save">
 				{{ t('large_file_previews', 'Save') }}
 			</NcButton>
+			<NcButton v-if="resettable"
+				class="lfp-number__reset"
+				variant="secondary"
+				:disabled="disabled"
+				:aria-label="t('large_file_previews', 'Reset {label}', { label })"
+				@click="emit('reset')">
+				{{ t('large_file_previews', 'Reset') }}
+			</NcButton>
 			<HelpPopover v-if="help" :text="help" :label="label" />
 		</div>
 	</div>
@@ -128,7 +141,8 @@ function save(): void {
 	min-width: 6rem;
 }
 
-.lfp-number__save {
+.lfp-number__save,
+.lfp-number__reset {
 	flex: 0 0 auto;
 	min-width: max-content;
 }

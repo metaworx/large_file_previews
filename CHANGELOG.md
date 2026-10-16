@@ -53,8 +53,8 @@ the first stable release.
   logged as text.
 
 - *Administration settings → Additional settings*: version, status (amber
-  if nothing is processed), types with providers, previews, limits,
-  failures, libvips, programs; down to a phone's width; `occ`, ⓘ help.
+  if nothing is processed), types, providers, previews, limits, failures,
+  libvips, programs; any width; empty fields default; `occ`, ⓘ help.
 
 - `occ lfp:config:show`, `get`, `set` and `unset`: the configuration,
   each type's providers, what a type or file resolves to and from which

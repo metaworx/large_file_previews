@@ -15,7 +15,8 @@ import HelpPopover from './HelpPopover.vue'
 import InstallHint from './InstallHint.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
-import { binaryCommand, scalarCommand, scratchCommand, untrustedCommand } from './occ'
+import { binaryCommand, scratchCommand, storedScalarCommand, untrustedCommand } from './occ'
+import { defaultPlaceholder, storedNumber } from './scalarField'
 import { t } from '../l10n'
 import { scalarChange } from './types'
 import type { Changes, ProgramRow, SettingsState } from './types'
@@ -68,13 +69,16 @@ function foundBy(program: ProgramRow): string {
 			<div>
 				<NumberField id="lfp-vips-concurrency"
 					:label="t('large_file_previews', 'Threads per render')"
-					:value="state.scalars.vips_concurrency.value"
+					:value="storedNumber(state.scalars.vips_concurrency)"
+					:placeholder="defaultPlaceholder(state.scalars.vips_concurrency)"
 					:min="state.scalars.vips_concurrency.min"
 					:max="state.scalars.vips_concurrency.max"
+					clearable
+					label-outside
 					:help="t('large_file_previews', 'One thread was fastest for a preview, and each thread reserves memory under the cap.')"
 					:disabled="saving"
 					@save="emit('save', scalarChange('vips_concurrency', $event))" />
-				<OccCommand :command="scalarCommand('vips_concurrency', state.scalars.vips_concurrency.value)" />
+				<OccCommand :command="storedScalarCommand('vips_concurrency', state.scalars.vips_concurrency)" />
 			</div>
 		</div>
 
@@ -134,13 +138,16 @@ function foundBy(program: ProgramRow): string {
 			<div>
 				<NumberField id="lfp-tiff-restrip-max"
 					:label="t('large_file_previews', 'Largest copy, MiB')"
-					:value="state.scalars.tiff_restrip_max_mb.value"
+					:value="storedNumber(state.scalars.tiff_restrip_max_mb)"
+					:placeholder="defaultPlaceholder(state.scalars.tiff_restrip_max_mb)"
 					:min="state.scalars.tiff_restrip_max_mb.min"
 					:max="state.scalars.tiff_restrip_max_mb.max"
+					clearable
+					label-outside
 					:help="t('large_file_previews', 'A TIFF whose copy would be larger is not copied, and stays a failure.')"
 					:disabled="saving"
 					@save="emit('save', scalarChange('tiff_restrip_max_mb', $event))" />
-				<OccCommand :command="scalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb.value)" />
+				<OccCommand :command="storedScalarCommand('tiff_restrip_max_mb', state.scalars.tiff_restrip_max_mb)" />
 			</div>
 		</div>
 	</div>

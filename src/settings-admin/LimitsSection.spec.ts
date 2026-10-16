@@ -10,12 +10,33 @@ function section(state = testState()) {
 }
 
 describe('LimitsSection', () => {
-	it('shows each limit with its value and range', () => {
+	it('shows each limit with its range, empty and its default the placeholder until it is set', () => {
 		const field = section().find('[data-limit="timeout_enabled"]').findAllComponents({ name: 'NumberField' })[0]
 
-		expect(field.props('value')).toBe(30)
+		expect(field.props('value')).toBeNull()
+		expect(field.props('placeholder')).toBe('30 (default)')
+		expect(field.props('clearable')).toBe(true)
 		expect(field.props('min')).toBe(1)
 		expect(field.props('max')).toBe(600)
+
+		const state = testState()
+		state.scalars.timeout_seconds = { ...state.scalars.timeout_seconds, value: 45, stored: true }
+
+		expect(section(state).find('[data-limit="timeout_enabled"]').findAllComponents({ name: 'NumberField' })[0].props('value')).toBe(45)
+	})
+
+	it('returns a limit to its default by removing its value', async () => {
+		const state = testState()
+		state.scalars.timeout_seconds = { ...state.scalars.timeout_seconds, value: 45, stored: true }
+		const wrapper = section(state)
+		const timeout = wrapper.find('[data-limit="timeout_enabled"]')
+
+		expect(timeout.text()).toContain('occ lfp:config:set timeout_seconds 45')
+
+		await timeout.findAllComponents({ name: 'NumberField' })[0].vm.$emit('save', null)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { timeout_seconds: null } }]])
+		expect(section().find('[data-limit="timeout_enabled"]').text()).toContain('occ lfp:config:unset timeout_seconds')
 	})
 
 	it('switches a limit off', async () => {
@@ -39,7 +60,7 @@ describe('LimitsSection', () => {
 		const caps = wrapper.find('[data-limit="prlimit_enabled"]')
 
 		expect(caps.text()).toContain('Address-space and file-size caps')
-		expect(caps.text()).toContain('occ lfp:config:set prlimit_fsize_mb 1024')
+		expect(caps.text()).toContain('occ lfp:config:unset prlimit_fsize_mb')
 
 		await caps.findAllComponents(NumberField)[2].vm.$emit('save', 2048)
 
@@ -63,8 +84,8 @@ describe('LimitsSection', () => {
 		const wrapper = section()
 		const retry = wrapper.find('[data-setting="failure_retry_minutes"]')
 
-		expect(retry.findComponent(NumberField).props('value')).toBe(60)
-		expect(retry.text()).toContain('occ lfp:config:set failure_retry_minutes 60')
+		expect(retry.findComponent(NumberField).props('placeholder')).toBe('60 (default)')
+		expect(retry.text()).toContain('occ lfp:config:unset failure_retry_minutes')
 
 		await retry.findComponent(NumberField).vm.$emit('save', 0)
 

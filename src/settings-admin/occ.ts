@@ -6,7 +6,7 @@
  * setting can be set from the shell as well, and the page says how.
  * Commands are not translated; they are what is typed.
  */
-import type { Rule } from './types'
+import type { Rule, Scalar } from './types'
 
 const SET = 'occ lfp:config:set'
 const UNSET = 'occ lfp:config:unset'
@@ -18,6 +18,11 @@ function quoted(text: string): string {
 
 export function scalarCommand(key: string, value: number | boolean | string): string {
 	return [SET, key, typeof value === 'boolean' ? String(value) : quoted(String(value))].join(' ')
+}
+
+/** A setting as stored: set where it is, unset where it follows its default. */
+export function storedScalarCommand(key: string, scalar: Scalar<number | boolean | string>): string {
+	return scalar.stored ? scalarCommand(key, scalar.value) : [UNSET, key].join(' ')
 }
 
 /**

@@ -12,7 +12,8 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwit
 import HelpPopover from './HelpPopover.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
-import { scalarCommand } from './occ'
+import { scalarCommand, storedScalarCommand } from './occ'
+import { defaultPlaceholder, storedNumber } from './scalarField'
 import { t } from '../l10n'
 import { scalarChange } from './types'
 import type { Changes, ScalarKeyOf, SettingsState } from './types'
@@ -88,12 +89,15 @@ const LIMITS: Limit[] = [
 				<div v-for="value in limit.values" :key="value.key">
 					<NumberField :id="'lfp-' + value.key"
 						:label="value.label"
-						:value="state.scalars[value.key].value"
+						:value="storedNumber(state.scalars[value.key])"
+						:placeholder="defaultPlaceholder(state.scalars[value.key])"
 						:min="state.scalars[value.key].min"
 						:max="state.scalars[value.key].max"
+						clearable
+						label-outside
 						:disabled="saving || !state.scalars[limit.switch].value"
 						@save="emit('save', scalarChange(value.key, $event))" />
-					<OccCommand :command="scalarCommand(value.key, state.scalars[value.key].value)" />
+					<OccCommand :command="storedScalarCommand(value.key, state.scalars[value.key])" />
 				</div>
 			</div>
 		</div>
@@ -106,12 +110,15 @@ const LIMITS: Limit[] = [
 			</h4>
 			<NumberField id="lfp-failure_retry_minutes"
 				:label="t('large_file_previews', 'Minutes')"
-				:value="state.scalars.failure_retry_minutes.value"
+				:value="storedNumber(state.scalars.failure_retry_minutes)"
+				:placeholder="defaultPlaceholder(state.scalars.failure_retry_minutes)"
 				:min="state.scalars.failure_retry_minutes.min"
 				:max="state.scalars.failure_retry_minutes.max"
+				clearable
+				label-outside
 				:disabled="saving"
 				@save="emit('save', scalarChange('failure_retry_minutes', $event))" />
-			<OccCommand :command="scalarCommand('failure_retry_minutes', state.scalars.failure_retry_minutes.value)" />
+			<OccCommand :command="storedScalarCommand('failure_retry_minutes', state.scalars.failure_retry_minutes)" />
 		</div>
 	</div>
 </template>

@@ -317,6 +317,9 @@ msgstr "Renderer"
 msgid "Reset"
 msgstr "Zurücksetzen"
 
+msgid "Reset {label}"
+msgstr "{label} zurücksetzen"
+
 msgid "Save"
 msgstr "Speichern"
 
@@ -532,6 +535,9 @@ msgstr "das Programm %s fehlt"
 
 msgid "{value} (as shipped)"
 msgstr "{value} (wie ausgeliefert)"
+
+msgid "{value} (default)"
+msgstr "{value} (Standard)"
 
 msgid "{value} (inherited)"
 msgstr "{value} (geerbt)"

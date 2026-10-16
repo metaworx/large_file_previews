@@ -22,6 +22,9 @@ const clearRules = () => {
 	}
 	cy.occ( `lfp:config:unset --mime ${ MIME } --field min_size_mb`, { failOnNonZeroExit: false, log: false } )
 	cy.occ( 'lfp:config:unset --mime application/pdf', { failOnNonZeroExit: false, log: false } )
+	for ( const key of [ 'min_size_mb', 'timeout_seconds' ] ) {
+		cy.occ( `lfp:config:unset ${ key }`, { failOnNonZeroExit: false, log: false } )
+	}
 }
 
 const openSettings = () => {
@@ -141,6 +144,30 @@ describe( 'The settings page', () => {
 		cy.occ( `lfp:config:get --mime ${ MIME } --output=json` ).then( ( { stdout } ) => {
 			expect( JSON.parse( stdout ).min_size_mb ).to.deep.equal( { value: 50, source: 'shipped' } )
 		} )
+	} )
+
+	it( 'resets a default to what it ships with, and clears a limit back to its own', () => {
+		const stored = ( key ) => cy.occ( 'lfp:config:show --output=json' )
+			.then( ( { stdout } ) => JSON.parse( stdout ).stored[ key ] )
+
+		cy.occ( 'lfp:config:set min_size_mb 5' )
+		cy.occ( 'lfp:config:set timeout_seconds 45' )
+		openSettings()
+
+		// The default: shown as it is, with a Reset while it is stored.
+		cy.get( 'input#lfp-min-size' ).should( 'have.value', '5' )
+			.closest( '.lfp-number' ).contains( 'button', 'Reset' ).click()
+		cy.get( 'input#lfp-min-size' ).should( 'have.value', '0' )
+			.closest( '.lfp-number' ).find( '.lfp-number__reset' ).should( 'not.exist' )
+
+		// A limit: emptied and saved, it follows its default again.
+		cy.get( 'input#lfp-timeout_seconds' ).should( 'have.value', '45' ).clear()
+		cy.get( 'input#lfp-timeout_seconds' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+		cy.get( 'input#lfp-timeout_seconds' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '30 (default)' )
+		cy.get( '[data-limit="timeout_enabled"]' ).should( 'contain', 'occ lfp:config:unset timeout_seconds' )
+
+		stored( 'min_size_mb' ).should( 'deep.include', { value: 0, stored: false } )
+		stored( 'timeout_seconds' ).should( 'deep.include', { value: 30, stored: false } )
 	} )
 
 	it( 'lists the providers Nextcloud tries for a type, this app first', () => {

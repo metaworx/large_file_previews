@@ -80,6 +80,21 @@ describe('NumberField', () => {
 		expect(outside.find('input').attributes('placeholder')).toBe('50 (inherited)')
 	})
 
+	it('offers a Reset after Save only where asked, and asks for it on click', async () => {
+		expect(field().wrapper.find('.lfp-number__reset').exists()).toBe(false)
+
+		const { wrapper } = field({ resettable: true })
+		const reset = wrapper.find('button.lfp-number__reset')
+
+		expect(reset.text()).toBe('Reset')
+		expect(reset.element.previousElementSibling?.classList.contains('lfp-number__save')).toBe(true)
+
+		await reset.trigger('click')
+
+		expect(wrapper.emitted('reset')).toHaveLength(1)
+		expect(wrapper.emitted('save')).toBeUndefined()
+	})
+
 	it('has no help button without a help text', () => {
 		expect(field().wrapper.findComponent(HelpPopover).exists()).toBe(false)
 	})
