@@ -72,11 +72,13 @@ The limits each render runs under:
 
 `tests/e2e/screenshots.cy.js` takes them; `tests/e2e/README.md` says how.
 
-[shot-settings]: docs/Screenshots/Settings.png
-[shot-processed]: docs/Screenshots/What-Is-Processed.png
-[shot-mime]: docs/Screenshots/MIME-Types.png
-[shot-extensions]: docs/Screenshots/Extensions.png
-[shot-limits]: docs/Screenshots/Limits.png
+<!-- BEGIN GENERATED RELEASE-PIN - do not edit; run "changelog.sh cut" -->
+[shot-settings]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Settings.png
+[shot-processed]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/What-Is-Processed.png
+[shot-mime]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/MIME-Types.png
+[shot-extensions]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Extensions.png
+[shot-limits]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.1.0/docs/Screenshots/Limits.png
+<!-- END GENERATED RELEASE-PIN -->
 
 ## Requirements
 
@@ -158,7 +160,8 @@ and until one is, the settings page says so in amber.
 Switched on, PDF and Illustrator files are taken at any size,
 and an image from `preview_max_filesize_image` up,
 50 MiB unless set, where Nextcloud's own image providers stop.
-With `min_size_all_types` on, images follow `min_size_mb` as every other type does:
+With `min_size_all_types` on,
+images follow `min_size_mb` as every other type does:
 at 0, the app renders every image of a type switched on,
 ahead of Nextcloud's own providers.
 A MIME type keeps only the fields set for it,
@@ -170,7 +173,8 @@ which also shows whether previews can be rendered and the last render that faile
 or with `occ`; both check a value the same way.
 Beneath each setting the page shows the `occ` command that sets it,
 copied with one click.
-A number field shows what is stored, and its default as its placeholder where nothing is:
+A number field shows what is stored,
+and its default as its placeholder where nothing is:
 emptied and saved, it follows the default again.
 The defaults themselves show their value, with a Reset while one is stored.
 Under *Advanced* it shows each program's path and version,

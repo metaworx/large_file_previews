@@ -63,9 +63,9 @@ CYPRESS_occ="$HOME/projects/nextcloud_testing/scripts/nc-test 34-lfp occ" \
 npx cypress run --spec tests/e2e/screenshots.cy.js
 ```
 
-`appinfo/info.xml` names each image at the release's tag,
-in a block `changelog.sh cut` moves to the next release;
-a new image is added there and to the README.
+`appinfo/info.xml` and the README name each image at the release's tag,
+each in a block `changelog.sh cut` moves to the next release;
+a new image is added to both blocks, and shown in the README.
 
 Cypress is pinned to an exact version in `package.json`,
 so that its binary, about 240 MB to download and 360 MB unpacked,
