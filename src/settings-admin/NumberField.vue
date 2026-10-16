@@ -100,9 +100,11 @@ function save(): void {
 </template>
 
 <style scoped>
+/* A block that shrinks to its row, not a column flexbox, which Chrome sizes
+   to the row's narrowest, wrapping it everywhere. */
 .lfp-number {
-	display: inline-flex;
-	flex-direction: column;
+	display: inline-block;
+	max-width: 100%;
 }
 
 .lfp-number__row {
@@ -112,14 +114,18 @@ function save(): void {
 }
 
 .lfp-number__label {
+	display: block;
 	color: var(--color-text-maxcontrast);
 	font-size: var(--font-size-small, 13px);
 }
 
-/* Wide enough for its label, which the field would otherwise cut. */
-.lfp-number__field {
-	flex: 0 0 auto;
+/* Wide enough for its label, which the field would otherwise cut, and
+   narrower only where the line is: its Save button and help stay beside it.
+   Two classes, to outweigh the width Nextcloud gives every input field. */
+.lfp-number .lfp-number__field {
+	flex: 0 1 auto;
 	width: 16rem;
+	min-width: 6rem;
 }
 
 .lfp-number__save {
