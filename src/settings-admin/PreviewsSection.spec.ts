@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import OccCommand from './OccCommand.vue'
 import PreviewsSection from './PreviewsSection.vue'
@@ -91,6 +91,34 @@ describe('PreviewsSection', () => {
 		expect(off.findComponent({ name: 'NumberField' }).props('help')).toContain('Not streamed')
 		expect(off.findComponent({ name: 'NumberField' }).props('value')).toBe(70)
 		expect(off.text()).toContain('occ lfp:config:set preview_quality 70')
+	})
+
+	it('tabulates in the Previews help what is stored, the largest and the smaller sizes, by format and stream', async () => {
+		const wrapper = mount(PreviewsSection, { props: { state: testState(), saving: false }, attachTo: document.body })
+
+		await wrapper.find('h3 button').trigger('click')
+		await flushPromises()
+		await new Promise((resolve) => setTimeout(resolve, 0))
+		const rows = [...document.body.querySelectorAll('.lfp-outcomes tbody tr')]
+			.map((row) => [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()))
+
+		expect(rows).toEqual([
+			['JPEG', 'on', 'JPEG, this app\'s quality', 'JPEG, Nextcloud\'s JPEG quality'],
+			['JPEG', 'off', 'JPEG, Nextcloud\'s JPEG quality', 'JPEG, Nextcloud\'s JPEG quality'],
+			['WebP', 'on', 'WebP, this app\'s quality', 'WebP, Nextcloud\'s WebP quality'],
+			['WebP', 'off', 'WebP, Nextcloud\'s WebP quality', 'WebP, Nextcloud\'s WebP quality'],
+			['PNG', 'on or off', 'PNG, lossless'],
+			['As Nextcloud\'s preview_format', 'on or off', 'As WebP where Nextcloud\'s preview_format says webp, as JPEG otherwise'],
+		])
+		expect(document.body.querySelector('.lfp-outcomes [data-outcome="png"] td:nth-child(3)')?.getAttribute('colspan')).toBe('2')
+
+		wrapper.unmount()
+	})
+
+	it('says Nextcloud\'s quality is, of this app\'s previews, the smaller sizes\', and the largest\'s not stored as rendered', () => {
+		const [jpeg] = section().find('[data-setting="nextcloud"]').findAllComponents({ name: 'NumberField' })
+
+		expect(jpeg.props('help')).toContain('of this app\'s, the smaller sizes, and the largest too where it is not stored as rendered')
 	})
 
 	it('shows Nextcloud\'s preview format read only, and its quality as it is stored', () => {

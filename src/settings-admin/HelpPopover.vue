@@ -5,7 +5,8 @@
  *
  * Small "i" button that reveals a short help text in an NcPopover, beside
  * the name of the setting it explains: the page shows the setting and its
- * command, and the reader asks for the why.
+ * command, and the reader asks for the why. What the default slot holds,
+ * a table say, follows the text, and widens the popover to fit it.
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import NcPopover from '@nextcloud/vue/components/NcPopover'
@@ -85,9 +86,12 @@ onUnmounted(() => {
 				</svg>
 			</button>
 		</template>
-		<p class="lfp-help-body">
+		<p class="lfp-help-body" :class="{ 'lfp-help-body--wide': $slots.default }">
 			{{ text }}
 		</p>
+		<div v-if="$slots.default" class="lfp-help-more">
+			<slot />
+		</div>
 	</NcPopover>
 </template>
 
@@ -131,5 +135,19 @@ onUnmounted(() => {
 	font-size: 13px;
 	line-height: 1.4;
 	max-width: 320px;
+}
+
+/* Beside a table, the text is as wide as the table may be: the window's
+   width, less a margin, up to 36rem; a table wider still scrolls. */
+.lfp-help-body--wide,
+.lfp-help-more {
+	max-width: min(36rem, calc(100vw - 32px));
+}
+
+.lfp-help-more {
+	padding: 0 14px 10px;
+	overflow-x: auto;
+	font-size: 13px;
+	line-height: 1.4;
 }
 </style>

@@ -36,6 +36,15 @@ describe('HelpPopover', () => {
 		expect(body?.textContent).toContain('What this does.')
 	})
 
+	it('shows what its slot holds after the text, the text then as wide', async () => {
+		wrapper = mount(HelpPopover, { props: { text: 'What is stored:', label: 'Previews' }, slots: { default: '<table class="probe"><tr><td>JPEG</td></tr></table>' } })
+		const body = await openHelp(wrapper)
+
+		expect(body?.classList.contains('lfp-help-body--wide')).toBe(true)
+		expect(body?.nextElementSibling?.classList.contains('lfp-help-more')).toBe(true)
+		expect(body?.nextElementSibling?.querySelector('.probe td')?.textContent).toBe('JPEG')
+	})
+
 	it('renders nothing without a help text', () => {
 		wrapper = mount(HelpPopover, { props: { label: 'Timeout' } })
 		expect(wrapper.find('button').exists()).toBe(false)

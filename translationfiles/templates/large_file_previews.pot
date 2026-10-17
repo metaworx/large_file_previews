@@ -81,6 +81,9 @@ msgstr ""
 msgid "/dev/fd is missing; is /proc mounted?"
 msgstr ""
 
+msgid "64, 256, 1024 px"
+msgstr ""
+
 msgid "A JPEG keeps no transparency: a transparent image is laid on this colour."
 msgstr ""
 
@@ -97,6 +100,9 @@ msgid "A page counts as scanned where one image covers it, each way, to at least
 msgstr ""
 
 msgid "A program's path is found by Nextcloud, or set in system config only, never here; Advanced, below, shows each path and the command that sets it."
+msgstr ""
+
+msgid "A render larger than Nextcloud's preview size is stored as with the switch off. A PDF as WebP without libvips is a JPEG."
 msgstr ""
 
 msgid "Add"
@@ -124,6 +130,12 @@ msgid "As Nextcloud's preview_format"
 msgstr ""
 
 msgid "As Nextcloud's preview_format: WebP where that system setting says webp, JPEG otherwise. A PDF previewed as WebP is converted by libvips, and is a JPEG where libvips is not there."
+msgstr ""
+
+msgid "As WebP where Nextcloud's preview_format says webp, as JPEG otherwise"
+msgstr ""
+
+msgid "As rendered"
 msgstr ""
 
 msgid "Background of a JPEG"
@@ -229,6 +241,12 @@ msgstr ""
 msgid "JPEG quality, 10 to 100"
 msgstr ""
 
+msgid "JPEG, Nextcloud's JPEG quality"
+msgstr ""
+
+msgid "JPEG, this app's quality"
+msgstr ""
+
 msgid "Large File Previews"
 msgstr ""
 
@@ -236,6 +254,9 @@ msgid "Large File Previews, v{version}"
 msgstr ""
 
 msgid "Large previews can be rendered."
+msgstr ""
+
+msgid "Largest"
 msgstr ""
 
 msgid "Largest copy, MiB"
@@ -283,7 +304,7 @@ msgstr ""
 msgid "Nextcloud makes every smaller size from the largest, in its type: where a client cannot show WebP, choose JPEG."
 msgstr ""
 
-msgid "Nextcloud stores a preview in the type it is given: the largest, streamed, as rendered; the smaller sizes, and the largest where it is not streamed, re-encoded at its own quality, the app config preview jpeg_quality and webp_quality."
+msgid "Nextcloud stores the largest preview in the type it is given, and makes the smaller sizes from it, in that type, at its own quality, the app config preview jpeg_quality and webp_quality. The largest keeps this app's quality where it is stored as rendered:"
 msgstr ""
 
 msgid "Nextcloud value {name}: not one this app carries; left out."
@@ -301,7 +322,7 @@ msgstr ""
 msgid "Nextcloud's own settings"
 msgstr ""
 
-msgid "Nextcloud's, for every preview it stores from now on, not only this app's; previews stored already keep theirs."
+msgid "Nextcloud's, for every preview it stores from now on, not only this app's: of this app's, the smaller sizes, and the largest too where it is not stored as rendered. Previews stored already keep theirs."
 msgstr ""
 
 msgid "No effect: its MIME type already selects it"
@@ -338,6 +359,9 @@ msgid "PDF scanned pages"
 msgstr ""
 
 msgid "PNG"
+msgstr ""
+
+msgid "PNG, lossless"
 msgstr ""
 
 msgid "Part {name}: not one this app reads; left out."
@@ -578,6 +602,12 @@ msgstr ""
 msgid "WebP quality, 10 to 100"
 msgstr ""
 
+msgid "WebP, Nextcloud's WebP quality"
+msgstr ""
+
+msgid "WebP, this app's quality"
+msgstr ""
+
 msgid "What each render runs under. The defaults suit most servers."
 msgstr ""
 
@@ -666,6 +696,15 @@ msgid "not handled"
 msgstr ""
 
 msgid "not set"
+msgstr ""
+
+msgid "off"
+msgstr ""
+
+msgid "on"
+msgstr ""
+
+msgid "on or off"
 msgstr ""
 
 msgid "optional"

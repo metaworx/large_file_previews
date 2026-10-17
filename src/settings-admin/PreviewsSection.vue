@@ -56,6 +56,20 @@ const QUALITIES: { key: 'jpeg_quality' | 'webp_quality', label: string }[] = [
 	{ key: 'webp_quality', label: t('large_file_previews', 'WebP quality, 10 to 100') },
 ]
 
+/**
+ * What Nextcloud stores, by this app's format and the stream: the largest
+ * preview, and the sizes it makes from it. A row of one result holds for
+ * both columns.
+ */
+const OUTCOMES: { format: string, stream: string, largest: string, smaller?: string }[] = [
+	{ format: 'jpeg', stream: t('large_file_previews', 'on'), largest: t('large_file_previews', 'JPEG, this app\'s quality'), smaller: t('large_file_previews', 'JPEG, Nextcloud\'s JPEG quality') },
+	{ format: 'jpeg', stream: t('large_file_previews', 'off'), largest: t('large_file_previews', 'JPEG, Nextcloud\'s JPEG quality'), smaller: t('large_file_previews', 'JPEG, Nextcloud\'s JPEG quality') },
+	{ format: 'webp', stream: t('large_file_previews', 'on'), largest: t('large_file_previews', 'WebP, this app\'s quality'), smaller: t('large_file_previews', 'WebP, Nextcloud\'s WebP quality') },
+	{ format: 'webp', stream: t('large_file_previews', 'off'), largest: t('large_file_previews', 'WebP, Nextcloud\'s WebP quality'), smaller: t('large_file_previews', 'WebP, Nextcloud\'s WebP quality') },
+	{ format: 'png', stream: t('large_file_previews', 'on or off'), largest: t('large_file_previews', 'PNG, lossless') },
+	{ format: 'nextcloud', stream: t('large_file_previews', 'on or off'), largest: t('large_file_previews', 'As WebP where Nextcloud\'s preview_format says webp, as JPEG otherwise') },
+]
+
 /** Each radio group's name, which ties its radios together. */
 const FORMAT_GROUP = 'lfp-preview-format'
 const BACKGROUND_GROUP = 'lfp-preview-background'
@@ -69,8 +83,34 @@ function label(choice: string): string {
 	<div class="lfp-previews">
 		<h3 class="lfp-named">
 			{{ t('large_file_previews', 'Previews') }}
-			<HelpPopover :text="t('large_file_previews', 'Nextcloud stores a preview in the type it is given: the largest, streamed, as rendered; the smaller sizes, and the largest where it is not streamed, re-encoded at its own quality, the app config preview jpeg_quality and webp_quality.')"
-				:label="t('large_file_previews', 'Previews')" />
+			<HelpPopover :text="t('large_file_previews', 'Nextcloud stores the largest preview in the type it is given, and makes the smaller sizes from it, in that type, at its own quality, the app config preview jpeg_quality and webp_quality. The largest keeps this app\'s quality where it is stored as rendered:')"
+				:label="t('large_file_previews', 'Previews')">
+				<table class="lfp-outcomes">
+					<thead>
+						<tr>
+							<th>{{ t('large_file_previews', 'Format') }}</th>
+							<th>{{ t('large_file_previews', 'As rendered') }}</th>
+							<th>{{ t('large_file_previews', 'Largest') }}</th>
+							<th>{{ t('large_file_previews', '64, 256, 1024 px') }}</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="outcome in OUTCOMES" :key="outcome.format + outcome.stream" :data-outcome="outcome.format">
+							<td>{{ label(outcome.format) }}</td>
+							<td>{{ outcome.stream }}</td>
+							<td :colspan="outcome.smaller ? 1 : 2">
+								{{ outcome.largest }}
+							</td>
+							<td v-if="outcome.smaller">
+								{{ outcome.smaller }}
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<p class="lfp-outcomes__note">
+					{{ t('large_file_previews', 'A render larger than Nextcloud\'s preview size is stored as with the switch off. A PDF as WebP without libvips is a JPEG.') }}
+				</p>
+			</HelpPopover>
 		</h3>
 
 		<h4 class="lfp-named">
@@ -167,7 +207,7 @@ function label(choice: string): string {
 					:max="100"
 					clearable
 					label-outside
-					:help="t('large_file_previews', 'Nextcloud\'s, for every preview it stores from now on, not only this app\'s; previews stored already keep theirs.')"
+					:help="t('large_file_previews', 'Nextcloud\'s, for every preview it stores from now on, not only this app\'s: of this app\'s, the smaller sizes, and the largest too where it is not stored as rendered. Previews stored already keep theirs.')"
 					:disabled="saving"
 					@save="emit('save', { nextcloud: { [quality.key]: $event } })" />
 				<OccCommand :command="appConfigCommand('preview', quality.key, state.nextcloud.quality_stored[quality.key] ? state.nextcloud[quality.key] : null)" />
@@ -175,3 +215,38 @@ function label(choice: string): string {
 		</div>
 	</div>
 </template>
+
+<style scoped>
+/* In the Previews help, which NcPopover puts in the body, outside the
+   page's own styles. */
+/* As wide as the popover lets it be, its cells wrapped to fit: Nextcloud's
+   own styles keep a table's text on one line. */
+.lfp-outcomes {
+	width: 100%;
+	border-collapse: collapse;
+	white-space: normal;
+}
+
+.lfp-outcomes th,
+.lfp-outcomes td {
+	padding: 4px 6px;
+	border-bottom: 1px solid var(--color-border);
+	text-align: start;
+	vertical-align: top;
+}
+
+/* In line with the help's text above it. */
+.lfp-outcomes th:first-child,
+.lfp-outcomes td:first-child {
+	padding-inline-start: 0;
+}
+
+.lfp-outcomes th {
+	font-weight: bold;
+}
+
+.lfp-outcomes__note {
+	margin: 8px 0 0;
+	color: var(--color-text-maxcontrast);
+}
+</style>

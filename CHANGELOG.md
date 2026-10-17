@@ -20,9 +20,9 @@ the first stable release.
 - *Previews → Nextcloud's own settings*: Nextcloud's JPEG and WebP
   quality set on the page, for every preview it stores from then on.
 
-- The largest preview stored as rendered, at the app's `preview_quality`
-  (95), not decoded and encoded again (`preview_stream`, on by default);
-  both on the page. The smaller sizes are Nextcloud's.
+- The largest preview stored as rendered, at `preview_quality` (95),
+  not encoded again (`preview_stream`), both on the page; the *Previews*
+  help tabulates the type and quality each size gets.
 
 ## [0.1.0] - 2026-10-17
 
