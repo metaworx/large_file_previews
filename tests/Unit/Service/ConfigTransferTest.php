@@ -40,6 +40,7 @@ class ConfigTransferTest
 			ConfigLexicon::TIMEOUT_SECONDS => 45,
 			ConfigLexicon::MIMETYPES       => [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 800 ] ],
 			ConfigLexicon::EXTENSIONS      => [ 'tif' => [ 'enabled' => false ] ],
+			'webp_quality'                 => 75,
 		];
 		$this->systemValues = [
 			BinaryLocator::SYSTEM_KEY                 => [ 'pdftoppm' => '/opt/poppler/bin/pdftoppm' ],
@@ -58,6 +59,7 @@ class ConfigTransferTest
 					'binaries'             => [ 'pdftoppm' => '/opt/poppler/bin/pdftoppm' ],
 					'vips_allow_untrusted' => true,
 				],
+				'nextcloud'  => [ 'appconfig' => [ 'preview' => [ 'webp_quality' => 75 ] ] ],
 			],
 			$this->transfer()->export(),
 		);
@@ -71,6 +73,63 @@ class ConfigTransferTest
 		$json = (string) json_encode( $this->transfer()->export() );
 
 		self::assertStringContainsString( '"settings":{},"mimetypes":{},"extensions":{},"system":{}', $json );
+	}
+
+	/**
+	 * Nextcloud's preview qualities travel under nextcloud > appconfig >
+	 * preview, where stored; an import lists them, writes them never, and
+	 * gives the command that sets them.
+	 */
+	public function testNextcloudsQualitiesAreCarriedAndShownAsCommandsNeverWritten(): void
+	{
+		$this->appValues = [ 'jpeg_quality' => 70 ];
+		$transfer        = $this->transfer();
+
+		self::assertSame( [ 'appconfig' => [ 'preview' => [ 'jpeg_quality' => 70 ] ] ], $transfer->export()['nextcloud'] );
+
+		$this->appValues = [ 'webp_quality' => 90 ];
+		$transfer        = $this->transfer();
+		$read            = $transfer->read( $this->file( [ 'nextcloud' => [ 'appconfig' => [ 'preview' => [ 'jpeg_quality' => 70 ] ] ] ] ) );
+
+		self::assertSame( [ 'jpeg_quality' => 70 ], $read->qualities );
+
+		$changes = $transfer->changes( $read, replace: true );
+		self::assertEquals(
+			[
+				new TransferChange( TransferChange::NEXTCLOUD, 'appconfig.preview.jpeg_quality', null, 70 ),
+				new TransferChange( TransferChange::NEXTCLOUD, 'appconfig.preview.webp_quality', 90, null ),
+			],
+			$changes,
+		);
+		self::assertSame(
+			[ 'occ config:app:set preview jpeg_quality --value=70 --type=integer', 'occ config:app:delete preview webp_quality' ],
+			array_map( ConfigTransfer::command( ... ), $changes ),
+		);
+
+		$transfer->apply( $read, replace: true, system: true );
+		self::assertSame( [ 'webp_quality' => 90 ], $this->appValues );
+	}
+
+	public function testOfNextcloudsPartWhatTheAppDoesNotCarryIsLeftOutAndABadQualityRefused(): void
+	{
+		$read = $this->transfer()->read(
+			$this->file( [ 'nextcloud' => [ 'system' => [ 'x' => 1 ], 'appconfig' => [ 'core' => [ 'y' => 1 ], 'preview' => [ 'jpeg_quality' => 60, 'avif_quality' => 50 ] ] ] ] ),
+		);
+
+		self::assertSame(
+			[
+				'Nextcloud value system: not one this app carries; left out',
+				'Nextcloud value appconfig.core: not one this app carries; left out',
+				'Nextcloud value appconfig.preview.avif_quality: not one this app carries; left out',
+			],
+			array_map( static fn( TransferWarning $warning ): string => $warning->text(), $read->warnings ),
+		);
+		self::assertSame( [ 'jpeg_quality' => 60 ], $read->qualities );
+
+		$this->expectException( ConfigurationException::class );
+		$this->expectExceptionMessage( 'jpeg_quality must be between 10 and 100.' );
+
+		$this->transfer()->read( $this->file( [ 'nextcloud' => [ 'appconfig' => [ 'preview' => [ 'jpeg_quality' => 5 ] ] ] ] ) );
 	}
 
 	public function testWhatWasExportedIsRestored(): void

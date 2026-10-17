@@ -55,7 +55,12 @@ final class ConfigTransfer
 
 	public const SCRATCH = 'scratch_directory';
 
-	private const PARTS = [ 'app', 'format', 'exported', 'settings', 'mimetypes', 'extensions', 'system' ];
+	private const PARTS = [ 'app', 'format', 'exported', 'settings', 'mimetypes', 'extensions', 'system', 'nextcloud' ];
+
+	/** Nextcloud's own values the file carries: its app config, the preview app's. */
+	private const APPCONFIG = 'appconfig';
+
+	private const PREVIEW_APP = 'preview';
 
 
 //  constructor
@@ -119,6 +124,9 @@ final class ConfigTransfer
 			'mimetypes'  => self::object( self::rules( $this->config->storedMimeRules() ) ),
 			'extensions' => self::object( self::rules( $this->config->extensionRules() ) ),
 			'system'     => self::object( $system ),
+			'nextcloud'  => $this->storedQualities() === []
+				? new stdClass()
+				: [ self::APPCONFIG => [ self::PREVIEW_APP => $this->storedQualities() ] ],
 		];
 	}
 
@@ -169,11 +177,12 @@ final class ConfigTransfer
 			$warnings[] = new TransferWarning( TransferWarning::PART, $part );
 		}
 
-		$exported = is_array( $document['exported'] ?? null ) ? $document['exported'] : [];
-		$settings = $this->settings( $this->part( $document, 'settings' ), $warnings );
-		$mimes    = $this->mimeRules( $this->part( $document, 'mimetypes' ), $warnings );
-		$exts     = $this->extensionRules( $this->part( $document, 'extensions' ), $warnings );
-		$system   = $this->part( $document, 'system' );
+		$exported  = is_array( $document['exported'] ?? null ) ? $document['exported'] : [];
+		$settings  = $this->settings( $this->part( $document, 'settings' ), $warnings );
+		$mimes     = $this->mimeRules( $this->part( $document, 'mimetypes' ), $warnings );
+		$exts      = $this->extensionRules( $this->part( $document, 'extensions' ), $warnings );
+		$system    = $this->part( $document, 'system' );
+		$qualities = $this->qualities( $this->part( $document, 'nextcloud' ), $warnings );
 
 		$binaries  = [];
 		$untrusted = null;
@@ -228,6 +237,7 @@ final class ConfigTransfer
 			is_string( $exported['version'] ?? null ) ? $exported['version'] : null,
 			is_string( $exported['date'] ?? null ) ? $exported['date'] : null,
 			$warnings,
+			$qualities,
 		);
 	}
 
@@ -301,6 +311,19 @@ final class ConfigTransfer
 			if ( $before !== $after )
 			{
 				$changes[] = new TransferChange( TransferChange::SYSTEM, $key, $before, $after );
+			}
+		}
+
+		$qualities = $this->storedQualities();
+
+		foreach ( ConfigurationService::PREVIEW_QUALITIES as $key )
+		{
+			$before = $qualities[ $key ] ?? null;
+			$after  = $transfer->qualities[ $key ] ?? ( $replace ? null : $before );
+
+			if ( $before !== $after )
+			{
+				$changes[] = new TransferChange( TransferChange::NEXTCLOUD, self::APPCONFIG . '.' . self::PREVIEW_APP . '.' . $key, $before, $after );
 			}
 		}
 
@@ -408,24 +431,28 @@ final class ConfigTransfer
 	}
 
 	/**
-	 * A part of the file, an object or absent.
+	 * A part of the file, an object or absent; a refusal names it by
+	 * `$path` where it lies deeper than the top.
 	 *
 	 * @param array<array-key, mixed> $document
 	 * @return array<array-key, mixed>
 	 * @throws ConfigurationException
 	 */
 	private function part(
-		array  $document,
-		string $part,
+		array   $document,
+		string  $part,
+		?string $path = null,
 	): array
 	{
 		$value = $document[ $part ] ?? [];
 
 		if ( ! is_array( $value ) || ( $value !== [] && array_is_list( $value ) ) )
 		{
+			$path ??= $part;
+
 			throw $this->refusal(
-				sprintf( 'The part %s of the file is not an object.', $part ),
-				$this->l10n->t( 'The part %s of the file is not an object.', [ $part ] ),
+				sprintf( 'The part %s of the file is not an object.', $path ),
+				$this->l10n->t( 'The part %s of the file is not an object.', [ $path ] ),
 			);
 		}
 
@@ -621,6 +648,95 @@ final class ConfigTransfer
 	}
 
 	/**
+	 * Nextcloud's preview qualities the file's nextcloud part carries, under
+	 * appconfig > preview; any other value of the part left out and named
+	 * by its path, a quality outside its range refused.
+	 *
+	 * @param array<array-key, mixed> $part
+	 * @param list<TransferWarning>   $warnings
+	 * @return array<string, int>
+	 * @throws ConfigurationException
+	 */
+	private function qualities(
+		array $part,
+		array &$warnings,
+	): array
+	{
+		$read = [];
+
+		foreach ( $part as $section => $apps )
+		{
+			$section = (string) $section;
+
+			if ( $section !== self::APPCONFIG )
+			{
+				$warnings[] = new TransferWarning( TransferWarning::NEXTCLOUD, $section );
+
+				continue;
+			}
+
+			foreach ( $this->part( $part, self::APPCONFIG, 'nextcloud.' . self::APPCONFIG ) as $app => $keys )
+			{
+				$app = (string) $app;
+
+				if ( $app !== self::PREVIEW_APP )
+				{
+					$warnings[] = new TransferWarning( TransferWarning::NEXTCLOUD, self::APPCONFIG . '.' . $app );
+
+					continue;
+				}
+
+				$path = 'nextcloud.' . self::APPCONFIG . '.' . self::PREVIEW_APP;
+
+				foreach ( $this->part( $part[ self::APPCONFIG ], self::PREVIEW_APP, $path ) as $key => $value )
+				{
+					$key = (string) $key;
+
+					if ( ! in_array( $key, ConfigurationService::PREVIEW_QUALITIES, true ) )
+					{
+						$warnings[] = new TransferWarning( TransferWarning::NEXTCLOUD, self::APPCONFIG . '.' . self::PREVIEW_APP . '.' . $key );
+
+						continue;
+					}
+
+					if ( ! is_int( $value ) || $value < ConfigurationService::PREVIEW_QUALITY_MIN || $value > ConfigurationService::PREVIEW_QUALITY_MAX )
+					{
+						throw $this->refusal(
+							sprintf( '%s must be between %d and %d.', $key, ConfigurationService::PREVIEW_QUALITY_MIN, ConfigurationService::PREVIEW_QUALITY_MAX ),
+							$this->l10n->t( '%1$s must be between %2$d and %3$d.', [ $key, ConfigurationService::PREVIEW_QUALITY_MIN, ConfigurationService::PREVIEW_QUALITY_MAX ] ),
+						);
+					}
+
+					$read[ $key ] = $value;
+				}
+			}
+		}
+
+		return $read;
+	}
+
+	/**
+	 * Nextcloud's preview qualities stored, rather than its default.
+	 *
+	 * @return array<string, int>
+	 */
+	private function storedQualities(): array
+	{
+		$preview = $this->config->nextcloudPreview();
+		$stored  = [];
+
+		foreach ( ConfigurationService::PREVIEW_QUALITIES as $key )
+		{
+			if ( $preview['quality_stored'][ $key ] )
+			{
+				$stored[ $key ] = $preview[ $key ];
+			}
+		}
+
+		return $stored;
+	}
+
+	/**
 	 * Refuses a system value occ would refuse to set.
 	 *
 	 * @throws ConfigurationException
@@ -654,6 +770,27 @@ final class ConfigTransfer
 
 
 //  static methods
+
+	/**
+	 * The occ command that makes one of Nextcloud's values what an import
+	 * would have it, which the import shows rather than runs; null for a
+	 * change of another part.
+	 */
+	public static function command( TransferChange $change ): ?string
+	{
+		$path = explode( '.', $change->name, 3 );
+
+		if ( $change->part !== TransferChange::NEXTCLOUD || count( $path ) !== 3 || $path[0] !== self::APPCONFIG )
+		{
+			return null;
+		}
+
+		[ , $app, $key ] = $path;
+
+		return is_int( $change->after )
+			? sprintf( 'occ config:app:set %s %s --value=%d --type=integer', $app, $key, $change->after )
+			: sprintf( 'occ config:app:delete %s %s', $app, $key );
+	}
 
 	/**
 	 * The settings, MIME rules and extension rules of the changes, as

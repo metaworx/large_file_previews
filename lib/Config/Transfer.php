@@ -29,6 +29,7 @@ final readonly class Transfer
 	 * @param string|null                    $version    the app version that wrote the file
 	 * @param string|null                    $date       when it was written
 	 * @param list<TransferWarning>          $warnings   what was left out
+	 * @param array<string, int>             $qualities  Nextcloud's preview qualities, by key of the preview app's config
 	 */
 	public function __construct(
 		public array   $settings = [],
@@ -40,6 +41,7 @@ final readonly class Transfer
 		public ?string $version = null,
 		public ?string $date = null,
 		public array   $warnings = [],
+		public array   $qualities = [],
 	)
 	{
 	}

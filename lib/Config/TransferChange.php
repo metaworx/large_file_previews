@@ -11,9 +11,10 @@ namespace OCA\LargeFilePreviews\Config;
 
 /**
  * One thing an import changes: a setting, a MIME type's or an extension's
- * rule, or a system value, from what is stored to what will be. Null on
- * either side is nothing stored: a setting's default, a type as it ships,
- * no rule for an extension, no system value.
+ * rule, a system value, or one of Nextcloud's own, from what is stored to
+ * what will be. Null on either side is nothing stored: a setting's default,
+ * a type as it ships, no rule for an extension, no system value, Nextcloud's
+ * default.
  */
 final readonly class TransferChange
 {
@@ -28,6 +29,12 @@ final readonly class TransferChange
 
 	/** A system value: `binaries.<program>`, `vips_allow_untrusted` or `scratch_directory`. */
 	public const SYSTEM = 'system';
+
+	/**
+	 * A value of Nextcloud's own, by where it lives: `appconfig.preview.jpeg_quality`.
+	 * Never written by an import: its command is shown instead (ConfigTransfer::command()).
+	 */
+	public const NEXTCLOUD = 'nextcloud';
 
 
 //  constructor

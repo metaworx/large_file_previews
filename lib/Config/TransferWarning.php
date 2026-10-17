@@ -42,6 +42,9 @@ final readonly class TransferWarning
 	/** A program whose path this app does not run. */
 	public const PROGRAM = 'program';
 
+	/** A value of the file's nextcloud part this app does not carry, by its path: `appconfig.core`. */
+	public const NEXTCLOUD = 'nextcloud';
+
 
 //  constructor
 
@@ -69,6 +72,7 @@ final readonly class TransferWarning
 			self::EXTENSION => sprintf( 'extension %s: of a type this app does not handle; left out', $this->name ),
 			self::SYSTEM    => sprintf( 'system value %s: not one this app has; left out', $this->name ),
 			self::PROGRAM   => sprintf( 'program %s: not one this app runs; left out', $this->name ),
+			self::NEXTCLOUD => sprintf( 'Nextcloud value %s: not one this app carries; left out', $this->name ),
 			default         => sprintf( '%s %s: left out', $this->kind, $this->name ),
 		};
 	}
