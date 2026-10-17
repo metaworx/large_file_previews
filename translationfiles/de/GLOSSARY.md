@@ -32,6 +32,8 @@ and in `appinfo/info.xml` where its summary or description has it.
 | default, defaults | Standard, Standardwerte | |
 | inherited | geerbt | a size field's placeholder: „50 (geerbt)“ |
 | as shipped | wie ausgeliefert | what a type has until set: „50 (wie ausgeliefert)“ |
+| backup and restore | sichern und wiederherstellen | the section; a file restored, „wiederhergestellt“ |
+| left out | ausgelassen | what an import does not know: „…; ausgelassen.“ |
 | override | Vorrang haben | „hat Feld für Feld Vorrang vor“; not *übersteuern*, which is Swiss usage |
 | enabled / disabled / excluded | aktiviert / deaktiviert / ausgeschlossen | a rule's processing, and how the help text quotes it |
 | limit, limits | Grenze, Grenzen | the section; „keine Grenze“ for no limit |

@@ -113,6 +113,9 @@ msgstr "Erweitert"
 msgid "An extension overrides its MIME type, field by field. Processing 'enabled' selects its files even where the MIME type is disabled; 'excluded' never selects them. A minimum or maximum set here replaces the MIME type's; one left empty follows it."
 msgstr "Eine Dateiendung hat Feld für Feld Vorrang vor ihrem MIME-Typ.Verarbeitung „aktiviert“ wählt ihre Dateien auch dann aus, wenn der MIME-Typ deaktiviert ist; „ausgeschlossen“ wählt sie nie aus. Ein hier gesetztes Minimum oder Maximum ersetzt das des MIME-Typs; ein leer gelassenes folgt ihm."
 
+msgid "Apply"
+msgstr "Anwenden"
+
 msgid "As Nextcloud's preview_format"
 msgstr "Wie preview_format von Nextcloud"
 
@@ -122,14 +125,23 @@ msgstr "Wie preview_format von Nextcloud: WebP, wo diese Systemeinstellung webp 
 msgid "Background of a JPEG"
 msgstr "Hintergrund eines JPEG"
 
+msgid "Backup and restore"
+msgstr "Sichern und wiederherstellen"
+
 msgid "Black"
 msgstr "Schwarz"
+
+msgid "Cancel"
+msgstr "Abbrechen"
 
 msgid "Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MiB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each. The file-size cap is the largest file a render may write: its preview, its messages, what libvips spills to disc."
 msgstr "Begrenzt den Adressraum eines Rendervorgangs, sodass eine ausufernde Speicheranforderung im Renderer scheitert. Der Adressraum zählt auch eingebundene Bibliotheken mit und liegt darum über dem Speicher, den ein Rendervorgang braucht: Ein PDF von 1,7 GB wurde innerhalb von 96 MiB gerendert. Bilder über libvips haben eine eigene Obergrenze: libvips dekodiert ganze Streifen eines Bildes, und jeder seiner Threads reserviert Speicher. Die Dateigrößen-Obergrenze ist die größte Datei, die ein Rendervorgang schreiben darf: seine Vorschau, seine Meldungen, was libvips auf die Festplatte auslagert."
 
 msgid "Command copied."
 msgstr "Befehl kopiert."
+
+msgid "Configuration imported."
+msgstr "Konfiguration importiert."
 
 msgid "Copy the command"
 msgstr "Befehl kopieren"
@@ -143,17 +155,26 @@ msgstr "Standardwerte"
 msgid "Detail"
 msgstr "Detail"
 
+msgid "Download configuration"
+msgstr "Konfiguration herunterladen"
+
 msgid "Everything the app needs is available."
 msgstr "Alles, was die App braucht, ist vorhanden."
 
 msgid "Extension"
 msgstr "Dateiendung"
 
+msgid "Extension {name}: of a type this app does not handle; left out."
+msgstr "Dateiendung {name}: von einem Typ, den diese App nicht behandelt; ausgelassen."
+
 msgid "Extension, e.g. tif"
 msgstr "Dateiendung, z. B. tif"
 
 msgid "Extensions"
 msgstr "Dateiendungen"
+
+msgid "Field {name}: not one a rule has; left out."
+msgstr "Feld {name}: keines, das eine Regel hat; ausgelassen."
 
 #, php-format
 msgid "Files .%1$s are %2$s, a type this app does not handle."
@@ -182,6 +203,9 @@ msgstr "Aus dem CRB-Repository, das aktiviert sein muss."
 
 msgid "From the community repository."
 msgstr "Aus dem community-Repository."
+
+msgid "From the file"
+msgstr "Aus der Datei"
 
 msgid "Grace period, seconds"
 msgstr "Nachfrist, Sekunden"
@@ -219,6 +243,9 @@ msgstr "Grenzen"
 msgid "MIME type"
 msgstr "MIME-Typ"
 
+msgid "MIME type {name}: not one this app handles; left out."
+msgstr "MIME-Typ {name}: keiner, den diese App behandelt; ausgelassen."
+
 msgid "MIME types"
 msgstr "MIME-Typen"
 
@@ -236,6 +263,9 @@ msgstr "Minimum, MiB"
 
 msgid "Minutes"
 msgstr "Minuten"
+
+msgid "Name"
+msgstr "Name"
 
 msgid "Needed"
 msgstr "Benötigt"
@@ -273,6 +303,9 @@ msgstr "Kein Typ, den diese App behandelt"
 msgid "Nothing is processed: every MIME type is disabled."
 msgstr "Nichts wird verarbeitet: Jeder MIME-Typ ist deaktiviert."
 
+msgid "Now"
+msgstr "Jetzt"
+
 msgid "Off, an image type starts where Nextcloud's own image providers stop, and leaves smaller images to them. On, images follow the minimum above, as PDF and Illustrator do: at 0, this app renders every image of a type that is switched on, ahead of Nextcloud's own providers."
 msgstr "Ausgeschaltet beginnt ein Bildtyp dort, wo die Bild-Vorschau-Anbieter von Nextcloud selbst aufhören, und überlässt ihnen kleinere Bilder. Eingeschaltet folgen Bilder dem Minimum oben, wie PDF und Illustrator: Bei 0 rendert diese App jedes Bild eines aktivierten Typs, noch vor den Vorschau-Anbietern von Nextcloud selbst."
 
@@ -287,6 +320,9 @@ msgstr "Gescannte PDF-Seiten"
 
 msgid "PNG"
 msgstr "PNG"
+
+msgid "Part {name}: not one this app reads; left out."
+msgstr "Teil {name}: keiner, den diese App liest; ausgelassen."
 
 msgid "Path"
 msgstr "Pfad"
@@ -305,6 +341,9 @@ msgstr "Verarbeitung"
 
 msgid "Program"
 msgstr "Programm"
+
+msgid "Program {name}: not one this app runs; left out."
+msgstr "Programm {name}: keines, das diese App ausführt; ausgelassen."
 
 msgid "Programs"
 msgstr "Programme"
@@ -330,11 +369,17 @@ msgstr "Eine gescannte Seite in ihrer eigenen Auflösung rendern, nicht vergrö�
 msgid "Renderer"
 msgstr "Renderer"
 
+msgid "Replace: return what the file does not name to its default"
+msgstr "Ersetzen: was die Datei nicht nennt, auf den Standard zurücksetzen"
+
 msgid "Reset"
 msgstr "Zurücksetzen"
 
 msgid "Reset {label}"
 msgstr "{label} zurücksetzen"
+
+msgid "Restore from a file…"
+msgstr "Aus einer Datei wiederherstellen…"
 
 msgid "Save"
 msgstr "Speichern"
@@ -354,6 +399,15 @@ msgstr "Sekunden"
 msgid "Set but not used: {problem}"
 msgstr "Gesetzt, aber nicht verwendet: {problem}"
 
+msgid "Set in config.php, which this page does not write: run these with occ."
+msgstr "In config.php gesetzt, die diese Seite nicht schreibt: Führe diese Befehle mit occ aus."
+
+msgid "Setting"
+msgstr "Einstellung"
+
+msgid "Setting {name}: not one this app has; left out."
+msgstr "Einstellung {name}: keine, die diese App hat; ausgelassen."
+
 msgid "Sizes are in MiB. A file is processed where its type is enabled and its size lies within the minimum and the maximum, both included. Anything this app does not process goes to Nextcloud's other preview providers."
 msgstr "Größen sind in MiB. Eine Datei wird verarbeitet, wenn ihr Typ aktiviert ist und ihre Größe zwischen Minimum und Maximum liegt, beide eingeschlossen. Was diese App nicht verarbeitet, geht an die anderen Vorschau-Anbieter von Nextcloud."
 
@@ -370,8 +424,23 @@ msgstr "Status"
 msgid "Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period. Every program one render runs shares the time."
 msgstr "Stoppt einen Rendervorgang, der zu lange dauert: SIGTERM, nach der Nachfrist SIGKILL. Alle Programme eines Rendervorgangs teilen sich die Zeit."
 
+msgid "System value {name}: not one this app has; left out."
+msgstr "Systemwert {name}: keiner, den diese App hat; ausgelassen."
+
 msgid "The command could not be copied; select it instead."
 msgstr "Der Befehl konnte nicht kopiert werden; markiere ihn stattdessen."
+
+msgid "The configuration could not be exported."
+msgstr "Die Konfiguration konnte nicht exportiert werden."
+
+msgid "The configuration stored, as a file, and such a file read back: before anything is written, it shows what would change and what it leaves out. All of it is written, or nothing. The values a file holds for config.php are set with occ, with the commands shown; occ lfp:config:import sets them too."
+msgstr "Die gespeicherte Konfiguration als Datei, und eine solche Datei zurückgelesen: Bevor etwas geschrieben wird, zeigt sie, was sich ändern würde und was sie auslässt. Alles wird geschrieben oder nichts. Die Werte einer Datei für config.php werden mit occ gesetzt, mit den angezeigten Befehlen; occ lfp:config:import setzt sie ebenfalls."
+
+msgid "The file changes none of the app's settings."
+msgstr "Die Datei ändert keine Einstellung der App."
+
+msgid "The file could not be read."
+msgstr "Die Datei konnte nicht gelesen werden."
 
 msgid "The file is not JSON."
 msgstr "Die Datei ist kein JSON."
@@ -490,6 +559,9 @@ msgstr "Welche Dateien"
 msgid "White"
 msgstr "Weiß"
 
+msgid "Written by version {version} on {date}."
+msgstr "Geschrieben von Version {version} am {date}."
+
 msgid "as MIME type"
 msgstr "wie MIME-Typ"
 
@@ -547,6 +619,9 @@ msgstr "kein Decoder"
 msgid "no limit"
 msgstr "keine Grenze"
 
+msgid "no rule"
+msgstr "keine Regel"
+
 msgid "not available"
 msgstr "nicht vorhanden"
 
@@ -555,6 +630,9 @@ msgstr "nicht gefunden"
 
 msgid "not handled"
 msgstr "nicht behandelt"
+
+msgid "not set"
+msgstr "nicht gesetzt"
 
 msgid "optional"
 msgstr "optional"

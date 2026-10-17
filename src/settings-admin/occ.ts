@@ -78,3 +78,14 @@ export function appConfigCommand(app: string, key: string, value: string | numbe
 export function scratchCommand(path: string): string {
 	return [SET, 'scratch_directory', quoted(path)].join(' ')
 }
+
+/**
+ * A system value set as a configuration file has it - `binaries.<program>`,
+ * `vips_allow_untrusted` or `scratch_directory` - or, where it has none,
+ * unset.
+ */
+export function systemValueCommand(name: string, value: string | boolean | null): string {
+	return value === null
+		? [UNSET, name].join(' ')
+		: [SET, name, typeof value === 'boolean' ? String(value) : quoted(value)].join(' ')
+}

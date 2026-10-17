@@ -216,3 +216,34 @@ export interface Changes {
 export function scalarChange<K extends ScalarKey>(key: K, value: ScalarValues[K] | null): Changes {
 	return { scalars: { [key]: value } as Changes['scalars'] }
 }
+
+/** A value a configuration file sets, or a rule's fields; null, nothing stored. */
+export type TransferValue = number | boolean | string | Rule | null
+
+/**
+ * One thing an import changes, from what is stored to what will be; a
+ * system value's name is binaries.<program>, vips_allow_untrusted or
+ * scratch_directory.
+ */
+export interface TransferChange {
+	part: 'settings' | 'mimetypes' | 'extensions' | 'system'
+	name: string
+	before: TransferValue
+	after: TransferValue
+}
+
+/** Something in a configuration file this app does not know, and left out. */
+export interface TransferWarning {
+	kind: 'part' | 'setting' | 'type' | 'field' | 'extension' | 'system' | 'program'
+	name: string
+}
+
+/** What POST /settings/import answers. */
+export interface ImportAnswer {
+	exported: { version: string | null, date: string | null }
+	warnings: TransferWarning[]
+	changes: TransferChange[]
+	applied: boolean
+	/** Where it was applied: the state with it. */
+	state?: SettingsState
+}

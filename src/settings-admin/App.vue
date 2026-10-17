@@ -4,14 +4,16 @@
  * @license   AGPL-3.0-or-later
  *
  * The admin settings page: one section, under the app's name (h2), with
- * the status, which files are processed, the previews' format, the limits
- * and the advanced settings (h3), each with its parts (h4).
+ * the status, which files are processed, the previews' format, the limits,
+ * the advanced settings, and backup and restore (h3), each with its parts
+ * (h4).
  */
 import { onMounted } from 'vue'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
 import AdvancedSection from './AdvancedSection.vue'
+import BackupSection from './BackupSection.vue'
 import LimitsSection from './LimitsSection.vue'
 import PreviewsSection from './PreviewsSection.vue'
 import StatusSection from './StatusSection.vue'
@@ -41,6 +43,7 @@ onMounted(load)
 				:saving="saving"
 				@save="save"
 				@refresh="refresh" />
+			<BackupSection :saving="saving" />
 		</template>
 	</NcSettingsSection>
 </template>

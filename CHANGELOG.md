@@ -13,8 +13,9 @@ the first stable release.
 
 ### Added
 
-- `occ lfp:config:export` and `import`: what is stored, restored all or
-  nothing; what the app does not know left out and named (exit 3).
+- `occ lfp:config:export` and `import`, and the page's *Backup and
+  restore*: what is stored, restored all or nothing, the changes shown
+  first; what the app does not know left out and named (exit 3).
 
 ## [0.1.0] - 2026-10-17
 

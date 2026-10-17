@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #, php-format
@@ -113,6 +113,9 @@ msgstr ""
 msgid "An extension overrides its MIME type, field by field. Processing 'enabled' selects its files even where the MIME type is disabled; 'excluded' never selects them. A minimum or maximum set here replaces the MIME type's; one left empty follows it."
 msgstr ""
 
+msgid "Apply"
+msgstr ""
+
 msgid "As Nextcloud's preview_format"
 msgstr ""
 
@@ -122,13 +125,22 @@ msgstr ""
 msgid "Background of a JPEG"
 msgstr ""
 
+msgid "Backup and restore"
+msgstr ""
+
 msgid "Black"
+msgstr ""
+
+msgid "Cancel"
 msgstr ""
 
 msgid "Caps the address space of a render, so a runaway allocation fails inside the renderer. Address space counts mapped libraries too, so it is above the memory a render uses: a 1.7 GB PDF rendered within 96 MiB. Images through libvips have a cap of their own: it decodes whole strips of an image, and its threads reserve memory each. The file-size cap is the largest file a render may write: its preview, its messages, what libvips spills to disc."
 msgstr ""
 
 msgid "Command copied."
+msgstr ""
+
+msgid "Configuration imported."
 msgstr ""
 
 msgid "Copy the command"
@@ -143,16 +155,25 @@ msgstr ""
 msgid "Detail"
 msgstr ""
 
+msgid "Download configuration"
+msgstr ""
+
 msgid "Everything the app needs is available."
 msgstr ""
 
 msgid "Extension"
 msgstr ""
 
+msgid "Extension {name}: of a type this app does not handle; left out."
+msgstr ""
+
 msgid "Extension, e.g. tif"
 msgstr ""
 
 msgid "Extensions"
+msgstr ""
+
+msgid "Field {name}: not one a rule has; left out."
 msgstr ""
 
 #, php-format
@@ -181,6 +202,9 @@ msgid "From the CRB repository, which must be enabled."
 msgstr ""
 
 msgid "From the community repository."
+msgstr ""
+
+msgid "From the file"
 msgstr ""
 
 msgid "Grace period, seconds"
@@ -219,6 +243,9 @@ msgstr ""
 msgid "MIME type"
 msgstr ""
 
+msgid "MIME type {name}: not one this app handles; left out."
+msgstr ""
+
 msgid "MIME types"
 msgstr ""
 
@@ -235,6 +262,9 @@ msgid "Minimum, MiB"
 msgstr ""
 
 msgid "Minutes"
+msgstr ""
+
+msgid "Name"
 msgstr ""
 
 msgid "Needed"
@@ -273,6 +303,9 @@ msgstr ""
 msgid "Nothing is processed: every MIME type is disabled."
 msgstr ""
 
+msgid "Now"
+msgstr ""
+
 msgid "Off, an image type starts where Nextcloud's own image providers stop, and leaves smaller images to them. On, images follow the minimum above, as PDF and Illustrator do: at 0, this app renders every image of a type that is switched on, ahead of Nextcloud's own providers."
 msgstr ""
 
@@ -286,6 +319,9 @@ msgid "PDF scanned pages"
 msgstr ""
 
 msgid "PNG"
+msgstr ""
+
+msgid "Part {name}: not one this app reads; left out."
 msgstr ""
 
 msgid "Path"
@@ -304,6 +340,9 @@ msgid "Processing"
 msgstr ""
 
 msgid "Program"
+msgstr ""
+
+msgid "Program {name}: not one this app runs; left out."
 msgstr ""
 
 msgid "Programs"
@@ -330,10 +369,16 @@ msgstr ""
 msgid "Renderer"
 msgstr ""
 
+msgid "Replace: return what the file does not name to its default"
+msgstr ""
+
 msgid "Reset"
 msgstr ""
 
 msgid "Reset {label}"
+msgstr ""
+
+msgid "Restore from a file…"
 msgstr ""
 
 msgid "Save"
@@ -354,6 +399,15 @@ msgstr ""
 msgid "Set but not used: {problem}"
 msgstr ""
 
+msgid "Set in config.php, which this page does not write: run these with occ."
+msgstr ""
+
+msgid "Setting"
+msgstr ""
+
+msgid "Setting {name}: not one this app has; left out."
+msgstr ""
+
 msgid "Sizes are in MiB. A file is processed where its type is enabled and its size lies within the minimum and the maximum, both included. Anything this app does not process goes to Nextcloud's other preview providers."
 msgstr ""
 
@@ -370,7 +424,22 @@ msgstr ""
 msgid "Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period. Every program one render runs shares the time."
 msgstr ""
 
+msgid "System value {name}: not one this app has; left out."
+msgstr ""
+
 msgid "The command could not be copied; select it instead."
+msgstr ""
+
+msgid "The configuration could not be exported."
+msgstr ""
+
+msgid "The configuration stored, as a file, and such a file read back: before anything is written, it shows what would change and what it leaves out. All of it is written, or nothing. The values a file holds for config.php are set with occ, with the commands shown; occ lfp:config:import sets them too."
+msgstr ""
+
+msgid "The file changes none of the app's settings."
+msgstr ""
+
+msgid "The file could not be read."
 msgstr ""
 
 msgid "The file is not JSON."
@@ -490,6 +559,9 @@ msgstr ""
 msgid "White"
 msgstr ""
 
+msgid "Written by version {version} on {date}."
+msgstr ""
+
 msgid "as MIME type"
 msgstr ""
 
@@ -547,6 +619,9 @@ msgstr ""
 msgid "no limit"
 msgstr ""
 
+msgid "no rule"
+msgstr ""
+
 msgid "not available"
 msgstr ""
 
@@ -554,6 +629,9 @@ msgid "not found"
 msgstr ""
 
 msgid "not handled"
+msgstr ""
+
+msgid "not set"
 msgstr ""
 
 msgid "optional"

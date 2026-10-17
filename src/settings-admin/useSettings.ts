@@ -14,7 +14,7 @@ import { getRequestToken } from '@nextcloud/auth'
 import { generateOcsUrl } from '@nextcloud/router'
 import { t } from '../l10n'
 import { toastError, toastSaved } from '../toast'
-import type { Changes, SettingsState } from './types'
+import type { Changes, ImportAnswer, SettingsState } from './types'
 
 export const SETTINGS_URL = '/apps/large_file_previews/settings'
 
@@ -29,32 +29,43 @@ interface Answer {
 }
 
 /**
- * One request to the settings API, with the request token; never throws.
- * A refusal's reason is the server's where it gave one.
+ * One call of the settings API, with the request token, a body sent as
+ * JSON; never throws. Not ok where it failed or never got there.
  */
-async function request(method: 'GET' | 'PUT' | 'POST', path: string, changes?: Changes): Promise<Answer> {
+async function call(method: 'GET' | 'PUT' | 'POST', path: string, body?: unknown): Promise<{ ok: boolean, body: unknown }> {
 	try {
 		const response = await fetch(generateOcsUrl(SETTINGS_URL + path), {
 			method,
 			headers: {
 				requesttoken: getRequestToken() ?? '',
 				'OCS-APIRequest': 'true',
-				...(changes === undefined ? {} : { 'Content-Type': 'application/json' }),
+				...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
 			},
-			...(changes === undefined ? {} : { body: JSON.stringify(changes) }),
+			...(body === undefined ? {} : { body: JSON.stringify(body) }),
 		})
-		const body = await response.json().catch(() => null) as SettingsState | { error?: unknown, state?: SettingsState } | null
-		if (response.ok) {
-			return { state: body as SettingsState, error: null }
-		}
-		const refusal = body !== null && 'error' in body ? body : null
-		return {
-			state: refusal?.state ?? null,
-			error: typeof refusal?.error === 'string' ? refusal.error : '',
-		}
+		return { ok: response.ok, body: await response.json().catch(() => null) }
 	} catch (e) {
-		return { state: null, error: '' }
+		return { ok: false, body: null }
 	}
+}
+
+/** A refusal's reason, where the server gave one; '' where it gave none. */
+function reason(body: unknown): string {
+	const error = body !== null && typeof body === 'object' && 'error' in body ? body.error : null
+	return typeof error === 'string' ? error : ''
+}
+
+/**
+ * One request that answers the state; a refusal's reason is the server's
+ * where it gave one.
+ */
+async function request(method: 'GET' | 'PUT' | 'POST', path: string, changes?: Changes): Promise<Answer> {
+	const answer = await call(method, path, changes)
+	if (answer.ok) {
+		return { state: answer.body as SettingsState, error: null }
+	}
+	const refusal = answer.body as { state?: SettingsState } | null
+	return { state: refusal?.state ?? null, error: reason(answer.body) }
 }
 
 export function useSettings() {
@@ -100,5 +111,37 @@ export function useSettings() {
 		}
 	}
 
-	return { state, saving, failed, load, save, refresh }
+	/** What is stored, as the file `occ lfp:config:export` writes; null where it could not be had. */
+	async function exportConfig(): Promise<Record<string, unknown> | null> {
+		const answer = await call('GET', '/export')
+		if (!answer.ok || answer.body === null || typeof answer.body !== 'object') {
+			toastError(t('large_file_previews', 'The configuration could not be exported.'))
+			return null
+		}
+		return answer.body as Record<string, unknown>
+	}
+
+	/**
+	 * A configuration file, read by the server: what it would change, what
+	 * it leaves out; with `apply`, written, and the state shown with it.
+	 * The refusal's reason where it is refused.
+	 */
+	async function importConfig(document: string, replace: boolean, apply: boolean): Promise<ImportAnswer | { error: string }> {
+		saving.value = apply
+		try {
+			const answer = await call('POST', '/import', { document, replace, apply })
+			if (!answer.ok) {
+				return { error: reason(answer.body) || t('large_file_previews', 'The file could not be read.') }
+			}
+			const read = answer.body as ImportAnswer
+			if (read.state !== undefined) {
+				state.value = read.state
+			}
+			return read
+		} finally {
+			saving.value = false
+		}
+	}
+
+	return { state, saving, failed, load, save, refresh, exportConfig, importConfig }
 }
