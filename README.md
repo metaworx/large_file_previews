@@ -288,10 +288,14 @@ A PDF previewed as WebP is converted by libvips, and is a JPEG without it.
 A JPEG keeps no transparency,
 so a transparent image is laid on `preview_background`, white or black.
 The quality is Nextcloud's:
-it re-encodes every preview at its app config `preview` `jpeg_quality` or `webp_quality`.
-The settings page shows those and Nextcloud's own `preview_format`, read only,
-each with the command that sets it:
-they apply to every preview, not only this app's.
+it re-encodes every preview it stores, the largest and each size made from it,
+at its app config `preview` `jpeg_quality` or `webp_quality`, 80 unless set;
+a PNG is lossless.
+The settings page sets both, 10 to 100, an emptied field back to 80,
+and shows Nextcloud's own `preview_format`, read only,
+each with the command that sets it.
+They apply to every preview Nextcloud stores from then on, not only this app's;
+previews stored already keep the quality they have.
 
 A page counts as scanned where one image covers it, each way,
 to at least `scan_coverage_percent` (90 by default, 50 to 100);

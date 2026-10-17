@@ -48,18 +48,36 @@ describe('PreviewsSection', () => {
 			'occ lfp:config:set preview_format nextcloud',
 			'occ lfp:config:set preview_background white',
 			'occ config:system:set preview_format --value=jpeg',
-			'occ config:app:set preview jpeg_quality --value=80',
-			'occ config:app:set preview webp_quality --value=80',
+			'occ config:app:delete preview jpeg_quality',
+			'occ config:app:delete preview webp_quality',
 		])
 	})
 
-	it('shows Nextcloud\'s own preview settings, read only', () => {
+	it('shows Nextcloud\'s preview format read only, and its quality as it is stored', () => {
 		const state = testState()
-		state.nextcloud = { ...state.nextcloud, preview_format: 'webp', jpeg_quality: 90, webp_quality: 65 }
+		state.nextcloud = { ...state.nextcloud, preview_format: 'webp', jpeg_quality: 90, webp_quality: 80, quality_stored: { jpeg_quality: true, webp_quality: false } }
 		const own = section(state).find('[data-setting="nextcloud"]')
 
 		expect(own.find('[data-nextcloud="preview_format"]').text()).toContain('Preview format: webp')
-		expect(own.find('[data-nextcloud="webp_quality"]').text()).toContain('WebP quality: 65')
-		expect(own.find('input').exists()).toBe(false)
+		expect(own.find('[data-nextcloud="preview_format"] input').exists()).toBe(false)
+
+		const [jpeg, webp] = own.findAllComponents({ name: 'NumberField' })
+		expect(jpeg.props('value')).toBe(90)
+		expect(webp.props('value')).toBeNull()
+		expect(webp.props('placeholder')).toBe('80 (default)')
+		expect(own.find('[data-nextcloud="jpeg_quality"]').text()).toContain('occ config:app:set preview jpeg_quality --value=90 --type=integer')
+	})
+
+	it('sets Nextcloud\'s quality, and clears it to its default', async () => {
+		const wrapper = section()
+		const [jpeg, webp] = wrapper.find('[data-setting="nextcloud"]').findAllComponents({ name: 'NumberField' })
+
+		await jpeg.vm.$emit('save', 70)
+		await webp.vm.$emit('save', null)
+
+		expect(wrapper.emitted('save')).toEqual([
+			[{ nextcloud: { jpeg_quality: 70 } }],
+			[{ nextcloud: { webp_quality: null } }],
+		])
 	})
 })

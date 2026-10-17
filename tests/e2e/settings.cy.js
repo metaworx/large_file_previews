@@ -219,6 +219,31 @@ describe( 'The settings page', () => {
 		} )
 	} )
 
+	it( 'sets Nextcloud\'s JPEG quality, and clears it back to its default', () => {
+		// Nextcloud's, not the app's: what the server had is put back after.
+		cy.occ( 'config:app:get preview jpeg_quality', { failOnNonZeroExit: false } ).then( ( { exitCode, stdout } ) => {
+			const had = exitCode === 0 ? stdout.trim() : null
+
+			cy.occ( 'config:app:delete preview jpeg_quality' )
+			openSettings()
+			cy.get( 'input#lfp-jpeg_quality' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '80 (default)' )
+
+			cy.get( 'input#lfp-jpeg_quality' ).type( '70' )
+			cy.get( 'input#lfp-jpeg_quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+			cy.get( '[data-nextcloud="jpeg_quality"]' ).should( 'contain', 'occ config:app:set preview jpeg_quality --value=70 --type=integer' )
+			cy.occ( 'config:app:get preview jpeg_quality' ).its( 'stdout' ).invoke( 'trim' ).should( 'equal', '70' )
+
+			cy.get( 'input#lfp-jpeg_quality' ).clear()
+			cy.get( 'input#lfp-jpeg_quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+			cy.get( '[data-nextcloud="jpeg_quality"]' ).should( 'contain', 'occ config:app:delete preview jpeg_quality' )
+			cy.occ( 'config:app:get preview jpeg_quality', { failOnNonZeroExit: false } ).its( 'exitCode' ).should( 'not.equal', 0 )
+
+			if ( had !== null ) {
+				cy.occ( `config:app:set preview jpeg_quality --value=${ had } --type=integer` )
+			}
+		} )
+	} )
+
 	it( 'keeps every help icon clear of every Save button', () => {
 		cy.get( '.lfp-help-icon' ).should( 'have.length.greaterThan', 0 )
 		cy.get( '.lfp-number__save' ).should( 'have.length.greaterThan', 0 )

@@ -69,9 +69,19 @@ export function systemCommand(key: string, value: string | number): string {
 	return command.join(' ')
 }
 
-/** One of Nextcloud's own app settings, as it stands. */
-export function appConfigCommand(app: string, key: string, value: string | number): string {
-	return ['occ config:app:set', app, key, '--value=' + quoted(String(value))].join(' ')
+/**
+ * One of Nextcloud's own app settings, as it stands, a number stored as
+ * one; where nothing is stored, the command that keeps it so.
+ */
+export function appConfigCommand(app: string, key: string, value: string | number | null): string {
+	if (value === null) {
+		return ['occ config:app:delete', app, key].join(' ')
+	}
+	const command = ['occ config:app:set', app, key, '--value=' + quoted(String(value))]
+	if (typeof value === 'number') {
+		command.push('--type=integer')
+	}
+	return command.join(' ')
 }
 
 /** The scratch directory, in system config. */

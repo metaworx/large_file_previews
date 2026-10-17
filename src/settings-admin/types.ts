@@ -200,7 +200,14 @@ export interface SettingsState {
 	/** The app's version, as installed. */
 	version: string
 	/** Nextcloud's own preview settings, read only. */
-	nextcloud: { preview_format: string, jpeg_quality: number, webp_quality: number, preview_max_filesize_image: number }
+	nextcloud: {
+		preview_format: string
+		jpeg_quality: number
+		webp_quality: number
+		preview_max_filesize_image: number
+		/** Which quality is stored, rather than Nextcloud's default. */
+		quality_stored: { jpeg_quality: boolean, webp_quality: boolean }
+	}
 	/** The distribution's family, where it is one the app knows packages for. */
 	platform: 'debian' | 'fedora' | 'rhel' | 'alpine' | 'arch' | null
 }
@@ -210,6 +217,8 @@ export interface Changes {
 	scalars?: { [K in ScalarKey]?: ScalarValues[K] | null }
 	mimetypes?: Record<string, RuleChange | null>
 	extensions?: Record<string, RuleChange | null>
+	/** Nextcloud's own preview qualities, the preview app's; null clears to its default. */
+	nextcloud?: { jpeg_quality?: number | null, webp_quality?: number | null }
 }
 
 /** One setting changed, or returned to its default with null. */

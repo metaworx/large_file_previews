@@ -223,8 +223,8 @@ msgstr "Sein Decoder, {decoder}, ist nicht vertrauenswürdig, und nicht vertraue
 msgid "JPEG"
 msgstr "JPEG"
 
-msgid "JPEG quality: {quality}"
-msgstr "JPEG-Qualität: {quality}"
+msgid "JPEG quality, 10 to 100"
+msgstr "JPEG-Qualität, 10 bis 100"
 
 msgid "Large File Previews"
 msgstr "Large File Previews"
@@ -289,8 +289,11 @@ msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder jeder Grö
 msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
 msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder bis {size} MiB (preview_max_filesize_image)."
 
-msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. Shown here, and changed with occ only, as Nextcloud has no page for them."
-msgstr "Die Vorschau-Einstellungen von Nextcloud selbst, die für jede Vorschau gelten, nicht nur für die dieser App. Hier angezeigt und nur mit occ geändert, da Nextcloud keine Seite dafür hat."
+msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ."
+msgstr "Die Vorschau-Einstellungen von Nextcloud selbst, die für jede Vorschau gelten, nicht nur für die dieser App. Das Format wird hier angezeigt und in config.php gesetzt; die Qualität, für die Nextcloud keine Seite hat, wird hier oder mit occ gesetzt."
+
+msgid "Nextcloud's, for every preview it stores from now on, not only this app's; previews stored already keep theirs."
+msgstr "Von Nextcloud, für jede Vorschau, die es ab jetzt speichert, nicht nur für die dieser App; bereits gespeicherte Vorschauen behalten ihre."
 
 msgid "No effect: its MIME type already selects it"
 msgstr "Ohne Wirkung: Ihr MIME-Typ wählt sie bereits aus"
@@ -545,8 +548,8 @@ msgstr "Version"
 msgid "WebP"
 msgstr "WebP"
 
-msgid "WebP quality: {quality}"
-msgstr "WebP-Qualität: {quality}"
+msgid "WebP quality, 10 to 100"
+msgstr "WebP-Qualität, 10 bis 100"
 
 msgid "What each render runs under. The defaults suit most servers."
 msgstr "Unter welchen Grenzen jeder Rendervorgang läuft. Die Standardwerte passen für die meisten Server."

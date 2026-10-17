@@ -6,12 +6,14 @@
  * The type previews are stored in, and what a JPEG of a transparent image
  * is laid on. Nextcloud stores a preview in the type it is given, and
  * re-encodes it at its own quality. The choices are the server's; one this
- * page has no words for is shown as it is. Nextcloud's own preview format
- * and quality are shown beneath, read only, each with the occ command that
- * sets it: they apply to every preview, and are the server's to set.
+ * page has no words for is shown as it is. Nextcloud's own settings are
+ * beneath, each with the occ command that sets it: its preview format, read
+ * only, in config.php; its JPEG and WebP quality, which every preview it
+ * stores is re-encoded at, set here, emptied back to its default.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import HelpPopover from './HelpPopover.vue'
+import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
 import { appConfigCommand, scalarCommand, systemCommand } from './occ'
 import { t } from '../l10n'
@@ -35,6 +37,15 @@ const LABELS: Record<string, string> = {
 	white: t('large_file_previews', 'White'),
 	black: t('large_file_previews', 'Black'),
 }
+
+/** Nextcloud's own default for either quality, where none is stored. */
+const QUALITY_DEFAULT = 80
+
+/** Nextcloud's qualities, the preview app's config, set on this page. */
+const QUALITIES: { key: 'jpeg_quality' | 'webp_quality', label: string }[] = [
+	{ key: 'jpeg_quality', label: t('large_file_previews', 'JPEG quality, 10 to 100') },
+	{ key: 'webp_quality', label: t('large_file_previews', 'WebP quality, 10 to 100') },
+]
 
 /** Each radio group's name, which ties its radios together. */
 const FORMAT_GROUP = 'lfp-preview-format'
@@ -93,7 +104,7 @@ function label(choice: string): string {
 
 		<h4 class="lfp-named">
 			{{ t('large_file_previews', 'Nextcloud\'s own') }}
-			<HelpPopover :text="t('large_file_previews', 'Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s. Shown here, and changed with occ only, as Nextcloud has no page for them.')"
+			<HelpPopover :text="t('large_file_previews', 'Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ.')"
 				:label="t('large_file_previews', 'Nextcloud\'s own')" />
 		</h4>
 		<div class="lfp-fields" data-setting="nextcloud">
@@ -101,13 +112,19 @@ function label(choice: string): string {
 				{{ t('large_file_previews', 'Preview format: {format}', { format: state.nextcloud.preview_format }) }}
 				<OccCommand :command="systemCommand('preview_format', state.nextcloud.preview_format)" />
 			</div>
-			<div data-nextcloud="jpeg_quality">
-				{{ t('large_file_previews', 'JPEG quality: {quality}', { quality: state.nextcloud.jpeg_quality }) }}
-				<OccCommand :command="appConfigCommand('preview', 'jpeg_quality', state.nextcloud.jpeg_quality)" />
-			</div>
-			<div data-nextcloud="webp_quality">
-				{{ t('large_file_previews', 'WebP quality: {quality}', { quality: state.nextcloud.webp_quality }) }}
-				<OccCommand :command="appConfigCommand('preview', 'webp_quality', state.nextcloud.webp_quality)" />
+			<div v-for="quality in QUALITIES" :key="quality.key" :data-nextcloud="quality.key">
+				<NumberField :id="'lfp-' + quality.key"
+					:label="quality.label"
+					:value="state.nextcloud.quality_stored[quality.key] ? state.nextcloud[quality.key] : null"
+					:placeholder="t('large_file_previews', '{value} (default)', { value: String(QUALITY_DEFAULT) })"
+					:min="10"
+					:max="100"
+					clearable
+					label-outside
+					:help="t('large_file_previews', 'Nextcloud\'s, for every preview it stores from now on, not only this app\'s; previews stored already keep theirs.')"
+					:disabled="saving"
+					@save="emit('save', { nextcloud: { [quality.key]: $event } })" />
+				<OccCommand :command="appConfigCommand('preview', quality.key, state.nextcloud.quality_stored[quality.key] ? state.nextcloud[quality.key] : null)" />
 			</div>
 		</div>
 	</div>

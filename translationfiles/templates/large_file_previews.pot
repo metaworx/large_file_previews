@@ -223,7 +223,7 @@ msgstr ""
 msgid "JPEG"
 msgstr ""
 
-msgid "JPEG quality: {quality}"
+msgid "JPEG quality, 10 to 100"
 msgstr ""
 
 msgid "Large File Previews"
@@ -289,7 +289,10 @@ msgstr ""
 msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
 msgstr ""
 
-msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. Shown here, and changed with occ only, as Nextcloud has no page for them."
+msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ."
+msgstr ""
+
+msgid "Nextcloud's, for every preview it stores from now on, not only this app's; previews stored already keep theirs."
 msgstr ""
 
 msgid "No effect: its MIME type already selects it"
@@ -545,7 +548,7 @@ msgstr ""
 msgid "WebP"
 msgstr ""
 
-msgid "WebP quality: {quality}"
+msgid "WebP quality, 10 to 100"
 msgstr ""
 
 msgid "What each render runs under. The defaults suit most servers."
