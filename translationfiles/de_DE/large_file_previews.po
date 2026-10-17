@@ -280,6 +280,9 @@ msgstr "Nextcloud"
 msgid "Nextcloud stores a preview in the type it is given, and re-encodes it at its own quality, the app config preview jpeg_quality and webp_quality."
 msgstr "Nextcloud speichert eine Vorschau in dem Format, in dem sie geliefert wird, und kodiert sie mit seiner eigenen Qualität neu, den App-Einstellungen preview jpeg_quality und webp_quality."
 
+msgid "Nextcloud value {name}: not one this app carries; left out."
+msgstr "Nextcloud-Wert {name}: keiner, den diese App mitführt; ausgelassen."
+
 msgid "Nextcloud's own"
 msgstr "Von Nextcloud"
 
@@ -405,9 +408,6 @@ msgstr "Sekunden"
 
 msgid "Set but not used: {problem}"
 msgstr "Gesetzt, aber nicht verwendet: {problem}"
-
-msgid "Set in config.php, which this page does not write: run these with occ."
-msgstr "In config.php gesetzt, die diese Seite nicht schreibt: Führen Sie diese Befehle mit occ aus."
 
 msgid "Setting"
 msgstr "Einstellung"
@@ -541,6 +541,9 @@ msgstr "Nicht vertrauenswürdige Decoder: erlaubt"
 
 msgid "Untrusted decoders: blocked"
 msgstr "Nicht vertrauenswürdige Decoder: gesperrt"
+
+msgid "Values in config.php, and Nextcloud's own, which a restore does not write: run these with occ."
+msgstr "Werte in config.php und die von Nextcloud selbst, die eine Wiederherstellung nicht schreibt: Führen Sie diese Befehle mit occ aus."
 
 msgid "Version"
 msgstr "Version"

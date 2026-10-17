@@ -9,7 +9,8 @@
  *
  * The page writes the app's settings and rules only. The values a file
  * holds for system config - programs' paths, the untrusted decoders, the
- * scratch directory - are shown as the occ commands that set them.
+ * scratch directory - and Nextcloud's own, its preview quality, are shown
+ * as the occ commands that set them.
  */
 import { computed, ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -17,7 +18,7 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwit
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import HelpPopover from './HelpPopover.vue'
 import OccCommand from './OccCommand.vue'
-import { systemValueCommand } from './occ'
+import { appConfigCommand, systemValueCommand } from './occ'
 import { useSettings } from './useSettings'
 import { t } from '../l10n'
 import { toastSaved } from '../toast'
@@ -44,8 +45,10 @@ const COLUMNS = {
 	after: t('large_file_previews', 'From the file'),
 }
 
-const appChanges = computed(() => read.value?.changes.filter((change) => change.part !== 'system') ?? [])
-const systemChanges = computed(() => read.value?.changes.filter((change) => change.part === 'system') ?? [])
+/** What this page writes: the app's settings and rules. */
+const appChanges = computed(() => read.value?.changes.filter((change) => change.part !== 'system' && change.part !== 'nextcloud') ?? [])
+/** What it does not, shown as commands: config.php's values, and Nextcloud's own. */
+const commandChanges = computed(() => read.value?.changes.filter((change) => change.part === 'system' || change.part === 'nextcloud') ?? [])
 
 /** `large_file_previews-config.<host>.<date>.json` */
 function downloadName(): string {
@@ -130,6 +133,8 @@ function warningText(warning: TransferWarning): string {
 		return t('large_file_previews', 'Extension {name}: of a type this app does not handle; left out.', name)
 	case 'program':
 		return t('large_file_previews', 'Program {name}: not one this app runs; left out.', name)
+	case 'nextcloud':
+		return t('large_file_previews', 'Nextcloud value {name}: not one this app carries; left out.', name)
 	default:
 		return t('large_file_previews', 'System value {name}: not one this app has; left out.', name)
 	}
@@ -166,8 +171,17 @@ function partText(part: TransferChange['part']): string {
 	}
 }
 
-function systemCommand(change: TransferChange): string {
+/**
+ * The occ command that makes a value the file holds outside this page what
+ * the file says: a system value, or one of Nextcloud's own, named by where
+ * it lives (`appconfig.preview.jpeg_quality`).
+ */
+function command(change: TransferChange): string {
 	const after = change.after
+	if (change.part === 'nextcloud') {
+		const [, app, key] = change.name.split('.', 3)
+		return appConfigCommand(app, key, typeof after === 'number' ? after : null)
+	}
 	return systemValueCommand(change.name, typeof after === 'string' || typeof after === 'boolean' ? after : null)
 }
 
@@ -254,11 +268,11 @@ const writtenBy = computed(() => {
 				{{ t('large_file_previews', 'The file changes none of the app\'s settings.') }}
 			</p>
 
-			<template v-if="systemChanges.length > 0">
+			<template v-if="commandChanges.length > 0">
 				<p class="lfp-backup__system">
-					{{ t('large_file_previews', 'Set in config.php, which this page does not write: run these with occ.') }}
+					{{ t('large_file_previews', 'Values in config.php, and Nextcloud\'s own, which a restore does not write: run these with occ.') }}
 				</p>
-				<OccCommand v-for="change in systemChanges" :key="change.name" :command="systemCommand(change)" />
+				<OccCommand v-for="change in commandChanges" :key="change.part + change.name" :command="command(change)" />
 			</template>
 
 			<div class="lfp-row">

@@ -28,6 +28,7 @@ function answer(extra: Partial<ImportAnswer> = {}): ImportAnswer {
 			{ part: 'settings', name: 'timeout_seconds', before: null, after: 60 },
 			{ part: 'mimetypes', name: 'image/tiff', before: { enabled: true }, after: { enabled: true, min_size_mb: 800 } },
 			{ part: 'system', name: 'binaries.pdftoppm', before: null, after: '/opt/poppler/bin/pdftoppm' },
+			{ part: 'nextcloud', name: 'appconfig.preview.jpeg_quality', before: null, after: 70 },
 		],
 		applied: false,
 		...extra,
@@ -97,6 +98,7 @@ describe('BackupSection', () => {
 			commands.push(command.props('command'))
 		}
 		expect(commands).toContain('occ lfp:config:set binaries.pdftoppm /opt/poppler/bin/pdftoppm')
+		expect(commands).toContain('occ config:app:set preview jpeg_quality --value=70 --type=integer')
 	})
 
 	it('reads it again to replace, and applies it on Apply', async () => {

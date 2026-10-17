@@ -316,10 +316,17 @@ occ lfp:config:import /root/lfp-config.json --dry-run
 ```
 
 The file is JSON: the settings, MIME rules and extensions stored,
-and the system values set - programs' paths, the untrusted decoders,
-the scratch directory.
+the system values set - programs' paths, the untrusted decoders,
+the scratch directory -
+and Nextcloud's own preview quality where it is stored,
+under `nextcloud > appconfig > preview`.
 What follows its default is left out,
 so that a restore follows the defaults of the version it runs on.
+The import reads standard input where no file is given:
+
+```bash
+occ lfp:config:import < /root/lfp-config.json
+```
 
 An import checks the whole file before it writes anything,
 and writes all of it or nothing.
@@ -332,11 +339,21 @@ is left out and named, and the rest imported, with exit status 3.
 A file it cannot read, or a value it knows that is not valid, is refused,
 with exit status 4, and nothing is written.
 
+Nextcloud's own values are not written by an import:
+their `occ` commands are printed instead, alone on standard output,
+and everything else on standard error,
+so that they can be run with it where `occ` is a command the shell knows:
+
+```bash
+occ lfp:config:import < /root/lfp-config.json | bash
+```
+
 The settings page does the same under *Backup and restore*:
 it downloads the file, and reads one uploaded,
 showing the changes and what is left out before Apply writes them.
 It writes the app's settings and rules only;
-the system values a file holds are shown as the `occ` commands that set them.
+the system values and Nextcloud's own a file holds
+are shown as the `occ` commands that set them.
 
 ## Paths, and what the app trusts
 

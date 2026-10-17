@@ -13,9 +13,9 @@ the first stable release.
 
 ### Added
 
-- `occ lfp:config:export` and `import`, and the page's *Backup and
-  restore*: what is stored, restored all or nothing, the changes shown
-  first; what the app does not know left out and named (exit 3).
+- `occ lfp:config:export` and `import` (from stdin too), the page's
+  *Backup and restore*: what is stored, all or nothing, the changes shown
+  first; Nextcloud's quality as commands; unknown values named (exit 3).
 
 - *Previews → Nextcloud's own*: Nextcloud's JPEG and WebP quality set
   on the page, for every preview it stores from then on.

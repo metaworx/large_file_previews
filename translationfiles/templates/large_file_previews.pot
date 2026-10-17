@@ -280,6 +280,9 @@ msgstr ""
 msgid "Nextcloud stores a preview in the type it is given, and re-encodes it at its own quality, the app config preview jpeg_quality and webp_quality."
 msgstr ""
 
+msgid "Nextcloud value {name}: not one this app carries; left out."
+msgstr ""
+
 msgid "Nextcloud's own"
 msgstr ""
 
@@ -404,9 +407,6 @@ msgid "Seconds"
 msgstr ""
 
 msgid "Set but not used: {problem}"
-msgstr ""
-
-msgid "Set in config.php, which this page does not write: run these with occ."
 msgstr ""
 
 msgid "Setting"
@@ -540,6 +540,9 @@ msgid "Untrusted decoders: allowed"
 msgstr ""
 
 msgid "Untrusted decoders: blocked"
+msgstr ""
+
+msgid "Values in config.php, and Nextcloud's own, which a restore does not write: run these with occ."
 msgstr ""
 
 msgid "Version"

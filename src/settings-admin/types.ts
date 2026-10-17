@@ -232,10 +232,11 @@ export type TransferValue = number | boolean | string | Rule | null
 /**
  * One thing an import changes, from what is stored to what will be; a
  * system value's name is binaries.<program>, vips_allow_untrusted or
- * scratch_directory.
+ * scratch_directory; one of Nextcloud's own is named where it lives,
+ * appconfig.preview.jpeg_quality.
  */
 export interface TransferChange {
-	part: 'settings' | 'mimetypes' | 'extensions' | 'system'
+	part: 'settings' | 'mimetypes' | 'extensions' | 'system' | 'nextcloud'
 	name: string
 	before: TransferValue
 	after: TransferValue
@@ -243,7 +244,7 @@ export interface TransferChange {
 
 /** Something in a configuration file this app does not know, and left out. */
 export interface TransferWarning {
-	kind: 'part' | 'setting' | 'type' | 'field' | 'extension' | 'system' | 'program'
+	kind: 'part' | 'setting' | 'type' | 'field' | 'extension' | 'system' | 'program' | 'nextcloud'
 	name: string
 }
 
