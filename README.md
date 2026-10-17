@@ -298,6 +298,42 @@ to at least `scan_coverage_percent` (90 by default, 50 to 100);
 `scan_native_enabled` switches the scan sizing off,
 and every page then fills the preview size.
 
+## Backup and restore
+
+What is stored can be written to a file and read back,
+before an update or a reinstall, or onto another server:
+
+```bash
+occ lfp:config:export /root/lfp-config.json
+```
+
+```bash
+occ lfp:config:import /root/lfp-config.json --dry-run
+```
+
+The file is JSON: the settings, MIME rules and extensions stored,
+and the system values set - programs' paths, the untrusted decoders,
+the scratch directory.
+What follows its default is left out,
+so that a restore follows the defaults of the version it runs on.
+
+An import checks the whole file before it writes anything,
+and writes all of it or nothing.
+It changes what the file names;
+`--replace` returns everything else to its default,
+so that the server holds exactly what the file does.
+`--dry-run` lists each change, from what is stored to what would be.
+What the app does not know - a setting, a MIME type, a field of a rule -
+is left out and named, and the rest imported, with exit status 3.
+A file it cannot read, or a value it knows that is not valid, is refused,
+with exit status 4, and nothing is written.
+
+The settings page does the same under *Backup and restore*:
+it downloads the file, and reads one uploaded,
+showing the changes and what is left out before Apply writes them.
+It writes the app's settings and rules only;
+the system values a file holds are shown as the `occ` commands that set them.
+
 ## Paths, and what the app trusts
 
 A program's path can be overridden, in system config only:

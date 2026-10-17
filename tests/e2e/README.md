@@ -15,6 +15,7 @@ so any one of them runs alone.
 
 | Spec | What it checks |
 |------|----------------|
+| `backup.cy.js` | Backup and restore round trip: rules set by `occ`, downloaded, cleared, the file uploaded, its changes shown and applied, and `occ` exporting what it did before; a file with a value out of range refused, nothing written. |
 | `app-enable.cy.js` | The app enabled and disabled on the Apps page, as `occ` sees it, and the settings showing the version the server runs; left enabled. |
 | `l10n-german.cy.js` | The settings page in `de` and in `de_DE`. Sets the administrator's language, and lifts `force_language` for its run; restores both. |
 | `screenshots.cy.js` | Not a test: the screenshot set of `docs/Screenshots/`, as a spec. Skips itself unless `CYPRESS_capture=1`; see *Taking the screenshots*. |
