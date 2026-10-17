@@ -86,7 +86,10 @@ class SettingsControllerTest
 
 		self::assertSame( [ 'scalars', 'active', 'mimetypes', 'extensions', 'prerequisites', 'ready', 'problems', 'lastFailure', 'overrideKey', 'programs', 'platform', 'scratch', 'untrusted', 'version', 'nextcloud' ], array_keys( $data ) );
 		self::assertSame( '0.1.0', $data['version'] );
-		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80, 'preview_max_filesize_image' => 50 ], $data['nextcloud'] );
+		self::assertSame(
+			[ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80, 'preview_max_filesize_image' => 50, 'quality_stored' => [ 'jpeg_quality' => false, 'webp_quality' => false ] ],
+			$data['nextcloud'],
+		);
 		self::assertSame( 'pdftoppm version 24.02.0', $data['programs'][0]['version'] );
 		self::assertSame( [ 'path' => '/var/tmp/nextcloud', 'overridden' => false ], $data['scratch'] );
 		self::assertSame( [ 'allowed' => false, 'blockable' => null ], $data['untrusted'] );
@@ -299,6 +302,28 @@ class SettingsControllerTest
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( 'not json' )->update()->getStatus() );
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":"on"}}' )->update()->getStatus() );
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":{"colour":1}}}' )->update()->getStatus() );
+	}
+
+	/**
+	 * Nextcloud's qualities are checked with the rest and written after
+	 * it: a refusal of either writes neither.
+	 */
+	public function testNextcloudsQualityIsWrittenWithTheRestOrNotAtAll(): void
+	{
+		$data = $this->controller( '{"scalars": {"timeout_seconds": 60}, "nextcloud": {"jpeg_quality": 70, "webp_quality": null}}' )->update()->getData();
+
+		self::assertSame( 70, $this->appValues['jpeg_quality'] );
+		self::assertSame( 60, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
+		self::assertSame( 70, $data['nextcloud']['jpeg_quality'] );
+		self::assertTrue( $data['nextcloud']['quality_stored']['jpeg_quality'] );
+
+		$this->appValues = [];
+
+		foreach ( [ '{"scalars": {"timeout_seconds": 60}, "nextcloud": {"jpeg_quality": 500}}', '{"scalars": {"timeout_seconds": 9999}, "nextcloud": {"jpeg_quality": 70}}', '{"nextcloud": {"jpeg_quality": "70"}}' ] as $body )
+		{
+			self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( $body )->update()->getStatus(), $body );
+			self::assertSame( [], $this->appValues, $body );
+		}
 	}
 
 	public function testTheExportIsWhatIsStored(): void

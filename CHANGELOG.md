@@ -17,6 +17,9 @@ the first stable release.
   restore*: what is stored, restored all or nothing, the changes shown
   first; what the app does not know left out and named (exit 3).
 
+- *Previews → Nextcloud's own*: Nextcloud's JPEG and WebP quality set
+  on the page, for every preview it stores from then on.
+
 ## [0.1.0] - 2026-10-17
 
 ### Added

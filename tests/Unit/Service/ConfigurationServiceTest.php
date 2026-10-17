@@ -86,12 +86,61 @@ class ConfigurationServiceTest
 	 */
 	public function testNextcloudsOwnPreviewSettings(): void
 	{
-		self::assertSame( [ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80, 'preview_max_filesize_image' => 50 ], $this->service()->nextcloudPreview() );
+		self::assertSame(
+			[ 'preview_format' => 'jpeg', 'jpeg_quality' => 80, 'webp_quality' => 80, 'preview_max_filesize_image' => 50, 'quality_stored' => [ 'jpeg_quality' => false, 'webp_quality' => false ] ],
+			$this->service()->nextcloudPreview(),
+		);
 
 		$this->systemValues = [ 'preview_format' => 'webp', 'preview_max_filesize_image' => -1 ];
 		$this->appValues    = [ 'jpeg_quality' => 5, 'webp_quality' => 65 ];
 
-		self::assertSame( [ 'preview_format' => 'webp', 'jpeg_quality' => 10, 'webp_quality' => 65, 'preview_max_filesize_image' => -1 ], $this->service()->nextcloudPreview() );
+		self::assertSame(
+			[ 'preview_format' => 'webp', 'jpeg_quality' => 10, 'webp_quality' => 65, 'preview_max_filesize_image' => -1, 'quality_stored' => [ 'jpeg_quality' => true, 'webp_quality' => true ] ],
+			$this->service()->nextcloudPreview(),
+		);
+	}
+
+	/**
+	 * Nextcloud's quality, set within its range and cleared to its default;
+	 * one stored as text is not replaced by a number, and the refusal says
+	 * how to replace it.
+	 */
+	public function testNextcloudsPreviewQualityIsSetWithinItsRange(): void
+	{
+		$service = $this->service();
+
+		$service->setPreviewQuality( 'jpeg_quality', 70 );
+		self::assertSame( 70, $this->appValues['jpeg_quality'] );
+
+		$service->setPreviewQuality( 'jpeg_quality', null );
+		self::assertArrayNotHasKey( 'jpeg_quality', $this->appValues );
+
+		foreach ( [ [ 'jpeg_quality', 5, 'jpeg_quality must be between 10 and 100.' ], [ 'avif_quality', 70, 'avif_quality is not one of Nextcloud\'s preview qualities.' ] ] as [ $key, $value, $message ] )
+		{
+			try
+			{
+				$service->setPreviewQuality( $key, $value );
+				self::fail( 'No refusal' );
+			}
+			catch ( ConfigurationException $refusal )
+			{
+				self::assertSame( $message, $refusal->getMessage() );
+			}
+		}
+
+		$this->appValues['webp_quality'] = '75';
+
+		try
+		{
+			$service->setPreviewQuality( 'webp_quality', 60 );
+			self::fail( 'No refusal' );
+		}
+		catch ( ConfigurationException $refusal )
+		{
+			self::assertStringContainsString( 'occ config:app:set preview webp_quality --value=60 --type=integer', $refusal->getMessage() );
+		}
+
+		self::assertSame( '75', $this->appValues['webp_quality'] );
 	}
 
 	public function testThePreviewFormat(): void

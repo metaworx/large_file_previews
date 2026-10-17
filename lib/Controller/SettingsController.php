@@ -101,10 +101,13 @@ class SettingsController
 	 *
 	 *     {"scalars":    {"timeout_seconds": 60, "choom_enabled": null},
 	 *      "mimetypes":  {"image/tiff": {"enabled": true, "min_size_mb": null}},
-	 *      "extensions": {"tif": null}}
+	 *      "extensions": {"tif": null},
+	 *      "nextcloud":  {"jpeg_quality": 70, "webp_quality": null}}
 	 *
 	 * A null clears: a setting back to its default, a field to the level
-	 * below, a whole rule to its shipped default or away. The changes are
+	 * below, a whole rule to its shipped default or away, a quality of
+	 * Nextcloud's - the `preview` app's, for every preview - to Nextcloud's
+	 * default. The changes are
 	 * made together or not at all: a refusal answers 400 with its reason,
 	 * and with the state, unchanged, for the page to show.
 	 */
@@ -127,11 +130,36 @@ class SettingsController
 				$scalars[ (string) $key ] = $value === null ? null : self::scalar( $value );
 			}
 
+			// Nextcloud's own preview qualities, checked with the rest and
+			// written after it: a refusal of either writes neither.
+			$qualities = [];
+
+			foreach ( self::map( $body, 'nextcloud' ) as $key => $value )
+			{
+				$key = (string) $key;
+
+				if ( $value !== null && ! is_int( $value ) )
+				{
+					throw new ConfigurationException(
+						sprintf( '%s takes a whole number.', $key ),
+						$this->l10n->t( '%s takes a whole number.', [ $key ] ),
+					);
+				}
+
+				$this->config->checkPreviewQuality( $key, $value );
+				$qualities[ $key ] = $value;
+			}
+
 			$this->config->apply(
 				$scalars,
 				$this->ruleChanges( self::map( $body, 'mimetypes' ) ),
 				$this->ruleChanges( self::map( $body, 'extensions' ) ),
 			);
+
+			foreach ( $qualities as $key => $quality )
+			{
+				$this->config->setPreviewQuality( $key, $quality );
+			}
 		}
 		catch ( ConfigurationException $e )
 		{

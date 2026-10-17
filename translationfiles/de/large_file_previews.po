@@ -53,6 +53,10 @@ msgid "%s is not an object."
 msgstr "%s ist kein Objekt."
 
 #, php-format
+msgid "%s is not one of Nextcloud's preview qualities."
+msgstr "%s ist keine der Vorschau-Qualitäten von Nextcloud."
+
+#, php-format
 msgid "%s is not true or false."
 msgstr "%s ist weder true noch false."
 
@@ -636,6 +640,10 @@ msgstr "nicht gesetzt"
 
 msgid "optional"
 msgstr "optional"
+
+#, php-format
+msgid "preview %1$s is stored as another type than a number; set it with %2$s."
+msgstr "preview %1$s ist mit einem anderen Typ als einer Zahl gespeichert; setze es mit %2$s."
 
 msgid "system config"
 msgstr "Systemkonfiguration"

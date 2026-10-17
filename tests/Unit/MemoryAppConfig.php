@@ -220,6 +220,27 @@ trait MemoryAppConfig
 			       ): array => (array) $get( $app, $key, $default ),
 		       )
 		;
+		// The type a value is stored as, from the PHP type a test gives it.
+		$config->method( 'getValueType' )
+		       ->willReturnCallback(
+			       static function(
+				       string $app,
+				       string $key,
+			       ) use (
+				       &$values,
+			       ): int
+			       {
+				       return match ( true )
+				       {
+					       is_int( $values[ $key ] ?? null )    => IAppConfig::VALUE_INT,
+					       is_bool( $values[ $key ] ?? null )   => IAppConfig::VALUE_BOOL,
+					       is_array( $values[ $key ] ?? null )  => IAppConfig::VALUE_ARRAY,
+					       is_string( $values[ $key ] ?? null ) => IAppConfig::VALUE_STRING,
+					       default                              => IAppConfig::VALUE_MIXED,
+				       };
+			       },
+		       )
+		;
 
 		$set = static function(
 			string $app,

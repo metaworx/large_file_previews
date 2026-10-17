@@ -43,6 +43,17 @@ class ConfigurationService
 
 //  constants
 
+	/** Nextcloud's preview qualities the page may set, of the app config of `preview`. */
+	public const PREVIEW_QUALITIES = [ 'jpeg_quality', 'webp_quality' ];
+
+	public const PREVIEW_QUALITY_DEFAULT = 80;
+
+	public const PREVIEW_QUALITY_MIN = 10;
+
+	public const PREVIEW_QUALITY_MAX = 100;
+
+	private const PREVIEW_APP = 'preview';
+
 	private const EXTENSION_PATTERN = '/^[a-z0-9][a-z0-9_+-]{0,31}$/';
 
 	/** @var array<string, TypeRule>|null */
@@ -172,18 +183,100 @@ class ConfigurationService
 	 * `webp_quality`, 80 unless set, held to 10 to 100), and the largest
 	 * image its own image providers take (system `preview_max_filesize_image`,
 	 * in MB, 50 unless set, -1 for none), where an image type of this app's
-	 * starts. Shown on the page, never written by this app.
+	 * starts; and which quality is stored rather than Nextcloud's default.
+	 * Shown on the page; the qualities written by it (setPreviewQuality()),
+	 * the rest never.
 	 *
-	 * @return array{preview_format: string, jpeg_quality: int, webp_quality: int, preview_max_filesize_image: int}
+	 * @return array{preview_format: string, jpeg_quality: int, webp_quality: int, preview_max_filesize_image: int, quality_stored: array{jpeg_quality: bool, webp_quality: bool}}
 	 */
 	public function nextcloudPreview(): array
 	{
 		return [
 			'preview_format'             => $this->system->getSystemValueString( 'preview_format', 'jpeg' ),
-			'jpeg_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'jpeg_quality', 80 ) ) ),
-			'webp_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( 'preview', 'webp_quality', 80 ) ) ),
+			'jpeg_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( self::PREVIEW_APP, 'jpeg_quality', self::PREVIEW_QUALITY_DEFAULT ) ) ),
+			'webp_quality'               => min( 100, max( 10, $this->appConfig->getValueInt( self::PREVIEW_APP, 'webp_quality', self::PREVIEW_QUALITY_DEFAULT ) ) ),
 			'preview_max_filesize_image' => $this->system->getSystemValueInt( ConfigLexicon::IMAGE_LIMIT_SYSTEM_KEY, ConfigLexicon::IMAGE_DEFAULT_MIN_SIZE_MB ),
+			'quality_stored'             => [
+				'jpeg_quality' => $this->appConfig->hasKey( self::PREVIEW_APP, 'jpeg_quality' ),
+				'webp_quality' => $this->appConfig->hasKey( self::PREVIEW_APP, 'webp_quality' ),
+			],
 		];
+	}
+
+	/**
+	 * Checks one of Nextcloud's preview qualities as setPreviewQuality()
+	 * would write it: one of the two, within 10 to 100, and, where it is
+	 * stored, stored as a number or untyped, which an integer may replace.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function checkPreviewQuality(
+		string $key,
+		?int   $quality,
+	): void
+	{
+		if ( ! in_array( $key, self::PREVIEW_QUALITIES, true ) )
+		{
+			throw new ConfigurationException(
+				sprintf( '%s is not one of Nextcloud\'s preview qualities.', $key ),
+				$this->l10n->t( '%s is not one of Nextcloud\'s preview qualities.', [ $key ] ),
+			);
+		}
+
+		if ( $quality === null )
+		{
+			return;
+		}
+
+		if ( $quality < self::PREVIEW_QUALITY_MIN || $quality > self::PREVIEW_QUALITY_MAX )
+		{
+			throw new ConfigurationException(
+				sprintf( '%s must be between %d and %d.', $key, self::PREVIEW_QUALITY_MIN, self::PREVIEW_QUALITY_MAX ),
+				$this->l10n->t( '%1$s must be between %2$d and %3$d.', [ $key, self::PREVIEW_QUALITY_MIN, self::PREVIEW_QUALITY_MAX ] ),
+			);
+		}
+
+		if ( ! $this->appConfig->hasKey( self::PREVIEW_APP, $key ) )
+		{
+			return;
+		}
+
+		$type = $this->appConfig->getValueType( self::PREVIEW_APP, $key ) & ~IAppConfig::VALUE_SENSITIVE;
+
+		if ( $type !== IAppConfig::VALUE_INT && $type !== IAppConfig::VALUE_MIXED )
+		{
+			$command = sprintf( 'occ config:app:set preview %s --value=%d --type=integer', $key, $quality );
+
+			throw new ConfigurationException(
+				sprintf( 'preview %s is stored as another type than a number; set it with %s.', $key, $command ),
+				$this->l10n->t( 'preview %1$s is stored as another type than a number; set it with %2$s.', [ $key, $command ] ),
+			);
+		}
+	}
+
+	/**
+	 * Sets one of Nextcloud's preview qualities, `jpeg_quality` or
+	 * `webp_quality` of the `preview` app, or clears it to Nextcloud's
+	 * default with null. It applies to every preview Nextcloud stores from
+	 * then on, not only this app's.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function setPreviewQuality(
+		string $key,
+		?int   $quality,
+	): void
+	{
+		$this->checkPreviewQuality( $key, $quality );
+
+		if ( $quality === null )
+		{
+			$this->appConfig->deleteKey( self::PREVIEW_APP, $key );
+		}
+		else
+		{
+			$this->appConfig->setValueInt( self::PREVIEW_APP, $key, $quality );
+		}
 	}
 
 	/**
