@@ -15,6 +15,7 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -22,6 +23,10 @@ use Symfony\Component\Console\Output\OutputInterface;
  * checked whole, then written whole, system values included; what this app
  * does not know is left out and named, and the exit status says which of
  * the three it was.
+ *
+ * Nextcloud's own values the file carries are not written: their occ
+ * commands are, alone on standard output, so that they can be piped to a
+ * shell; everything else goes to standard error.
  *
  * @noinspection PhpUnused
  */
@@ -56,7 +61,7 @@ class ConfigImport
 	{
 		$this->name( 'config:import' )
 		     ->setDescription( 'Restore a configuration config:export wrote, all of it or nothing' )
-		     ->addArgument( 'file', InputArgument::REQUIRED, 'The file; - for standard input' )
+		     ->addArgument( 'file', InputArgument::OPTIONAL, 'The file; - or none for standard input, where it is piped in' )
 		     ->addOption( 'dry-run', null, InputOption::VALUE_NONE, 'Say what would change, and change nothing' )
 		     ->addOption( 'replace', null, InputOption::VALUE_NONE, 'Return what the file does not name to its default, so that the server holds exactly what the file does' )
 		     ->setHelp(
@@ -66,10 +71,19 @@ class ConfigImport
 					     'config:import /root/lfp-config.json --dry-run   what would change',
 					     'config:import /root/lfp-config.json             the settings, rules and system values it names',
 					     'config:import /root/lfp-config.json --replace   ... and everything else to its default',
+					     'config:import < /root/lfp-config.json           the same, from standard input',
 					     '',
 					     'Everything is checked before anything is written, and nothing is where one',
 					     'value is refused. What this app does not know - a setting, a MIME type, a',
 					     'field - is left out, and named.',
+					     '',
+					     'Nextcloud\'s own values the file carries, its preview quality, are not',
+					     'written: their occ commands are printed, alone on standard output, and',
+					     'everything else on standard error. To run them as well:',
+					     '',
+					     '    occ lfp:config:import < /root/lfp-config.json | bash',
+					     '',
+					     'where occ is a command the shell knows by that name.',
 					     '',
 					     'Exit status: 0 imported; 3 imported, something left out; 4 refused, nothing',
 					     'written; 1 an error; 2 a wrong call.',
@@ -85,12 +99,18 @@ class ConfigImport
 		OutputInterface $output,
 	): int
 	{
-		$file = (string) $input->getArgument( 'file' );
-		$text = $file === '-' ? @file_get_contents( 'php://stdin' ) : @file_get_contents( $file );
+		$messages = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
+		$file     = $input->getArgument( 'file' );
+		$piped    = ! is_string( $file ) || $file === '' || $file === '-';
+		$text     = $piped ? $this->standardInput() : @file_get_contents( $file );
 
-		if ( $text === false )
+		if ( $text === null || $text === false )
 		{
-			$output->writeln( sprintf( '<error>%s cannot be read.</error>', $file ) );
+			$messages->writeln(
+				$piped
+					? '<error>Give a file, or pipe one in.</error>'
+					: sprintf( '<error>%s cannot be read.</error>', $file ),
+			);
 
 			return self::INVALID;
 		}
@@ -102,10 +122,10 @@ class ConfigImport
 		{
 			$read = $this->transfer->read( $text );
 
-			$output->writeln(
+			$messages->writeln(
 				sprintf(
 					'%s: written by version %s on %s.',
-					$file === '-' ? 'standard input' : $file,
+					$piped ? 'standard input' : $file,
 					$read->version ?? 'unknown',
 					$read->date ?? 'an unknown date',
 				),
@@ -113,7 +133,7 @@ class ConfigImport
 
 			foreach ( $read->warnings as $warning )
 			{
-				$output->writeln( '<comment>' . $warning->text() . '</comment>' );
+				$messages->writeln( '<comment>' . $warning->text() . '</comment>' );
 			}
 
 			$changes = $dryRun
@@ -122,18 +142,18 @@ class ConfigImport
 		}
 		catch ( ConfigurationException $refusal )
 		{
-			$output->writeln( '<error>Refused: ' . $refusal->getMessage() . ' Nothing was written.</error>' );
+			$messages->writeln( '<error>Refused: ' . $refusal->getMessage() . ' Nothing was written.</error>' );
 
 			return self::REFUSED;
 		}
 
 		if ( $changes === [] )
 		{
-			$output->writeln( 'Nothing to change.' );
+			$messages->writeln( 'Nothing to change.' );
 		}
 		else
 		{
-			$table = new Table( $output );
+			$table = new Table( $messages );
 			$table->setHeaders( [ 'Part', 'Name', 'Before', 'After' ] );
 
 			foreach ( $changes as $change )
@@ -142,14 +162,45 @@ class ConfigImport
 			}
 
 			$table->render();
-			$output->writeln(
+			$messages->writeln(
 				$dryRun
 					? sprintf( 'Dry run: %d change(s), nothing written.', count( $changes ) )
 					: sprintf( 'Imported: %d change(s).', count( $changes ) ),
 			);
 		}
 
+		$commands = array_values( array_filter( array_map( ConfigTransfer::command( ... ), $changes ) ) );
+
+		if ( $commands !== [] )
+		{
+			$messages->writeln( 'Nextcloud\'s own values are not written; their commands follow on standard output.' );
+
+			foreach ( $commands as $command )
+			{
+				$output->writeln( $command, OutputInterface::OUTPUT_RAW );
+			}
+		}
+
 		return $read->warnings === [] ? self::SUCCESS : self::WARNINGS;
+	}
+
+
+//  other non-static methods
+
+	/**
+	 * What is piped in, or null where standard input is a terminal: nothing
+	 * to wait for.
+	 */
+	protected function standardInput(): ?string
+	{
+		if ( ! defined( 'STDIN' ) || stream_isatty( STDIN ) )
+		{
+			return null;
+		}
+
+		$text = stream_get_contents( STDIN );
+
+		return $text === false ? null : $text;
 	}
 
 

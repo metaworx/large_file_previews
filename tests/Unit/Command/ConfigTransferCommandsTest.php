@@ -109,6 +109,87 @@ class ConfigTransferCommandsTest
 		self::assertSame( 2, $this->import()->execute( [ 'file' => '/no/such/file.json' ] ) );
 	}
 
+	/**
+	 * Without a file, or with -, what is piped in is read; at a terminal,
+	 * where nothing is, it is a wrong call.
+	 */
+	public function testStandardInputIsReadWithoutAFileOrWithDash(): void
+	{
+		$text = (string) json_encode( [ 'app' => 'large_file_previews', 'format' => 1, 'settings' => [ 'timeout_seconds' => 60 ] ] );
+
+		self::assertSame( 0, $this->piped( $text )->execute( [] ) );
+		self::assertSame( 60, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
+
+		$this->appValues = [];
+
+		self::assertSame( 0, $this->piped( $text )->execute( [ 'file' => '-' ] ) );
+		self::assertSame( 60, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
+
+		$terminal = $this->piped( null );
+
+		self::assertSame( 2, $terminal->execute( [] ) );
+		self::assertStringContainsString( 'Give a file, or pipe one in.', $terminal->getDisplay() );
+	}
+
+	/**
+	 * Nextcloud's qualities are not written; their commands, alone on
+	 * standard output, are what a shell would run; the rest is on standard
+	 * error. The same on a dry run.
+	 */
+	public function testNextcloudsCommandsAloneOnStandardOutput(): void
+	{
+		$this->writeFile( [ 'settings' => [ 'timeout_seconds' => 60 ], 'nextcloud' => [ 'appconfig' => [ 'preview' => [ 'jpeg_quality' => 70 ] ] ] ] );
+
+		foreach ( [ [ 'file' => $this->file, '--dry-run' => true ], [ 'file' => $this->file ] ] as $call )
+		{
+			$tester = $this->import();
+
+			self::assertSame( 0, $tester->execute( $call, [ 'capture_stderr_separately' => true ] ) );
+			self::assertSame( "occ config:app:set preview jpeg_quality --value=70 --type=integer\n", $tester->getDisplay() );
+			self::assertStringContainsString( 'timeout_seconds', $tester->getErrorOutput() );
+			self::assertStringContainsString( 'their commands follow on standard output', $tester->getErrorOutput() );
+		}
+
+		self::assertArrayNotHasKey( 'jpeg_quality', $this->appValues );
+	}
+
+	/**
+	 * An import whose standard input is the text given, or a terminal where
+	 * it is null.
+	 */
+	private function piped( ?string $text ): CommandTester
+	{
+		return new CommandTester(
+			new class (
+				$this->transfer(),
+				$text,
+			)
+			    extends
+			    ConfigImport
+			{
+
+//  constructor
+
+				public function __construct(
+					ConfigTransfer           $transfer,
+					private readonly ?string $text,
+				)
+				{
+					parent::__construct( $transfer );
+				}
+
+
+//  other non-static methods
+
+				#[\Override]
+				protected function standardInput(): ?string
+				{
+					return $this->text;
+				}
+			},
+		);
+	}
+
 	private function import(): CommandTester
 	{
 		return new CommandTester( new ConfigImport( $this->transfer() ) );
