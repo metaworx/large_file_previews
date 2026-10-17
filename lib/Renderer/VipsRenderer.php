@@ -31,9 +31,10 @@ use OCA\LargeFilePreviews\Service\ScratchDirectory;
  * read as a header line or as "out of memory", and one ending in `]` is not
  * read as load options.
  *
- * The output is a PNG, a JPEG at quality 95 laid on preview_background, or a
- * WebP at quality 95; Nextcloud keeps the type and re-encodes at its own
- * quality. convert() writes the same from a PNG, for poppler's pages:
+ * The output is a PNG, a JPEG at preview_quality laid on preview_background,
+ * or a WebP at preview_quality; Nextcloud keeps the type, and the render as
+ * it is where the provider streams it. convert() writes the same from a PNG,
+ * for poppler's pages:
  *
  *     vips copy <page.png> <output>[<save options>]
  *
@@ -497,9 +498,9 @@ class VipsRenderer
 	}
 
 	/**
-	 * The options a preview is saved with: a lossy one at a quality that
-	 * Nextcloud's own re-encoding, at its quality, hardly adds to, and a
-	 * JPEG laid on the background, since it keeps no transparency.
+	 * The options a preview is saved with: a lossy one at preview_quality,
+	 * and a JPEG laid on the background, since it keeps no transparency,
+	 * its Huffman tables optimized, which loses nothing and halves it.
 	 */
 	private function saveOptions( PreviewFormat $format ): string
 	{
@@ -507,11 +508,11 @@ class VipsRenderer
 		{
 			PreviewFormat::PNG  => '',
 			PreviewFormat::JPEG => sprintf(
-				'[Q=%d,background=%d]',
-				PreviewFormat::QUALITY,
+				'[Q=%d,optimize_coding,background=%d]',
+				$this->config->previewQuality(),
 				$this->config->getScalar( ConfigLexicon::PREVIEW_BACKGROUND ) === 'black' ? 0 : 255,
 			),
-			PreviewFormat::WEBP => sprintf( '[Q=%d]', PreviewFormat::QUALITY ),
+			PreviewFormat::WEBP => sprintf( '[Q=%d]', $this->config->previewQuality() ),
 		};
 	}
 

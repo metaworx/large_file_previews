@@ -75,6 +75,8 @@ class ConfigLexicon
 
 	public const PREVIEW_BACKGROUND = 'preview_background';
 
+	public const PREVIEW_QUALITY = 'preview_quality';
+
 	public const PREVIEW_STREAM = 'preview_stream';
 
 	public const LAST_FAILURE = 'last_failure';
@@ -227,8 +229,8 @@ class ConfigLexicon
 				'definition' => 'Threads vipsthumbnail may use for one render (--vips-concurrency); the header, a conversion and tiffcp run with their own defaults.',
 			],
 			// Nextcloud stores a preview in the type of the image it is
-			// given, re-encoded at its own quality (preview jpeg_quality and
-			// webp_quality), so the app chooses only the type.
+			// given: streamed, as rendered; otherwise re-encoded at its own
+			// quality (preview jpeg_quality and webp_quality).
 			self::PREVIEW_FORMAT             => [
 				'default'    => 'nextcloud',
 				'choices'    => [ 'nextcloud', 'png', 'jpeg', 'webp' ],
@@ -238,6 +240,14 @@ class ConfigLexicon
 				'default'    => 'white',
 				'choices'    => [ 'white', 'black' ],
 				'definition' => 'What a transparent image is laid on in a JPEG preview, which keeps no transparency.',
+			],
+			// 95, as the renderers wrote before it could be set: a re-encoding
+			// at Nextcloud's quality hardly adds to its loss.
+			self::PREVIEW_QUALITY            => [
+				'default'    => 95,
+				'min'        => 10,
+				'max'        => 100,
+				'definition' => 'The quality a JPEG or WebP preview is rendered at; streamed, the largest preview\'s, otherwise only the image Nextcloud encodes again at its own. A PNG has none.',
 			],
 			// Nextcloud stores a stream image as it is; off, the render is
 			// decoded and Nextcloud encodes it again, as before.

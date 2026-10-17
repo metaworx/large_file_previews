@@ -17,11 +17,12 @@ the first stable release.
   *Backup and restore*: what is stored, all or nothing, the changes shown
   first; Nextcloud's quality as commands; unknown values named (exit 3).
 
-- *Previews → Nextcloud's own*: Nextcloud's JPEG and WebP quality set
-  on the page, for every preview it stores from then on.
+- *Previews → Nextcloud's own settings*: Nextcloud's JPEG and WebP
+  quality set on the page, for every preview it stores from then on.
 
-- The largest preview stored as rendered, not decoded and encoded again
-  (`preview_stream`, on by default); the smaller sizes are Nextcloud's.
+- The largest preview stored as rendered, at the app's `preview_quality`
+  (95), not decoded and encoded again (`preview_stream`, on by default);
+  both on the page. The smaller sizes are Nextcloud's.
 
 ## [0.1.0] - 2026-10-17
 

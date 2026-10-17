@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Tests\Unit\Renderer;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\PageProbe;
 use OCA\LargeFilePreviews\Renderer\PopplerRenderer;
 use OCA\LargeFilePreviews\Renderer\PreviewFormat;
@@ -93,12 +94,26 @@ class PopplerRendererTest
 	}
 
 	/**
-	 * A JPEG is pdftoppm's own, at the quality the renderers share.
+	 * A JPEG is pdftoppm's own, at the quality the renderers share, 95
+	 * unless preview_quality says otherwise.
 	 */
 	public function testAJpeg(): void
 	{
 		$this->output = substr( $this->output, 0, -4 ) . '.jpg';
-		$runner       = $this->renders( 4096, [ '-jpeg', '-jpegopt', 'quality=95' ] );
+		$runner       = $this->renders( 4096, [ '-jpeg', '-jpegopt', 'quality=95,optimize=y' ] );
+
+		self::assertTrue(
+			$this->poppler( $runner )
+			     ->render( $this->input, 4096, $this->output )
+			     ->isSuccess(),
+		);
+	}
+
+	public function testAJpegAtTheQualitySet(): void
+	{
+		$this->appValues[ ConfigLexicon::PREVIEW_QUALITY ] = 70;
+		$this->output                                      = substr( $this->output, 0, -4 ) . '.jpg';
+		$runner                                            = $this->renders( 4096, [ '-jpeg', '-jpegopt', 'quality=70,optimize=y' ] );
 
 		self::assertTrue(
 			$this->poppler( $runner )

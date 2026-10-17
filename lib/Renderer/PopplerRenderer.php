@@ -22,7 +22,7 @@ use OCA\LargeFilePreviews\Service\RunOptions;
  * PDF and Illustrator (9 and later, which is PDF inside) through pdftoppm:
  *
  *     pdftoppm -f 1 -l 1 -scale-to <N> -png -singlefile /dev/fd/4 <outstem>
- *     pdftoppm -f 1 -l 1 -scale-to <N> -jpeg -jpegopt quality=95 -singlefile /dev/fd/4 <outstem>
+ *     pdftoppm -f 1 -l 1 -scale-to <N> -jpeg -jpegopt quality=<Q>,optimize=y -singlefile /dev/fd/4 <outstem>
  *
  * The file is opened here and handed on as descriptor 4 (RunOptions), so
  * its name never reaches pdftoppm. pdftoppm reads the cross-reference table
@@ -34,7 +34,8 @@ use OCA\LargeFilePreviews\Service\RunOptions;
  * Many real files print warnings and still exit 0: success is the exit
  * status and the file, never an empty stderr. A page that is one scan is
  * rendered at the scan's own resolution where that is smaller than the box
- * (PageProbe).
+ * (PageProbe). A JPEG is at preview_quality, its Huffman tables optimized:
+ * lossless, and a third of the size of pdftoppm's default on a drawn page.
  *
  * pdftoppm writes no WebP: its PNG is converted by libvips, and without
  * libvips a WebP preview is a JPEG (format()).
@@ -152,7 +153,7 @@ class PopplerRenderer
 					'-scale-to',
 					(string) $box,
 					...( $format === PreviewFormat::JPEG
-						? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d', PreviewFormat::QUALITY ) ]
+						? [ '-jpeg', '-jpegopt', sprintf( 'quality=%d,optimize=y', $this->config->previewQuality() ) ]
 						: [ '-png' ] ),
 					'-singlefile',
 					RunOptions::path( RunOptions::INPUT ),

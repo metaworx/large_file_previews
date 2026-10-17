@@ -75,6 +75,8 @@ export function testState(): SettingsState {
 			vips_concurrency: scalar(1, 1, 64),
 			preview_format: word('nextcloud', ['nextcloud', 'png', 'jpeg', 'webp']),
 			preview_background: word('white', ['white', 'black']),
+			preview_quality: scalar(95, 10, 100),
+			preview_stream: scalar(true),
 		},
 		// Every type ships off: nothing is processed.
 		active: [],

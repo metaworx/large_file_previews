@@ -57,6 +57,7 @@ class ConfigLexiconTest
 				'vips_concurrency',
 				'preview_format',
 				'preview_background',
+				'preview_quality',
 				'preview_stream',
 				'mimetypes',
 				'extensions',

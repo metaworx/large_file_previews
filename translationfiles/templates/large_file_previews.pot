@@ -214,6 +214,9 @@ msgstr ""
 msgid "Grace period, seconds"
 msgstr ""
 
+msgid "Handed to Nextcloud as a stream, the largest preview is stored as it was rendered, at the quality set here. Off, Nextcloud decodes it and encodes it again at its own. A render larger than Nextcloud's preview size is decoded either way, to be scaled."
+msgstr ""
+
 msgid "Help: {label}"
 msgstr ""
 
@@ -277,7 +280,10 @@ msgstr ""
 msgid "Nextcloud"
 msgstr ""
 
-msgid "Nextcloud stores a preview in the type it is given, and re-encodes it at its own quality, the app config preview jpeg_quality and webp_quality."
+msgid "Nextcloud makes every smaller size from the largest, in its type: where a client cannot show WebP, choose JPEG."
+msgstr ""
+
+msgid "Nextcloud stores a preview in the type it is given: the largest, streamed, as rendered; the smaller sizes, and the largest where it is not streamed, re-encoded at its own quality, the app config preview jpeg_quality and webp_quality."
 msgstr ""
 
 msgid "Nextcloud value {name}: not one this app carries; left out."
@@ -308,6 +314,9 @@ msgid "No suitable renderer ({program})"
 msgstr ""
 
 msgid "Not a type this app handles"
+msgstr ""
+
+msgid "Not streamed, only the image Nextcloud encodes again at its own quality, which sets the preview's."
 msgstr ""
 
 msgid "Nothing is processed: every MIME type is disabled."
@@ -365,6 +374,12 @@ msgid "Providers"
 msgstr ""
 
 msgid "Providers:"
+msgstr ""
+
+msgid "Quality"
+msgstr ""
+
+msgid "Quality, 10 to 100"
 msgstr ""
 
 msgid "Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker."
@@ -431,6 +446,9 @@ msgstr ""
 msgid "Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period. Every program one render runs shares the time."
 msgstr ""
 
+msgid "Store the largest preview as rendered"
+msgstr ""
+
 msgid "System value {name}: not one this app has; left out."
 msgstr ""
 
@@ -463,6 +481,9 @@ msgid "The file names no format."
 msgstr ""
 
 msgid "The format is set in config.php, and read by Imaginary only: webp makes WebP, anything else JPEG. The quality, which Nextcloud has no page for, is set here or with occ."
+msgstr ""
+
+msgid "The largest preview's, JPEG or WebP, stored as rendered; the smaller sizes are Nextcloud's, at its own quality."
 msgstr ""
 
 #, php-format

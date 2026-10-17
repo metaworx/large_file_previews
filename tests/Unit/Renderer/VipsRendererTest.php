@@ -133,8 +133,9 @@ class VipsRendererTest
 	}
 
 	/**
-	 * A JPEG at 95 on the background, white unless told black; a WebP at
-	 * 95; a PNG as it is. libvips writes each.
+	 * A JPEG at preview_quality, 95 by default, on the background, white
+	 * unless told black; a WebP at preview_quality; a PNG as it is. libvips
+	 * writes each.
 	 */
 	public function testTheSaveOptions(): void
 	{
@@ -143,13 +144,15 @@ class VipsRendererTest
 		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.jpg' );
 		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.webp' );
 
-		$this->appValues = [ ConfigLexicon::PREVIEW_BACKGROUND => 'black' ];
+		$this->appValues = [ ConfigLexicon::PREVIEW_BACKGROUND => 'black', ConfigLexicon::PREVIEW_QUALITY => 70 ];
 
 		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.jpg' );
+		$this->renderer( $this->runner( '' ) )->render( $this->input, 1024, $stem . '.webp' );
 
-		self::assertSame( $stem . '.jpg[Q=95,background=255]', $this->runs[1]['arguments'][5] );
+		self::assertSame( $stem . '.jpg[Q=95,optimize_coding,background=255]', $this->runs[1]['arguments'][5] );
 		self::assertSame( $stem . '.webp[Q=95]', $this->runs[3]['arguments'][5] );
-		self::assertSame( $stem . '.jpg[Q=95,background=0]', $this->runs[5]['arguments'][5] );
+		self::assertSame( $stem . '.jpg[Q=70,optimize_coding,background=0]', $this->runs[5]['arguments'][5] );
+		self::assertSame( $stem . '.webp[Q=70]', $this->runs[7]['arguments'][5] );
 		self::assertSame( PreviewFormat::WEBP, $this->renderer( $this->runner( '' ) )->format( PreviewFormat::WEBP ) );
 	}
 

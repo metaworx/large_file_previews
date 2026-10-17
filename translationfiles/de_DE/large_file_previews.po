@@ -214,6 +214,9 @@ msgstr "Aus der Datei"
 msgid "Grace period, seconds"
 msgstr "Nachfrist, Sekunden"
 
+msgid "Handed to Nextcloud as a stream, the largest preview is stored as it was rendered, at the quality set here. Off, Nextcloud decodes it and encodes it again at its own. A render larger than Nextcloud's preview size is decoded either way, to be scaled."
+msgstr "Als Stream an Nextcloud übergeben, wird die größte Vorschau so gespeichert, wie sie gerendert wurde, in der hier eingestellten Qualität. Ausgeschaltet dekodiert Nextcloud sie und kodiert sie in seiner eigenen neu. Ein Rendering, das größer ist als Nextclouds Vorschaugröße, wird in jedem Fall dekodiert, um es zu skalieren."
+
 msgid "Help: {label}"
 msgstr "Hilfe: {label}"
 
@@ -277,8 +280,11 @@ msgstr "Benötigt"
 msgid "Nextcloud"
 msgstr "Nextcloud"
 
-msgid "Nextcloud stores a preview in the type it is given, and re-encodes it at its own quality, the app config preview jpeg_quality and webp_quality."
-msgstr "Nextcloud speichert eine Vorschau in dem Format, in dem sie geliefert wird, und kodiert sie mit seiner eigenen Qualität neu, den App-Einstellungen preview jpeg_quality und webp_quality."
+msgid "Nextcloud makes every smaller size from the largest, in its type: where a client cannot show WebP, choose JPEG."
+msgstr "Nextcloud erzeugt jede kleinere Größe aus der größten, in deren Format: Wo ein Client kein WebP anzeigen kann, wählen Sie JPEG."
+
+msgid "Nextcloud stores a preview in the type it is given: the largest, streamed, as rendered; the smaller sizes, and the largest where it is not streamed, re-encoded at its own quality, the app config preview jpeg_quality and webp_quality."
+msgstr "Nextcloud speichert eine Vorschau in dem Format, in dem sie geliefert wird: die größte, als Stream, so wie gerendert; die kleineren Größen, und die größte, wo sie nicht als Stream kommt, mit seiner eigenen Qualität neu kodiert, den App-Einstellungen preview jpeg_quality und webp_quality."
 
 msgid "Nextcloud value {name}: not one this app carries; left out."
 msgstr "Nextcloud-Wert {name}: keiner, den diese App mitführt; ausgelassen."
@@ -309,6 +315,9 @@ msgstr "Kein geeigneter Renderer ({program})"
 
 msgid "Not a type this app handles"
 msgstr "Kein Typ, den diese App behandelt"
+
+msgid "Not streamed, only the image Nextcloud encodes again at its own quality, which sets the preview's."
+msgstr "Ohne Stream nur die des Bildes, das Nextcloud in seiner eigenen Qualität neu kodiert; diese bestimmt die der Vorschau."
 
 msgid "Nothing is processed: every MIME type is disabled."
 msgstr "Nichts wird verarbeitet: Jeder MIME-Typ ist deaktiviert."
@@ -366,6 +375,12 @@ msgstr "Anbieter"
 
 msgid "Providers:"
 msgstr "Anbieter:"
+
+msgid "Quality"
+msgstr "Qualität"
+
+msgid "Quality, 10 to 100"
+msgstr "Qualität, 10 bis 100"
 
 msgid "Raises the score the kernel kills by when memory runs out, so a render dies before a web server worker."
 msgstr "Erhöht den Wert, nach dem der Kernel Prozesse beendet, wenn der Speicher ausgeht, sodass ein Rendervorgang vor einem Webserver-Prozess beendet wird."
@@ -431,6 +446,9 @@ msgstr "Status"
 msgid "Stops a render that takes too long: SIGTERM, then SIGKILL after the grace period. Every program one render runs shares the time."
 msgstr "Stoppt einen Rendervorgang, der zu lange dauert: SIGTERM, nach der Nachfrist SIGKILL. Alle Programme eines Rendervorgangs teilen sich die Zeit."
 
+msgid "Store the largest preview as rendered"
+msgstr "Die größte Vorschau so speichern, wie sie gerendert wurde"
+
 msgid "System value {name}: not one this app has; left out."
 msgstr "Systemwert {name}: keiner, den diese App hat; ausgelassen."
 
@@ -464,6 +482,9 @@ msgstr "Die Datei nennt kein Format."
 
 msgid "The format is set in config.php, and read by Imaginary only: webp makes WebP, anything else JPEG. The quality, which Nextcloud has no page for, is set here or with occ."
 msgstr "Das Format wird in config.php gesetzt und nur von Imaginary gelesen: webp ergibt WebP, alles andere JPEG. Die Qualität, für die Nextcloud keine Seite hat, wird hier oder mit occ gesetzt."
+
+msgid "The largest preview's, JPEG or WebP, stored as rendered; the smaller sizes are Nextcloud's, at its own quality."
+msgstr "Die der größten Vorschau, JPEG oder WebP, so gespeichert, wie sie gerendert wurde; die kleineren Größen erzeugt Nextcloud, in seiner eigenen Qualität."
 
 #, php-format
 msgid "The last large preview that failed, at %1$s, was a file of type %2$s: %3$s."

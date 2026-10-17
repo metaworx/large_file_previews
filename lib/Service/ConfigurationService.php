@@ -177,6 +177,14 @@ class ConfigurationService
 	}
 
 	/**
+	 * The quality a JPEG or WebP preview is rendered at (`preview_quality`).
+	 */
+	public function previewQuality(): int
+	{
+		return $this->getInt( ConfigLexicon::PREVIEW_QUALITY );
+	}
+
+	/**
 	 * Whether the largest preview is handed to Nextcloud as a stream, which
 	 * it stores as rendered (`preview_stream`).
 	 */

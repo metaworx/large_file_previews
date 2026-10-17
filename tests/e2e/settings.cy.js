@@ -22,7 +22,7 @@ const clearRules = () => {
 	}
 	cy.occ( `lfp:config:unset --mime ${ MIME } --field min_size_mb`, { failOnNonZeroExit: false, log: false } )
 	cy.occ( 'lfp:config:unset --mime application/pdf', { failOnNonZeroExit: false, log: false } )
-	for ( const key of [ 'min_size_mb', 'timeout_seconds' ] ) {
+	for ( const key of [ 'min_size_mb', 'timeout_seconds', 'preview_quality', 'preview_stream' ] ) {
 		cy.occ( `lfp:config:unset ${ key }`, { failOnNonZeroExit: false, log: false } )
 	}
 }
@@ -242,6 +242,22 @@ describe( 'The settings page', () => {
 				cy.occ( `config:app:set preview jpeg_quality --value=${ had } --type=integer` )
 			}
 		} )
+	} )
+
+	it( 'sets the app\'s quality and switches the stream, as occ reads back', () => {
+		const stored = ( key ) => cy.occ( 'lfp:config:show --output=json' )
+			.then( ( { stdout } ) => JSON.parse( stdout ).stored[ key ] )
+
+		cy.get( 'input#lfp-preview-quality' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '95 (default)' )
+		cy.get( 'input#lfp-preview-quality' ).type( '85' )
+		cy.get( 'input#lfp-preview-quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+		cy.get( '[data-setting="preview_quality"]' ).should( 'contain', 'occ lfp:config:set preview_quality 85' )
+		stored( 'preview_quality' ).should( 'deep.include', { value: 85, stored: true } )
+
+		cy.get( '[data-setting="preview_stream"]' ).should( 'contain', 'occ lfp:config:set preview_stream true' )
+			.find( '.lfp-named input[type="checkbox"]' ).first().click( { force: true } )
+		cy.get( '[data-setting="preview_stream"]' ).should( 'contain', 'occ lfp:config:set preview_stream false' )
+		stored( 'preview_stream' ).should( 'deep.include', { value: false, stored: true } )
 	} )
 
 	it( 'keeps every help icon clear of every Save button', () => {

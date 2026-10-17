@@ -26,6 +26,8 @@ export interface ScalarValues {
 	vips_concurrency: number
 	preview_format: string
 	preview_background: string
+	preview_quality: number
+	preview_stream: boolean
 }
 
 export type ScalarKey = keyof ScalarValues

@@ -287,10 +287,21 @@ WebP where it says `webp`, JPEG otherwise.
 A PDF previewed as WebP is converted by libvips, and is a JPEG without it.
 A JPEG keeps no transparency,
 so a transparent image is laid on `preview_background`, white or black.
-The quality is Nextcloud's:
-it re-encodes every preview it stores, the largest and each size made from it,
-at its app config `preview` `jpeg_quality` or `webp_quality`, 80 unless set;
-a PNG is lossless.
+Every smaller size is made from the largest, in its type,
+so where a client cannot show WebP, the type is JPEG.
+
+The largest preview is stored as rendered:
+the app hands it to Nextcloud as a stream, which Nextcloud keeps as it is,
+at `preview_quality`, 95 by default, 10 to 100; a PNG is lossless.
+A JPEG's Huffman tables are optimized, which loses nothing:
+a drawn page of 4096 x 2048 pixels is 50 KB at 95,
+where Nextcloud's own is 62 KB at 80.
+`preview_stream`, on by default, switches that;
+off, and for a render larger than Nextcloud's preview size, which is scaled,
+Nextcloud decodes the render and encodes it again at its own quality.
+That is its app config `preview` `jpeg_quality` or `webp_quality`,
+80 unless set,
+for every size it makes from the largest, and for the largest not streamed.
 The settings page sets both, 10 to 100, an emptied field back to 80,
 and shows Nextcloud's own `preview_format`, read only,
 each with the command that sets it.

@@ -47,10 +47,50 @@ describe('PreviewsSection', () => {
 		expect(commands).toEqual([
 			'occ lfp:config:set preview_format nextcloud',
 			'occ lfp:config:set preview_background white',
+			'occ lfp:config:set preview_stream true',
+			'occ lfp:config:unset preview_quality',
 			'occ config:system:set preview_format --value=jpeg',
 			'occ config:app:delete preview jpeg_quality',
 			'occ config:app:delete preview webp_quality',
 		])
+	})
+
+	it('says under the format that a client without WebP needs JPEG', () => {
+		expect(section().find('[data-setting="preview_format"] [data-hint="webp"]').text()).toContain('where a client cannot show WebP, choose JPEG')
+	})
+
+	it('switches the stream, and sets the quality, emptied back to its default', async () => {
+		const wrapper = section()
+		const stream = wrapper.find('[data-setting="preview_stream"]')
+		const quality = stream.find('[data-setting="preview_quality"]').findComponent({ name: 'NumberField' })
+
+		expect(stream.findComponent(NcCheckboxRadioSwitch).props('modelValue')).toBe(true)
+		expect(quality.props('value')).toBeNull()
+		expect(quality.props('placeholder')).toBe('95 (default)')
+		expect([quality.props('min'), quality.props('max')]).toEqual([10, 100])
+
+		await stream.findComponent(NcCheckboxRadioSwitch).vm.$emit('update:modelValue', false)
+		await quality.vm.$emit('save', 85)
+		await quality.vm.$emit('save', null)
+
+		expect(wrapper.emitted('save')).toEqual([
+			[{ scalars: { preview_stream: false } }],
+			[{ scalars: { preview_quality: 85 } }],
+			[{ scalars: { preview_quality: null } }],
+		])
+	})
+
+	it('says what the quality is of: the largest preview streamed, otherwise only what Nextcloud encodes again', () => {
+		const state = testState()
+		expect(section(state).find('[data-setting="preview_quality"]').findComponent({ name: 'NumberField' }).props('help')).toContain('The largest preview\'s')
+
+		state.scalars.preview_stream.value = false
+		state.scalars.preview_quality = { ...state.scalars.preview_quality, value: 70, stored: true }
+		const off = section(state).find('[data-setting="preview_quality"]')
+
+		expect(off.findComponent({ name: 'NumberField' }).props('help')).toContain('Not streamed')
+		expect(off.findComponent({ name: 'NumberField' }).props('value')).toBe(70)
+		expect(off.text()).toContain('occ lfp:config:set preview_quality 70')
 	})
 
 	it('shows Nextcloud\'s preview format read only, and its quality as it is stored', () => {
