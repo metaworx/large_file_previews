@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Tests\Unit\Controller;
 
+use DateTime;
+use DateTimeZone;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Controller\SettingsController;
@@ -20,6 +22,7 @@ use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\CommandRunner;
+use OCA\LargeFilePreviews\Service\ConfigTransfer;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
@@ -31,6 +34,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IPreview;
 use OCP\IRequest;
 use OCP\ITempManager;
@@ -297,6 +301,73 @@ class SettingsControllerTest
 		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"mimetypes":{"image/png":{"colour":1}}}' )->update()->getStatus() );
 	}
 
+	public function testTheExportIsWhatIsStored(): void
+	{
+		$this->appValues = [ ConfigLexicon::TIMEOUT_SECONDS => 45 ];
+		$data            = $this->controller( '' )->export()->getData();
+
+		self::assertSame( 'large_file_previews', $data['app'] );
+		self::assertSame( [ 'timeout_seconds' => 45 ], $data['settings'] );
+	}
+
+	/**
+	 * Without apply, an import says what it would change and what it leaves
+	 * out, and writes nothing; the system values are among the changes, for
+	 * the page to show their commands.
+	 */
+	public function testAnImportNotAppliedSaysWhatWouldChangeAndWritesNothing(): void
+	{
+		$document = $this->document( [ 'settings' => [ 'timeout_seconds' => 60, 'speed' => 1 ], 'system' => [ 'scratch_directory' => '/var/cache/lfp' ] ] );
+		$data     = $this->controller( (string) json_encode( [ 'document' => $document ] ) )->import()->getData();
+
+		self::assertSame( [ [ 'kind' => 'setting', 'name' => 'speed' ] ], $data['warnings'] );
+		self::assertSame(
+			[
+				[ 'part' => 'settings', 'name' => 'timeout_seconds', 'before' => null, 'after' => 60 ],
+				[ 'part' => 'system', 'name' => 'scratch_directory', 'before' => null, 'after' => '/var/cache/lfp' ],
+			],
+			$data['changes'],
+		);
+		self::assertSame( [ 'version' => '0.0.9', 'date' => null ], $data['exported'] );
+		self::assertFalse( $data['applied'] );
+		self::assertArrayNotHasKey( 'state', $data );
+		self::assertSame( [], $this->appValues );
+	}
+
+	/**
+	 * Applied, the settings and rules are written and the state follows;
+	 * the system values never are.
+	 */
+	public function testAnImportAppliedWritesTheAppsConfigurationOnly(): void
+	{
+		$document = $this->document( [ 'settings' => [ 'timeout_seconds' => 60 ], 'system' => [ 'vips_allow_untrusted' => true ] ] );
+		$data     = $this->controller( (string) json_encode( [ 'document' => $document, 'apply' => true ] ) )->import()->getData();
+
+		self::assertTrue( $data['applied'] );
+		self::assertSame( 60, $data['state']['scalars']['timeout_seconds']['value'] );
+		self::assertSame( 60, $this->appValues[ ConfigLexicon::TIMEOUT_SECONDS ] );
+		self::assertArrayNotHasKey( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, $this->systemValues );
+	}
+
+	public function testAnImportRefusedIsA400WithTheTranslatedReasonAndNothingWritten(): void
+	{
+		$document = $this->document( [ 'settings' => [ 'timeout_seconds' => 60, 'choom_adjust' => 5000 ] ] );
+		$response = $this->controller( (string) json_encode( [ 'document' => $document, 'apply' => true ] ) )->import();
+
+		self::assertSame( Http::STATUS_BAD_REQUEST, $response->getStatus() );
+		self::assertSame( [ 'error' => '«choom_adjust must be between 0 and 1000.»' ], $response->getData() );
+		self::assertSame( [], $this->appValues );
+		self::assertSame( Http::STATUS_BAD_REQUEST, $this->controller( '{"document": 7}' )->import()->getStatus() );
+	}
+
+	/**
+	 * @param array<string, mixed> $parts
+	 */
+	private function document( array $parts ): string
+	{
+		return (string) json_encode( [ 'app' => 'large_file_previews', 'format' => 1, 'exported' => [ 'version' => '0.0.9' ], ...$parts ] );
+	}
+
 	/**
 	 * @param array<string, string> $overrides programs' paths in system config
 	 */
@@ -343,6 +414,11 @@ class SettingsControllerTest
 		     ->willReturn( '0.1.0' )
 		;
 
+		$time = $this->createMock( ITimeFactory::class );
+		$time->method( 'getDateTime' )
+		     ->willReturn( new DateTime( '2026-10-17T02:18:00', new DateTimeZone( 'UTC' ) ) )
+		;
+
 		// The server's providers: this app's for every type it handles.
 		$ours     = $this->createMock( LargeFileProvider::class );
 		$previews = $this->createMock( IPreview::class );
@@ -366,6 +442,7 @@ class SettingsControllerTest
 			$apps,
 			$this->markingL10n(),
 			new ProviderChain( $previews, $this->createMock( LoggerInterface::class ) ),
+			new ConfigTransfer( $config, $binaries, $scratch, $apps, $time, $this->markingL10n() ),
 		)
 		    extends
 		    SettingsController

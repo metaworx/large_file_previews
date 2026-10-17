@@ -15,10 +15,13 @@ use OCA\LargeFilePreviews\Config\ConfigurationException;
 use OCA\LargeFilePreviews\Config\SupportedTypes;
 use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\RuleChange;
+use OCA\LargeFilePreviews\Config\TransferChange;
+use OCA\LargeFilePreviews\Config\TransferWarning;
 use OCA\LargeFilePreviews\Config\TypeRule;
 use OCA\LargeFilePreviews\Renderer\Renderers;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
+use OCA\LargeFilePreviews\Service\ConfigTransfer;
 use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
@@ -63,6 +66,7 @@ class SettingsController
 		private readonly IAppManager          $apps,
 		private readonly IL10N                $l10n,
 		private readonly ProviderChain        $providers,
+		private readonly ConfigTransfer       $transfer,
 	)
 	{
 		parent::__construct( Application::APP_ID, $request );
@@ -141,6 +145,66 @@ class SettingsController
 		}
 
 		return new DataResponse( $this->state() );
+	}
+
+	/**
+	 * What is stored, as the file `occ lfp:config:export` writes; the page
+	 * saves it.
+	 */
+	#[ApiRoute( verb: 'GET', url: '/settings/export' )]
+	public function export(): DataResponse
+	{
+		return new DataResponse( $this->transfer->export() );
+	}
+
+	/**
+	 * Reads a configuration file, its text in the body:
+	 *
+	 *     {"document": "{\"app\": ...}", "replace": false, "apply": false}
+	 *
+	 * and answers what it would change, what it leaves out, and what wrote
+	 * it. With `apply`, its settings and rules are written, all or nothing,
+	 * and the state follows. Its system values are never written here: they
+	 * are among the changes, for the page to show the commands that set
+	 * them. A refusal answers 400 with its reason, nothing written.
+	 */
+	#[ApiRoute( verb: 'POST', url: '/settings/import' )]
+	public function import(): DataResponse
+	{
+		$body = json_decode( $this->readRequestBody(), true );
+
+		try
+		{
+			if ( ! is_array( $body ) || ! is_string( $body['document'] ?? null ) )
+			{
+				throw new ConfigurationException( 'The body holds no document.', $this->l10n->t( 'The request is not valid.' ) );
+			}
+
+			$replace = ( $body['replace'] ?? false ) === true;
+			$apply   = ( $body['apply'] ?? false ) === true;
+			$read    = $this->transfer->read( $body['document'] );
+			$changes = $apply
+				? $this->transfer->apply( $read, $replace, system: false )
+				: $this->transfer->check( $read, $replace, system: false );
+		}
+		catch ( ConfigurationException $e )
+		{
+			return new DataResponse( [ 'error' => $e->hint ], Http::STATUS_BAD_REQUEST );
+		}
+
+		$answer = [
+			'exported' => [ 'version' => $read->version, 'date' => $read->date ],
+			'warnings' => array_map( static fn( TransferWarning $warning ): array => $warning->toArray(), $read->warnings ),
+			'changes'  => array_map( static fn( TransferChange $change ): array => $change->toArray(), $changes ),
+			'applied'  => $apply,
+		];
+
+		if ( $apply )
+		{
+			$answer['state'] = $this->state();
+		}
+
+		return new DataResponse( $answer );
 	}
 
 	/**
