@@ -13,8 +13,8 @@ the first stable release.
 
 ### Added
 
-- Backup and restore of the configuration: what is stored, restored all
-  or nothing; what the app does not know left out and named.
+- `occ lfp:config:export` and `import`: what is stored, restored all or
+  nothing; what the app does not know left out and named (exit 3).
 
 ## [0.1.0] - 2026-10-17
 
