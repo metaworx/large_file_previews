@@ -41,6 +41,22 @@ msgid "%s is not a MIME type this app handles, so its files never reach it."
 msgstr "%s ist kein MIME-Typ, den diese App behandelt; seine Dateien erreichen sie also nie."
 
 #, php-format
+msgid "%s is not a path."
+msgstr "%s ist kein Pfad."
+
+#, php-format
+msgid "%s is not a value a setting can have."
+msgstr "%s ist kein Wert, den eine Einstellung haben kann."
+
+#, php-format
+msgid "%s is not an object."
+msgstr "%s ist kein Objekt."
+
+#, php-format
+msgid "%s is not true or false."
+msgstr "%s ist weder true noch false."
+
+#, php-format
 msgid "%s is not writable"
 msgstr "%s ist nicht beschreibbar"
 
@@ -357,6 +373,19 @@ msgstr "Stoppt einen Rendervorgang, der zu lange dauert: SIGTERM, nach der Nachf
 msgid "The command could not be copied; select it instead."
 msgstr "Der Befehl konnte nicht kopiert werden; markiere ihn stattdessen."
 
+msgid "The file is not JSON."
+msgstr "Die Datei ist kein JSON."
+
+msgid "The file is not a configuration of this app."
+msgstr "Die Datei ist keine Konfiguration dieser App."
+
+#, php-format
+msgid "The file is of format %1$d; this app reads format %2$d and older."
+msgstr "Die Datei hat das Format %1$d; diese App liest Format %2$d und ältere."
+
+msgid "The file names no format."
+msgstr "Die Datei nennt kein Format."
+
 #, php-format
 msgid "The last large preview that failed, at %1$s, was a file of type %2$s: %3$s."
 msgstr "Die letzte fehlgeschlagene große Vorschau, am %1$s, betraf eine Datei vom Typ %2$s: %3$s."
@@ -391,11 +420,23 @@ msgstr "Die genannten Pakete sind die von Fedora."
 msgid "The packages named are those of RHEL and its rebuilds."
 msgstr "Die genannten Pakete sind die von RHEL und seinen Nachbauten."
 
+#, php-format
+msgid "The part %s of the file is not an object."
+msgstr "Der Teil %s der Datei ist kein Objekt."
+
 msgid "The programs could not be found again."
 msgstr "Die Programme konnten nicht erneut gesucht werden."
 
 msgid "The request is not valid."
 msgstr "Die Anfrage ist ungültig."
+
+#, php-format
+msgid "The rule of %1$s is not valid: %2$s."
+msgstr "Die Regel von %1$s ist ungültig: %2$s."
+
+#, php-format
+msgid "The rule of %s is not an object."
+msgstr "Die Regel von %s ist kein Objekt."
 
 msgid "The setting could not be saved."
 msgstr "Die Einstellung konnte nicht gespeichert werden."

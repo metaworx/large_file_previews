@@ -183,13 +183,7 @@ class ScratchDirectory
 	 */
 	public function set( string $path ): void
 	{
-		$problem = match ( true )
-		{
-			! str_starts_with( $path, '/' ) => 'is not an absolute path',
-			! is_dir( $path )               => 'is not a directory',
-			! is_writable( $path )          => 'is not writable',
-			default                         => null,
-		};
+		$problem = self::pathProblem( $path );
 
 		if ( $problem !== null )
 		{
@@ -208,6 +202,21 @@ class ScratchDirectory
 
 
 //  static methods
+
+	/**
+	 * What keeps a path from being the scratch directory, in English, or
+	 * null where it is an absolute path to a writable directory.
+	 */
+	public static function pathProblem( string $path ): ?string
+	{
+		return match ( true )
+		{
+			! str_starts_with( $path, '/' ) => 'is not an absolute path',
+			! is_dir( $path )               => 'is not a directory',
+			! is_writable( $path )          => 'is not writable',
+			default                         => null,
+		};
+	}
 
 	/**
 	 * The type of the file system a path is on, from `/proc/mounts`: the

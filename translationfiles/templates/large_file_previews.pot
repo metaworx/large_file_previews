@@ -41,6 +41,22 @@ msgid "%s is not a MIME type this app handles, so its files never reach it."
 msgstr ""
 
 #, php-format
+msgid "%s is not a path."
+msgstr ""
+
+#, php-format
+msgid "%s is not a value a setting can have."
+msgstr ""
+
+#, php-format
+msgid "%s is not an object."
+msgstr ""
+
+#, php-format
+msgid "%s is not true or false."
+msgstr ""
+
+#, php-format
 msgid "%s is not writable"
 msgstr ""
 
@@ -357,6 +373,19 @@ msgstr ""
 msgid "The command could not be copied; select it instead."
 msgstr ""
 
+msgid "The file is not JSON."
+msgstr ""
+
+msgid "The file is not a configuration of this app."
+msgstr ""
+
+#, php-format
+msgid "The file is of format %1$d; this app reads format %2$d and older."
+msgstr ""
+
+msgid "The file names no format."
+msgstr ""
+
 #, php-format
 msgid "The last large preview that failed, at %1$s, was a file of type %2$s: %3$s."
 msgstr ""
@@ -391,10 +420,22 @@ msgstr ""
 msgid "The packages named are those of RHEL and its rebuilds."
 msgstr ""
 
+#, php-format
+msgid "The part %s of the file is not an object."
+msgstr ""
+
 msgid "The programs could not be found again."
 msgstr ""
 
 msgid "The request is not valid."
+msgstr ""
+
+#, php-format
+msgid "The rule of %1$s is not valid: %2$s."
+msgstr ""
+
+#, php-format
+msgid "The rule of %s is not an object."
 msgstr ""
 
 msgid "The setting could not be saved."

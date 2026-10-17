@@ -224,13 +224,7 @@ class BinaryLocator
 	{
 		self::refuseUnknown( $program );
 
-		$problem = match ( true )
-		{
-			! str_starts_with( $path, '/' ) => 'is not an absolute path',
-			! is_file( $path )              => 'does not exist',
-			! is_executable( $path )        => 'is not executable',
-			default                         => null,
-		};
+		$problem = self::pathProblem( $path );
 
 		if ( $problem !== null )
 		{
@@ -282,6 +276,21 @@ class BinaryLocator
 
 
 //  static methods
+
+	/**
+	 * What keeps a path from being a program's override, in English, or
+	 * null where it is an absolute path to an executable file.
+	 */
+	public static function pathProblem( string $path ): ?string
+	{
+		return match ( true )
+		{
+			! str_starts_with( $path, '/' ) => 'is not an absolute path',
+			! is_file( $path )              => 'does not exist',
+			! is_executable( $path )        => 'is not executable',
+			default                         => null,
+		};
+	}
 
 	/**
 	 * An absolute path to an executable file.

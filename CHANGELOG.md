@@ -11,6 +11,11 @@ the first stable release.
 
 ## [Unreleased]
 
+### Added
+
+- Backup and restore of the configuration: what is stored, restored all
+  or nothing; what the app does not know left out and named.
+
 ## [0.1.0] - 2026-10-17
 
 ### Added

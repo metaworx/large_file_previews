@@ -209,6 +209,17 @@ class ConfigurationService
 		$this->system->setSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, $allowed );
 	}
 
+	/**
+	 * What system config says of the untrusted decoders, where it says
+	 * anything that is a switch; null where it says nothing.
+	 */
+	public function untrustedStored(): ?bool
+	{
+		$value = $this->system->getSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY, null );
+
+		return is_bool( $value ) ? $value : null;
+	}
+
 	public function unsetUntrustedAllowed(): void
 	{
 		$this->system->deleteSystemValue( ConfigLexicon::ALLOW_UNTRUSTED_SYSTEM_KEY );
@@ -434,7 +445,8 @@ class ConfigurationService
 	 * written. The writes are app config's own, one after the other.
 	 *
 	 * A null setting returns to its default, a null rule is removed, a MIME
-	 * type's to its shipped default.
+	 * type's to its shipped default. Without `$write`, everything is
+	 * validated and nothing written: whether the changes would be taken.
 	 *
 	 * @param array<string, int|bool|string|null> $scalars
 	 * @param array<string, RuleChange|null>      $mimeRules      by MIME type
@@ -445,6 +457,7 @@ class ConfigurationService
 		array $scalars = [],
 		array $mimeRules = [],
 		array $extensionRules = [],
+		bool  $write = true,
 	): void
 	{
 		$values = [];
@@ -477,6 +490,11 @@ class ConfigurationService
 			$extensions = $this->changedExtensionRule( $extensions, (string) $extension, $change );
 		}
 
+		if ( ! $write )
+		{
+			return;
+		}
+
 		foreach ( $values as $key => $value )
 		{
 			match ( true )
@@ -503,6 +521,20 @@ class ConfigurationService
 		{
 			$this->storeMap( ConfigLexicon::EXTENSIONS, $extensions );
 		}
+	}
+
+	/**
+	 * A setting's value as it would be stored - a switch's "yes" as true -
+	 * or why it cannot be.
+	 *
+	 * @throws ConfigurationException
+	 */
+	public function normaliseScalar(
+		string          $key,
+		int|bool|string $value,
+	): int|bool|string
+	{
+		return $this->validScalar( $key, $value );
 	}
 
 	/**
