@@ -20,6 +20,9 @@ the first stable release.
 - *Previews → Nextcloud's own*: Nextcloud's JPEG and WebP quality set
   on the page, for every preview it stores from then on.
 
+- The largest preview stored as rendered, not decoded and encoded again
+  (`preview_stream`, on by default); the smaller sizes are Nextcloud's.
+
 ## [0.1.0] - 2026-10-17
 
 ### Added

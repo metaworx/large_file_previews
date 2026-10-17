@@ -19,7 +19,9 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\SetupCheck\RendererCheck;
 use OCP\ICacheFactory;
+use OCP\IConfig;
 use OCP\IPreview;
+use OCP\IStreamImage;
 use OCP\Server;
 use OCP\SetupCheck\SetupResult;
 
@@ -125,6 +127,31 @@ class RenderTest
 
 		self::assertGreaterThan( 0, $preview->getSize() );
 		self::assertNull( $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE ) ?: null );
+	}
+
+	/**
+	 * Streamed, the largest preview Nextcloud stores is the render, byte for
+	 * byte; with the stream off, it is Nextcloud's re-encoding of it.
+	 */
+	public function testTheLargestPreviewIsStoredAsRendered(): void
+	{
+		$system   = Server::get( IConfig::class );
+		$maxX     = $system->getSystemValueInt( 'preview_max_x', 4096 );
+		$maxY     = $system->getSystemValueInt( 'preview_max_y', 4096 );
+		$file     = $this->file( 'stream.pdf', PdfFixture::bytes() );
+		$rendered = Server::get( LargeFileProvider::class )->getThumbnail( $file, $maxX, $maxY );
+
+		self::assertInstanceOf( IStreamImage::class, $rendered );
+
+		$render = $rendered->data();
+
+		self::assertSame( $render, Server::get( IPreview::class )->getPreview( $file, -1, -1 )->getContent() );
+
+		$this->settings()->setScalar( ConfigLexicon::PREVIEW_STREAM, false );
+		$decoded = Server::get( IPreview::class )->getPreview( $this->file( 'decoded.pdf', PdfFixture::bytes() ), -1, -1 )->getContent();
+
+		self::assertNotSame( $render, $decoded );
+		self::assertGreaterThan( 0, strlen( $decoded ) );
 	}
 
 	public function testOutsideTheSizeWindowItIsDeclined(): void

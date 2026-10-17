@@ -31,6 +31,7 @@ use OCP\Files\File;
 use OCP\Files\Storage\IStorage;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IImage;
+use OCP\IStreamImage;
 use OCP\ITempManager;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -179,6 +180,46 @@ class LargeFileProviderTest
 
 		self::assertSame( $image, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 2048 ) );
 		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	/**
+	 * A render that fits the box is handed over as it is, a stream, and
+	 * never decoded; the folder goes all the same.
+	 */
+	public function testARenderThatFitsIsHandedOverAsAStream(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ), 4096 );
+
+		$stream = $this->createMock( IStreamImage::class );
+		$stream->method( 'width' )->willReturn( 4096 );
+		$stream->method( 'height' )->willReturn( 2048 );
+		$this->images->method( 'stream' )->willReturn( $stream );
+		$this->images->expects( self::never() )->method( 'load' );
+
+		self::assertSame( $stream, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 4096 ) );
+		self::assertDirectoryDoesNotExist( $this->folder );
+	}
+
+	/**
+	 * A render larger than the box, which the renderer drew square, is
+	 * decoded, for GD to fit it; with the stream switched off, every one is.
+	 */
+	public function testARenderLargerThanTheBoxOrWithTheStreamOffIsDecoded(): void
+	{
+		$this->renders( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0 ), 4096 );
+
+		$stream = $this->createMock( IStreamImage::class );
+		$stream->method( 'width' )->willReturn( 2896 );
+		$stream->method( 'height' )->willReturn( 4096 );
+		$this->images->method( 'stream' )->willReturn( $stream );
+		$image = $this->createMock( IImage::class );
+		$this->images->expects( self::exactly( 2 ) )->method( 'load' )->willReturn( $image );
+
+		self::assertSame( $image, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 2048 ) );
+
+		$this->appValues[ ConfigLexicon::PREVIEW_STREAM ] = false;
+
+		self::assertSame( $image, $this->provider()->getThumbnail( $this->file( 'application/pdf', 'a.pdf' ), 4096, 4096 ) );
 	}
 
 	/**

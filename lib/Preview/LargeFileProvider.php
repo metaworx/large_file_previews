@@ -40,6 +40,10 @@ use Throwable;
  * for an image whether libvips can decode it, which the memory cache keeps
  * and only a miss asks `vips` for (VipsLoaders). `getThumbnail()` is asked
  * for the largest preview only; Nextcloud makes every smaller size from it.
+ * It answers with the rendered file as a stream (RenderedPreview), which
+ * Nextcloud stores as it is, where `preview_stream` is on and the render fits
+ * Nextcloud's box; otherwise with the render decoded, which Nextcloud
+ * encodes again at its own quality.
  */
 class LargeFileProvider
     implements
@@ -174,6 +178,18 @@ class LargeFileProvider
 			if ( ! $outcome->isSuccess() )
 			{
 				return $this->failed( $file, $outcome );
+			}
+
+			// Stored as rendered, where the render fits Nextcloud's box; the
+			// stream is open before the folder goes, and keeps the file.
+			if ( $this->config->previewStream() )
+			{
+				$stream = $this->images->stream( $output );
+
+				if ( $stream !== null && $stream->width() <= $maxX && $stream->height() <= $maxY )
+				{
+					return $stream;
+				}
 			}
 
 			$image = $this->images->load( $output );

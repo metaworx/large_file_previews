@@ -18,6 +18,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCP\IImage;
 use OCP\IPreview;
+use OCP\IStreamImage;
 use OCP\Server;
 
 /**
@@ -210,7 +211,8 @@ class ImageRenderTest
 	}
 
 	/**
-	 * The red, green and blue of the top left pixel.
+	 * The red, green and blue of the top left pixel; of a render handed over
+	 * as a stream, of its bytes decoded.
 	 *
 	 * @return list<int>
 	 */
@@ -218,7 +220,9 @@ class ImageRenderTest
 	{
 		self::assertNotNull( $image );
 
-		$resource = $image->resource();
+		$resource = $image instanceof IStreamImage
+			? imagecreatefromstring( (string) $image->data() )
+			: $image->resource();
 		self::assertInstanceOf( \GdImage::class, $resource );
 		$color = imagecolorsforindex( $resource, (int) imagecolorat( $resource, 1, 1 ) );
 

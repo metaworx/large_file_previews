@@ -75,6 +75,8 @@ class ConfigLexicon
 
 	public const PREVIEW_BACKGROUND = 'preview_background';
 
+	public const PREVIEW_STREAM = 'preview_stream';
+
 	public const LAST_FAILURE = 'last_failure';
 
 	/**
@@ -236,6 +238,12 @@ class ConfigLexicon
 				'default'    => 'white',
 				'choices'    => [ 'white', 'black' ],
 				'definition' => 'What a transparent image is laid on in a JPEG preview, which keeps no transparency.',
+			],
+			// Nextcloud stores a stream image as it is; off, the render is
+			// decoded and Nextcloud encodes it again, as before.
+			self::PREVIEW_STREAM             => [
+				'default'    => true,
+				'definition' => 'Whether the largest preview is stored as rendered, handed to Nextcloud as a stream at the app\'s quality, rather than decoded and encoded again at Nextcloud\'s; a render larger than Nextcloud\'s preview box is decoded either way, to be scaled.',
 			],
 		];
 

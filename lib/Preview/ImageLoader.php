@@ -11,9 +11,11 @@ namespace OCA\LargeFilePreviews\Preview;
 
 use OCP\IImage;
 use OCP\Image;
+use OCP\IStreamImage;
 
 /**
- * Loads a rendered preview, a PNG, a JPEG or a WebP, as Nextcloud's image.
+ * Loads a rendered preview, a PNG, a JPEG or a WebP, as Nextcloud's image,
+ * or opens it as a stream image Nextcloud stores as it is.
  *
  * Its own class so that the provider can be tested without a server:
  * OCP\Image extends a server class.
@@ -22,6 +24,15 @@ class ImageLoader
 {
 
 //  other non-static methods
+
+	/**
+	 * The file as a stream image, which Nextcloud stores as it is, or null
+	 * where it is not an image of a type a renderer writes.
+	 */
+	public function stream( string $path ): ?IStreamImage
+	{
+		return RenderedPreview::open( $path );
+	}
 
 	/**
 	 * The image, or null where the file is not one.

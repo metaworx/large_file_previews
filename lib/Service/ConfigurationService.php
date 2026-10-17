@@ -177,6 +177,15 @@ class ConfigurationService
 	}
 
 	/**
+	 * Whether the largest preview is handed to Nextcloud as a stream, which
+	 * it stores as rendered (`preview_stream`).
+	 */
+	public function previewStream(): bool
+	{
+		return $this->getBool( ConfigLexicon::PREVIEW_STREAM );
+	}
+
+	/**
 	 * Nextcloud's own preview settings, as Nextcloud reads them: the type
 	 * Imaginary writes (system `preview_format`), and the quality every
 	 * JPEG and WebP preview is re-encoded at (`preview` `jpeg_quality`,
