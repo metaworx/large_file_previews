@@ -1,4 +1,4 @@
-# AP ConfigTransfer v1.0: Configuration backup and restore
+# AP ConfigTransfer v1.1: Configuration backup and restore
 
 ## TL;DR
 
@@ -7,7 +7,7 @@ Restoring it validates everything first and writes all of it or nothing:
 `occ` restores system config as well, the page app config only,
 showing the `occ` commands for the rest.
 
-- export: JSON, the app id, the version that wrote it, a format number;
+- export: JSON, the app id, a format number, what wrote it and when (`exported`);
   stored settings, MIME rules, extensions - only what is stored -
   and the three system values
 - import: merge by default (what the file names), `--replace` to clear the rest;
@@ -44,10 +44,13 @@ Settled with the user on 2026-10-17:
   Exit codes: 0 done, **3 done with warnings**, **4 refused**;
   1 (a general error) and 2 (a wrong call) reserved, as Symfony has them.
 
-Open at the plan gate: a key the app knows whose value is invalid -
-out of range, of the wrong type, a rule whose minimum exceeds its maximum.
-This plan refuses it (4), since skipping it would restore something
-other than the file says, without a sign beyond a warning.
+At the plan gate of v1.0:
+
+- **An invalid value of a known key** - out of range, of the wrong type,
+  a rule whose minimum exceeds its maximum - is refused (4).
+- **The app version and the date** go under `exported`.
+- **A download** is named `large_file_previews-config.<host>.<date>.json`.
+- **The section** is "Backup and restore".
 
 ## Analysis
 
@@ -72,8 +75,7 @@ other than the file says, without a sign beyond a warning.
   {
     "app": "large_file_previews",
     "format": 1,
-    "version": "0.1.0",
-    "exported": "2026-10-17T02:18:00+00:00",
+    "exported":   { "version": "0.1.0", "date": "2026-10-17T02:18:00+00:00" },
     "settings":   { "timeout_seconds": 45 },
     "mimetypes":  { "image/tiff": { "enabled": true, "min_size_mb": 800 } },
     "extensions": { "tif": { "enabled": false } },
@@ -91,7 +93,8 @@ other than the file says, without a sign beyond a warning.
     a setting, a rule's field, a MIME type it does not handle, a system value,
     a part - and, from the page, every system value, with its command.
   - Used: everything else.
-  - `version` is reported, not checked: an older app's file is read by the same format.
+  - `exported` is reported, not checked:
+    an older app's file is read by the same format.
 - **Replace.** Every setting, MIME rule and extension the file does not name is unset;
   by `occ`, every system value it does not name as well.
   The page shows the `occ` commands that would unset those.
@@ -102,8 +105,8 @@ other than the file says, without a sign beyond a warning.
   answering the changes, the warnings, a refusal, the system commands,
   and with `apply` the new state. Admin only, CSRF checked, as the others.
 - **Download on the page** builds the file in the browser from the export's answer,
-  `large_file_previews-<host>-<date>.json`; the upload reads the file in the browser
-  and posts its text.
+  `large_file_previews-config.<host>.<date>.json`;
+  the upload reads the file in the browser and posts its text.
 
 ## Implementation Plan
 
@@ -169,3 +172,5 @@ One per block:
 ## Change History
 
 - v1.0: the plan, from the TL;DR and the user's answers on 2026-10-17.
+- v1.1: the user's answers at its gate: `exported` holds the version and the date;
+  an invalid value refused; the download's name; the section's title.
