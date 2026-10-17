@@ -283,17 +283,17 @@ msgstr "Nextcloud speichert eine Vorschau in dem Format, in dem sie geliefert wi
 msgid "Nextcloud value {name}: not one this app carries; left out."
 msgstr "Nextcloud-Wert {name}: keiner, den diese App mitführt; ausgelassen."
 
-msgid "Nextcloud's own"
-msgstr "Von Nextcloud"
-
 msgid "Nextcloud's own image providers take images of any size (preview_max_filesize_image)."
 msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder jeder Größe (preview_max_filesize_image)."
 
 msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
 msgstr "Die Bild-Vorschau-Anbieter von Nextcloud selbst nehmen Bilder bis {size} MiB (preview_max_filesize_image)."
 
-msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ."
-msgstr "Die Vorschau-Einstellungen von Nextcloud selbst, die für jede Vorschau gelten, nicht nur für die dieser App. Das Format wird hier angezeigt und in config.php gesetzt; die Qualität, für die Nextcloud keine Seite hat, wird hier oder mit occ gesetzt."
+msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's."
+msgstr "Die Vorschau-Einstellungen von Nextcloud selbst, die für jede Vorschau gelten, nicht nur für die dieser App."
+
+msgid "Nextcloud's own settings"
+msgstr "Einstellungen von Nextcloud selbst"
 
 msgid "Nextcloud's, for every preview it stores from now on, not only this app's; previews stored already keep theirs."
 msgstr "Von Nextcloud, für jede Vorschau, die es ab jetzt speichert, nicht nur für die dieser App; bereits gespeicherte Vorschauen behalten ihre."
@@ -337,8 +337,8 @@ msgstr "Teil {name}: keiner, den diese App liest; ausgelassen."
 msgid "Path"
 msgstr "Pfad"
 
-msgid "Preview format: {format}"
-msgstr "Vorschauformat: {format}"
+msgid "Preview format: {format} (jpeg or webp, in config.php)"
+msgstr "Vorschauformat: {format} (jpeg oder webp, in config.php)"
 
 msgid "Previews"
 msgstr "Vorschauen"
@@ -461,6 +461,9 @@ msgstr "Die Datei hat das Format %1$d; diese App liest Format %2$d und ältere."
 
 msgid "The file names no format."
 msgstr "Die Datei nennt kein Format."
+
+msgid "The format is set in config.php, and read by Imaginary only: webp makes WebP, anything else JPEG. The quality, which Nextcloud has no page for, is set here or with occ."
+msgstr "Das Format wird in config.php gesetzt und nur von Imaginary gelesen: webp ergibt WebP, alles andere JPEG. Die Qualität, für die Nextcloud keine Seite hat, wird hier oder mit occ gesetzt."
 
 #, php-format
 msgid "The last large preview that failed, at %1$s, was a file of type %2$s: %3$s."

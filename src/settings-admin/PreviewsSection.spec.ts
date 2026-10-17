@@ -68,6 +68,16 @@ describe('PreviewsSection', () => {
 		expect(own.find('[data-nextcloud="jpeg_quality"]').text()).toContain('occ config:app:set preview jpeg_quality --value=90 --type=integer')
 	})
 
+	it('says in amber that Nextcloud\'s own settings apply to every preview, and names the format\'s values', () => {
+		const wrapper = section()
+
+		expect(wrapper.findAll('h4').map((heading) => heading.text())).toContain('Nextcloud\'s own settings')
+		const note = wrapper.findComponent({ name: 'NcNoteCard' })
+		expect(note.props('type')).toBe('warning')
+		expect(note.text()).toBe('Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s.')
+		expect(wrapper.find('[data-nextcloud="preview_format"]').text()).toContain('Preview format: jpeg (jpeg or webp, in config.php)')
+	})
+
 	it('sets Nextcloud\'s quality, and clears it to its default', async () => {
 		const wrapper = section()
 		const [jpeg, webp] = wrapper.find('[data-setting="nextcloud"]').findAllComponents({ name: 'NumberField' })

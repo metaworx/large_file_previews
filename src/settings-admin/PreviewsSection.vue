@@ -12,6 +12,7 @@
  * stores is re-encoded at, set here, emptied back to its default.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import HelpPopover from './HelpPopover.vue'
 import NumberField from './NumberField.vue'
 import OccCommand from './OccCommand.vue'
@@ -103,13 +104,16 @@ function label(choice: string): string {
 		</div>
 
 		<h4 class="lfp-named">
-			{{ t('large_file_previews', 'Nextcloud\'s own') }}
-			<HelpPopover :text="t('large_file_previews', 'Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ.')"
-				:label="t('large_file_previews', 'Nextcloud\'s own')" />
+			{{ t('large_file_previews', 'Nextcloud\'s own settings') }}
+			<HelpPopover :text="t('large_file_previews', 'The format is set in config.php, and read by Imaginary only: webp makes WebP, anything else JPEG. The quality, which Nextcloud has no page for, is set here or with occ.')"
+				:label="t('large_file_previews', 'Nextcloud\'s own settings')" />
 		</h4>
+		<NcNoteCard type="warning" class="lfp-nextcloud-own">
+			{{ t('large_file_previews', 'Nextcloud\'s own preview settings, which apply to every preview, not only this app\'s.') }}
+		</NcNoteCard>
 		<div class="lfp-fields" data-setting="nextcloud">
 			<div data-nextcloud="preview_format">
-				{{ t('large_file_previews', 'Preview format: {format}', { format: state.nextcloud.preview_format }) }}
+				{{ t('large_file_previews', 'Preview format: {format} (jpeg or webp, in config.php)', { format: state.nextcloud.preview_format }) }}
 				<OccCommand :command="systemCommand('preview_format', state.nextcloud.preview_format)" />
 			</div>
 			<div v-for="quality in QUALITIES" :key="quality.key" :data-nextcloud="quality.key">

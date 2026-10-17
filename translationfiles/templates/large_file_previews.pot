@@ -283,16 +283,16 @@ msgstr ""
 msgid "Nextcloud value {name}: not one this app carries; left out."
 msgstr ""
 
-msgid "Nextcloud's own"
-msgstr ""
-
 msgid "Nextcloud's own image providers take images of any size (preview_max_filesize_image)."
 msgstr ""
 
 msgid "Nextcloud's own image providers take images up to {size} MiB (preview_max_filesize_image)."
 msgstr ""
 
-msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's. The format is shown here and set in config.php; the quality, which Nextcloud has no page for, is set here or with occ."
+msgid "Nextcloud's own preview settings, which apply to every preview, not only this app's."
+msgstr ""
+
+msgid "Nextcloud's own settings"
 msgstr ""
 
 msgid "Nextcloud's, for every preview it stores from now on, not only this app's; previews stored already keep theirs."
@@ -337,7 +337,7 @@ msgstr ""
 msgid "Path"
 msgstr ""
 
-msgid "Preview format: {format}"
+msgid "Preview format: {format} (jpeg or webp, in config.php)"
 msgstr ""
 
 msgid "Previews"
@@ -460,6 +460,9 @@ msgid "The file is of format %1$d; this app reads format %2$d and older."
 msgstr ""
 
 msgid "The file names no format."
+msgstr ""
+
+msgid "The format is set in config.php, and read by Imaginary only: webp makes WebP, anything else JPEG. The quality, which Nextcloud has no page for, is set here or with occ."
 msgstr ""
 
 #, php-format
