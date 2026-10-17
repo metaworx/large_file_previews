@@ -17,6 +17,7 @@ use OCA\LargeFilePreviews\Config\TransferChange;
 use OCA\LargeFilePreviews\Config\TransferWarning;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigTransfer;
+use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\App\IAppManager;
@@ -51,7 +52,11 @@ class ConfigTransferTest
 			[
 				'app'        => 'large_file_previews',
 				'format'     => 1,
-				'exported'   => [ 'version' => '0.1.0', 'date' => '2026-10-17T02:18:00+00:00' ],
+				'exported'   => [
+					'version'  => '0.1.0',
+					'date'     => '2026-10-17T02:18:00+00:00',
+					'programs' => [ 'pdftoppm' => [ 'path' => '/usr/bin/pdftoppm', 'version' => 'pdftoppm version 24.02.0', 'source' => 'finder' ] ],
+				],
 				'settings'   => [ 'timeout_seconds' => 45 ],
 				'mimetypes'  => [ 'image/tiff' => [ 'enabled' => true, 'min_size_mb' => 800 ] ],
 				'extensions' => [ 'tif' => [ 'enabled' => false ] ],
@@ -147,7 +152,12 @@ class ConfigTransferTest
 		$this->appValues    = [ ConfigLexicon::CHOOM_ADJUST => 10 ];
 		$this->systemValues = [];
 		$transfer           = $this->transfer();
-		$transfer->apply( $transfer->read( $file ), replace: true, system: true );
+		$read               = $transfer->read( $file );
+
+		// What wrote the file, its programs among it, is reported, never a warning.
+		self::assertSame( [], $read->warnings );
+
+		$transfer->apply( $read, replace: true, system: true );
 
 		self::assertEquals( $stored, [ $this->appValues, $this->systemValues ] );
 	}
@@ -310,6 +320,10 @@ class ConfigTransferTest
 		$apps->method( 'getAppVersion' )->willReturn( '0.1.0' );
 		$time = $this->createMock( ITimeFactory::class );
 		$time->method( 'getDateTime' )->willReturn( new DateTime( '2026-10-17T02:18:00', new DateTimeZone( 'UTC' ) ) );
+		$prerequisites = $this->createMock( PrerequisitesService::class );
+		$prerequisites->method( 'programList' )
+		              ->willReturn( [ [ 'name' => 'pdftoppm', 'path' => '/usr/bin/pdftoppm', 'source' => 'finder', 'problem' => null, 'version' => 'pdftoppm version 24.02.0', 'install' => null ] ] )
+		;
 
 		return new ConfigTransfer(
 			$this->settings(),
@@ -318,6 +332,7 @@ class ConfigTransferTest
 			$apps,
 			$time,
 			$this->englishL10n(),
+			$prerequisites,
 		);
 	}
 

@@ -15,6 +15,7 @@ use OCA\LargeFilePreviews\Command\ConfigExport;
 use OCA\LargeFilePreviews\Command\ConfigImport;
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Service\ConfigTransfer;
+use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\App\IAppManager;
@@ -220,6 +221,7 @@ class ConfigTransferCommandsTest
 			$apps,
 			$time,
 			$this->englishL10n(),
+			$this->createMock( PrerequisitesService::class ),
 		);
 	}
 }

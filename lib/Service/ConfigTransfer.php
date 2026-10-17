@@ -72,6 +72,7 @@ final class ConfigTransfer
 		private readonly IAppManager          $apps,
 		private readonly ITimeFactory         $time,
 		private readonly IL10N                $l10n,
+		private readonly PrerequisitesService $prerequisites,
 	)
 	{
 	}
@@ -117,8 +118,9 @@ final class ConfigTransfer
 			'app'        => Application::APP_ID,
 			'format'     => self::FORMAT,
 			'exported'   => [
-				'version' => $this->apps->getAppVersion( Application::APP_ID ),
-				'date'    => $this->time->getDateTime( 'now', new DateTimeZone( 'UTC' ) )->format( DateTimeInterface::ATOM ),
+				'version'  => $this->apps->getAppVersion( Application::APP_ID ),
+				'date'     => $this->time->getDateTime( 'now', new DateTimeZone( 'UTC' ) )->format( DateTimeInterface::ATOM ),
+				'programs' => self::object( $this->programs() ),
 			],
 			'settings'   => self::object( $settings ),
 			'mimetypes'  => self::object( self::rules( $this->config->storedMimeRules() ) ),
@@ -713,6 +715,30 @@ final class ConfigTransfer
 		}
 
 		return $read;
+	}
+
+	/**
+	 * The programs the app runs, as the server that wrote the file had them,
+	 * for whoever reads the file to diagnose: where each is, its version, and
+	 * how it was found (`finder`, `override`). Under `exported`, which an
+	 * import reports and never applies.
+	 *
+	 * @return array<string, array{path: ?string, version: ?string, source: string}>
+	 */
+	private function programs(): array
+	{
+		$programs = [];
+
+		foreach ( $this->prerequisites->programList() as $program )
+		{
+			$programs[ $program['name'] ] = [
+				'path'    => $program['path'],
+				'version' => $program['version'],
+				'source'  => $program['source'],
+			];
+		}
+
+		return $programs;
 	}
 
 	/**

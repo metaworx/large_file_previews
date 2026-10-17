@@ -467,7 +467,7 @@ class SettingsControllerTest
 			$apps,
 			$this->markingL10n(),
 			new ProviderChain( $previews, $this->createMock( LoggerInterface::class ) ),
-			new ConfigTransfer( $config, $binaries, $scratch, $apps, $time, $this->markingL10n() ),
+			new ConfigTransfer( $config, $binaries, $scratch, $apps, $time, $this->markingL10n(), $prerequisites ),
 		)
 		    extends
 		    SettingsController

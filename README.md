@@ -322,6 +322,9 @@ and Nextcloud's own preview quality where it is stored,
 under `nextcloud > appconfig > preview`.
 What follows its default is left out,
 so that a restore follows the defaults of the version it runs on.
+Under `exported` the file says what wrote it - the app's version, the date,
+and each program's path, version and how it was found - for diagnosis;
+an import reports the version and the date, and applies none of it.
 The import reads standard input where no file is given:
 
 ```bash
