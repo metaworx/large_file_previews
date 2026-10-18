@@ -113,8 +113,9 @@ jobs:
           fail_on_unmatched_files: true
 
   # The release installed from a fake store that lists it - the real
-  # listing with this release added - by occ, and a preview rendered by
-  # the installed copy, before the real store hears of it.
+  # listing with this release added - by occ and through the Apps page,
+  # and the app's own checks run against the installed copy, before the
+  # real store hears of it.
   precheck:
     name: Install before publishing
     needs: [ build, sign ]

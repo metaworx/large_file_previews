@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.7.0)
+# CI Conventions — Large File Previews (v1.8.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -27,6 +27,16 @@ and for the constraints that a future edit would otherwise break silently.
 | Platform | Files |
 |----------|-------|
 | GitHub Actions | `.github/workflows/test.yml`, which calls `publish.yml` on a tag, which calls `install-check.yml`; the composite actions under `.github/actions/` |
+
+The composite actions, `publish.yml`, `install-check.yml`, `package.sh`,
+the translation scripts and the fake store are **vendored copies** of the
+guidelines' `platform/nextcloud/` files, taken by `sync-vendor.sh` as
+`GUIDELINES/config.ini` names them under `[vendor]` and recorded in
+`GUIDELINES/vendor.sources`; `tools/check` fails on a copy edited here.
+An edit goes to the guidelines and comes back with the next pin.
+What is this app's own is `.github/app.env`, which `install-check.yml` reads,
+and `tests/e2e/store/checks.sh`, which `check-install.sh` sources;
+`test.yml` is the app's, and calls the vendored actions.
 
 GitHub Actions is the only pipeline.
 GitLab (`origin`) is the code host and the issue tracker,
@@ -133,8 +143,10 @@ A version tag whose lint, PHPUnit and Cypress jobs pass runs `publish.yml`:
    and through the Apps page (`tests/e2e/store/install-from-apps-page.cy.js`),
    from a fake store that lists it (`tests/e2e/store/appstore.py fake`);
    `tests/e2e/store/check-install.sh` checks the install
-   and renders a PDF's preview through it,
-   and the settings page's browser tests run against the installed copy.
+   and runs this app's checks from `tests/e2e/store/checks.sh`,
+   a PDF's preview rendered through it among them,
+   and the browser tests `.github/app.env` names run against the installed copy,
+   on a runner with the packages it lists.
    Before the first release the fake store lists the app
    from its manifest and certificate.
    A nightly installed through the Apps page puts the server on the `daily` channel,

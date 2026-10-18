@@ -1,10 +1,10 @@
 <!-- GENERATED FILE - DO NOT EDIT.
      Source: shared/_AGENTS.md + project/_CONTRACT.md
      Regenerate: GUIDELINES/shared/tools/sync-docs.sh
-     Contract version: v3.25.0 -->
+     Contract version: v3.26.0 -->
 
 
-# AI Agent Guidelines (v3.25.0)
+# AI Agent Guidelines (v3.26.0)
 
 Core behavioral rules for AI agents working on this codebase.  
 All agents MUST comply.
@@ -14,7 +14,7 @@ refer to linked documents for extended guidance.
 ## Contents
 
 <!-- BEGIN GENERATED CONTENTS - do not edit; run "GUIDELINES/shared/tools/sync-docs.sh" -->
-- AI Agent Guidelines (v3.25.0)
+- AI Agent Guidelines (v3.26.0)
   1. Critical Behavioral Rules (STRICT)
     - 1.1 Gate Message Mechanism
     - 1.2 Action Plan (AP) Requirement
@@ -67,8 +67,11 @@ refer to linked documents for extended guidance.
   A runtime that can end a turn only through a tool call, as Roo's can,
   carries a short label there and nothing more:
   the gate is the text, and the tool is not where the choice is explained.
-- A gate message is **brief**: what the user needs in order to decide.
+- A gate message is **brief**: what the user needs in order to decide,
+  in plain short language.
   How the work went is not retold; `GUIDELINES/shared/GATE_WORKFLOW.md` §4.
+- Its open decisions and notes are **numbered**,
+  each decision with a recommended option, so that a short answer can name them.
 - A gate message is the **only** valid way to request user confirmation.
   Echoing "waiting for input" via shell commands is a **violation** of this rule.
 - A visual workflow diagram is available in `GUIDELINES/shared/GATE_WORKFLOW.md`.
