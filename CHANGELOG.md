@@ -11,6 +11,8 @@ the first stable release.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-18
+
 ### Added
 
 - `occ lfp:config:export` and `import` (from stdin too), the page's
