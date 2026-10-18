@@ -12,6 +12,10 @@ the harness instance of this app while developing, a fresh server in CI.
 Cypress runs them in alphabetical order.
 Each sets up what it needs and clears what it set, before and after,
 so any one of them runs alone.
+Around each spec, `support/e2e.js` saves the app's configuration
+with `occ lfp:config:export`, starts the spec from the settings as they ship,
+and puts the saved configuration back with `lfp:config:import --replace`,
+so a spec leaves an instance someone uses as it found it.
 
 | Spec | What it checks |
 |------|----------------|

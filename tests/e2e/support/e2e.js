@@ -109,13 +109,53 @@ const sweepCypressTokens = ( users ) => {
 	}
 }
 
+// The app's configuration as the server held it before the spec, put back
+// after it: specs set and clear rules of their own, on an instance a person
+// may use too. Saved by the app's own export; the spec then starts from the
+// settings as they ship, and the import, --replace, restores what was saved
+// and returns what the spec set to its default. Only the app's own parts:
+// Nextcloud's settings and config.php are left as they are. A spec's own
+// after() hooks run first, so an app it disabled is enabled again.
+const SAVED_CONFIG = 'cypress/saved-config.json'
+const SHIPPED_CONFIG = 'cypress/shipped-config.json'
+let configSaved = false
+
+const importConfig = ( file, what ) => {
+	cy.occ( `lfp:config:import --replace - < ${ file }`, { failOnNonZeroExit: false, log: false } ).then( ( { exitCode, stderr } ) => {
+		// 3: imported, with warnings; 4: refused, and nothing written.
+		expect( exitCode, `${ what }: ${ stderr }` ).to.be.oneOf( [ 0, 3 ] )
+	} )
+}
+
+const saveConfig = () => {
+	configSaved = false
+	cy.occ( 'lfp:config:export', { failOnNonZeroExit: false, log: false } ).then( ( { exitCode, stdout } ) => {
+		// Disabled, the app has no command, and nothing to put back.
+		if ( exitCode !== 0 ) {
+			return
+		}
+		cy.writeFile( SAVED_CONFIG, stdout, { log: false } )
+		configSaved = true
+		cy.writeFile( SHIPPED_CONFIG, { app: 'large_file_previews', format: 1 }, { log: false } )
+		importConfig( SHIPPED_CONFIG, 'starting from the shipped configuration' )
+	} )
+}
+
+const restoreConfig = () => {
+	if ( configSaved ) {
+		importConfig( SAVED_CONFIG, 'restoring the configuration' )
+	}
+}
+
 before( () => {
 	cy.admin().then( ( { user } ) => sweepCypressTokens( [ user ] ) )
+	saveConfig()
 } )
 
 after( () => {
 	sweepCypressTokens( loggedInAs )
 	loggedInAs.clear()
+	restoreConfig()
 } )
 
 // ---------------------------------------------------------------------------
