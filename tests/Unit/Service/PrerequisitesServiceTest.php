@@ -20,6 +20,7 @@ use OCA\LargeFilePreviews\Service\Prerequisite;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
+use OCA\LargeFilePreviews\Service\Sandbox;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\ICache;
 use OCP\ICacheFactory;
@@ -41,7 +42,7 @@ class PrerequisitesServiceTest
 		$items   = $service->check();
 
 		self::assertSame(
-			[ 'proc_open', 'proc_get_status', 'proc_close', '/dev/fd', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'pdfinfo', 'pdfimages', 'vipsthumbnail', 'vipsheader', 'vips', 'tiffcp', 'timeout', 'prlimit', 'choom' ],
+			[ 'proc_open', 'proc_get_status', 'proc_close', '/dev/fd', 'temporary directory', 'gd', 'sysvsem', 'pdftoppm', 'pdfinfo', 'pdfimages', 'vipsthumbnail', 'vipsheader', 'vips', 'tiffcp', 'timeout', 'prlimit', 'choom', 'bwrap' ],
 			array_map(
 				static fn(
 					Prerequisite $item,
@@ -93,6 +94,43 @@ class PrerequisitesServiceTest
 		self::assertSame( Prerequisite::OPTIONAL, self::item( $items, 'choom' )->status );
 		self::assertStringEndsWith( 'switched off', self::item( $items, 'choom' )->neededFor );
 		self::assertFalse( self::item( $items, 'choom' )->isBlocking() );
+	}
+
+	/**
+	 * bwrap found is not enough: it must start a sandbox here. Switched off,
+	 * the page still says whether it could; the setup check, which asks no
+	 * versions, does not start one.
+	 */
+	public function testABwrapThatCannotStartASandboxIsOptionalWhileOff(): void
+	{
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'setting up uid map: Permission denied';
+		$programs                                                   = [ 'pdftoppm', 'timeout', 'prlimit', 'choom', 'bwrap' ];
+
+		$asked = self::item( $this->service( $programs, $this->bareRunner() )->check( true ), 'bwrap' );
+		self::assertSame( Prerequisite::OPTIONAL, $asked->status );
+		self::assertStringContainsString( 'cannot start a sandbox here: setting up uid map: Permission denied', $asked->detail );
+		self::assertStringEndsWith( 'switched off', $asked->neededFor );
+
+		self::assertSame( Prerequisite::OK, self::item( $this->service( $programs )->check(), 'bwrap' )->status );
+	}
+
+	/**
+	 * Switched on, a bwrap that cannot start a sandbox blocks, since every
+	 * render would fail; one that can is ready.
+	 */
+	public function testWhileOnTheSandboxMustStart(): void
+	{
+		$this->appValues[ ConfigLexicon::BWRAP_ENABLED ]            = true;
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'No permissions to create new namespace';
+		$programs                                                   = [ 'pdftoppm', 'timeout', 'prlimit', 'choom', 'bwrap' ];
+
+		$refused = self::item( $this->service( $programs )->check(), 'bwrap' );
+		self::assertSame( Prerequisite::MISSING, $refused->status );
+		self::assertTrue( $refused->isBlocking() );
+
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
+		self::assertSame( Prerequisite::OK, self::item( $this->service( $programs )->check(), 'bwrap' )->status );
+		self::assertSame( Prerequisite::MISSING, self::item( $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ] )->check(), 'bwrap' )->status );
 	}
 
 	/**
@@ -308,17 +346,33 @@ class PrerequisitesServiceTest
 		            ->willReturn( $temp === '' ? sys_get_temp_dir() : $temp )
 		;
 
+		$binaries = $this->binaryLocator(
+			static fn(
+				string $program,
+			): string|false => in_array( $program, $found, true ) ? '/usr/bin/' . $program : false,
+		);
+
 		return new PrerequisitesService(
 			$this->settings(),
-			$this->binaryLocator(
-				static fn(
-					string $program,
-				): string|false => in_array( $program, $found, true ) ? '/usr/bin/' . $program : false,
-			),
+			$binaries,
 			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $versions ),
 			$tempManager,
 			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),
+			new Sandbox( $binaries, $this->detectionCache() ),
 		);
+	}
+
+	/**
+	 * A runner every program answers `v1` to.
+	 */
+	private function bareRunner(): CommandRunner
+	{
+		$runner = $this->createMock( CommandRunner::class );
+		$runner->method( 'runBare' )
+		       ->willReturn( new RenderOutcome( Outcome::SUCCEEDED, 'exit status 0', 0, null, 'v1' ) )
+		;
+
+		return $runner;
 	}
 
 

@@ -69,6 +69,7 @@ class BinaryLocator
 			'timeout'       => [ 'version' => '--version', 'limit' => 'timeout', 'for' => 'the timeout of each render', 'source' => 'core' ],
 			'prlimit'       => [ 'version' => '--version', 'limit' => 'prlimit', 'for' => 'the address-space and file-size caps of each render', 'source' => 'util' ],
 			'choom'         => [ 'version' => '--version', 'limit' => 'choom', 'for' => 'the OOM score of each render', 'source' => 'util' ],
+			'bwrap'         => [ 'version' => '--version', 'limit' => 'bwrap', 'for' => 'the sandbox of each render', 'source' => 'bwrap' ],
 		];
 
 	/** @var array<string, BinaryLocation> */

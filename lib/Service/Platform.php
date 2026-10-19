@@ -58,6 +58,7 @@ class Platform
 				'tiff'     => 'libtiff-tools',
 				'core'     => 'coreutils',
 				'util'     => 'util-linux',
+				'bwrap'    => 'bubblewrap',
 			],
 			self::FEDORA => [
 				'poppler'  => 'poppler-utils',
@@ -65,6 +66,7 @@ class Platform
 				'tiff'     => 'libtiff-tools',
 				'core'     => 'coreutils',
 				'util'     => 'util-linux',
+				'bwrap'    => 'bubblewrap',
 			],
 			self::RHEL   => [
 				'poppler'  => 'poppler-utils',
@@ -72,6 +74,7 @@ class Platform
 				'tiff'     => 'libtiff-tools',
 				'core'     => 'coreutils',
 				'util'     => 'util-linux',
+				'bwrap'    => 'bubblewrap',
 			],
 			self::ALPINE => [
 				'poppler'  => 'poppler-utils',
@@ -79,6 +82,7 @@ class Platform
 				'tiff'     => 'tiff-tools',
 				'core'     => 'coreutils',
 				'util'     => 'util-linux-misc',
+				'bwrap'    => 'bubblewrap',
 			],
 			self::ARCH   => [
 				'poppler'  => 'poppler',
@@ -86,6 +90,7 @@ class Platform
 				'tiff'     => 'libtiff',
 				'core'     => 'coreutils',
 				'util'     => 'util-linux',
+				'bwrap'    => 'bubblewrap',
 			],
 		];
 

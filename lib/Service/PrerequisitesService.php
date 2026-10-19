@@ -34,6 +34,7 @@ class PrerequisitesService
 		private readonly ProgramVersions      $versions,
 		private readonly ITempManager         $tempManager,
 		private readonly Platform             $platform,
+		private readonly Sandbox              $sandbox,
 	)
 	{
 	}
@@ -190,6 +191,7 @@ class PrerequisitesService
 			'timeout' => $limits->timeoutEnabled,
 			'prlimit' => $limits->prlimitEnabled,
 			'choom'   => $limits->choomEnabled,
+			'bwrap'   => $limits->bwrapEnabled,
 			'images'  => $this->config->imagesEnabled(),
 		];
 		$items   = [];
@@ -234,12 +236,23 @@ class PrerequisitesService
 				}
 			}
 
+			// Found is not enough: whether it can start a sandbox here, where
+			// it is needed or the versions are asked for. Missing while on.
+			$problem = $program === Sandbox::PROGRAM && ( $needed || $versions )
+				? $this->sandbox->problem()
+				: null;
+
 			$items[] = new Prerequisite(
 				Prerequisite::GROUP_PROGRAM,
 				$program,
-				Prerequisite::OK,
+				match ( true )
+				{
+					$problem === null => Prerequisite::OK,
+					$needed           => Prerequisite::MISSING,
+					default           => Prerequisite::OPTIONAL,
+				},
 				$for,
-				$detail,
+				$problem === null ? $detail : $detail . '; cannot start a sandbox here: ' . $problem,
 			);
 		}
 

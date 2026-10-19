@@ -15,7 +15,7 @@ the first stable release.
 
 - Each render in a bubblewrap sandbox (`bwrap_enabled`, off): no network,
   and of the files only the system's programs and the render's own
-  folder.
+  folder; the status says whether it can start here.
 
 ### Changed
 
