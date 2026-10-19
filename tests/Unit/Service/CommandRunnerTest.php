@@ -16,6 +16,7 @@ use OCA\LargeFilePreviews\Service\Deadline;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
+use OCA\LargeFilePreviews\Service\Sandbox;
 use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
@@ -95,6 +96,49 @@ class CommandRunnerTest
 			[ '/c', '-n', '1000', '--', '/usr/bin/pdftoppm', '-f', '1', 'in put.pdf' ],
 			$this->runner( [ 'choom' => '/c', 'pdftoppm' => '/usr/bin/pdftoppm' ] )->command( 'pdftoppm', [ '-f', '1', 'in put.pdf' ] ),
 		);
+	}
+
+	/**
+	 * The sandbox is innermost: the caps, the OOM score and the timeout
+	 * hold for bwrap and what it starts. It binds the run's own folder.
+	 */
+	public function testTheSandboxIsInnermost(): void
+	{
+		$this->appValues                                            = self::only( ConfigLexicon::CHOOM_ENABLED ) + [ ConfigLexicon::BWRAP_ENABLED => true ];
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
+
+		self::assertSame(
+			[
+				'/c', '-n', '1000', '--',
+				'/usr/bin/bwrap', ...Sandbox::arguments( Sandbox::layout(), '/usr/bin/pdftoppm', '/render', is_dir( Sandbox::FONT_CACHE ) ), '--',
+				'/usr/bin/pdftoppm', '-f', '1',
+			],
+			$this->runner( [ 'choom' => '/c', 'bwrap' => '/usr/bin/bwrap', 'pdftoppm' => '/usr/bin/pdftoppm' ] )
+			     ->command( 'pdftoppm', [ '-f', '1' ], new RunOptions( writable: '/render' ) ),
+		);
+	}
+
+	/**
+	 * Switched on, a bwrap that is missing, or cannot start a sandbox here,
+	 * stops the run before it starts, as a missing limit does.
+	 */
+	public function testASandboxSwitchedOnButUnusableFailsClosed(): void
+	{
+		$this->appValues = self::only( '' ) + [ ConfigLexicon::BWRAP_ENABLED => true ];
+
+		$missing = $this->runner( [ 'pdftoppm' => '/usr/bin/pdftoppm' ] )->command( 'pdftoppm', [] );
+
+		self::assertInstanceOf( RenderOutcome::class, $missing );
+		self::assertSame( Outcome::LIMIT_MISSING, $missing->outcome );
+		self::assertStringContainsString( 'bwrap is switched on but not found', $missing->reason );
+
+		// The first runner's finder left bwrap known as missing.
+		$this->cacheValues                                           = [ Sandbox::probeKey( '/usr/bin/bwrap' ) => 'setting up uid map: Permission denied' ];
+		$refused                                                     = $this->runner( [ 'bwrap' => '/usr/bin/bwrap', 'pdftoppm' => '/usr/bin/pdftoppm' ] )->command( 'pdftoppm', [] );
+
+		self::assertInstanceOf( RenderOutcome::class, $refused );
+		self::assertSame( Outcome::LIMIT_MISSING, $refused->outcome );
+		self::assertStringContainsString( 'cannot start a sandbox here: setting up uid map: Permission denied', $refused->reason );
 	}
 
 	/**
@@ -391,15 +435,18 @@ class CommandRunnerTest
 		            )
 		;
 
+		$binaries = $this->binaryLocator(
+			static fn(
+				string $program,
+			): string|false => $programs[ $program ]
+				?? ( is_file( $stubs . '/' . $program ) ? $stubs . '/' . $program : false ),
+		);
+
 		return new CommandRunner(
 			$this->settings(),
-			$this->binaryLocator(
-				static fn(
-					string $program,
-				): string|false => $programs[ $program ]
-					?? ( is_file( $stubs . '/' . $program ) ? $stubs . '/' . $program : false ),
-			),
+			$binaries,
 			$tempManager,
+			new Sandbox( $binaries, $this->detectionCache() ),
 		);
 	}
 

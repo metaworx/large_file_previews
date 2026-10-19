@@ -159,7 +159,7 @@ class PopplerRenderer
 					RunOptions::path( RunOptions::INPUT ),
 					$stem,
 				],
-				new RunOptions( descriptors: [ RunOptions::INPUT => $input ], deadline: $deadline ),
+				new RunOptions( descriptors: [ RunOptions::INPUT => $input ], deadline: $deadline, writable: dirname( $stem ) ),
 			);
 		}
 		finally

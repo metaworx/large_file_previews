@@ -230,6 +230,7 @@ class VipsRenderer
 				environment: $this->environment( dirname( $output ) ),
 				prlimitAsMb: (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
 				deadline: $this->deadline(),
+				writable: dirname( $output ),
 			);
 
 			// Not enlarged: a header that cannot be read leaves the box, and the
@@ -388,6 +389,7 @@ class VipsRenderer
 						descriptors: [ RunOptions::INPUT => $input, RunOptions::COPY => $copy ],
 						fsizeBytes: $bytes + self::COPY_MARGIN_BYTES,
 						deadline: $run->deadline,
+						writable: $run->writable,
 					),
 				),
 				null,
@@ -460,6 +462,7 @@ class VipsRenderer
 				environment: $this->environment( dirname( $output ) ),
 				prlimitAsMb: (int) $this->config->getScalar( ConfigLexicon::VIPS_PRLIMIT_AS_MB ),
 				deadline: $deadline ?? $this->deadline(),
+				writable: dirname( $output ),
 			),
 		);
 
@@ -565,6 +568,6 @@ class VipsRenderer
 		bool       $keepStdout = false,
 	): RunOptions
 	{
-		return new RunOptions( $keepStdout, $run->environment, $run->prlimitAsMb, $descriptors, $run->fsizeBytes, $run->deadline );
+		return new RunOptions( $keepStdout, $run->environment, $run->prlimitAsMb, $descriptors, $run->fsizeBytes, $run->deadline, $run->writable );
 	}
 }

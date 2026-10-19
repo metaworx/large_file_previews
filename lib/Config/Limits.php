@@ -28,6 +28,8 @@ final readonly class Limits
 		// The largest file a run may write, in bytes: its output, stderr and
 		// any spill; switched with the address-space cap (prlimit_enabled).
 		public int  $prlimitFsizeBytes = 1_073_741_824,
+		// Each run in a bubblewrap sandbox (Sandbox).
+		public bool $bwrapEnabled = false,
 	)
 	{
 	}
@@ -55,12 +57,14 @@ final readonly class Limits
 			$this->choomEnabled,
 			$this->choomAdjust,
 			$prlimitFsizeBytes ?? $this->prlimitFsizeBytes,
+			$this->bwrapEnabled,
 		);
 	}
 
 	/**
 	 * The timeout alone: for asking a program its version or its loaders,
-	 * which need no cap, but must not hang a request.
+	 * which need no cap and read no user's file, but must not hang a
+	 * request.
 	 */
 	public function timeoutOnly(): self
 	{

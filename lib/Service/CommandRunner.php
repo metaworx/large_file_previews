@@ -15,7 +15,7 @@ use OCP\ITempManager;
 /**
  * Runs a program under the limits the configuration switches on:
  *
- *     timeout --kill-after=<K>s <T>s  prlimit --as=<BYTES> --fsize=<BYTES> --  choom -n <ADJ> --  <program> …
+ *     timeout --kill-after=<K>s <T>s  prlimit --as=<BYTES> --fsize=<BYTES> --  choom -n <ADJ> --  bwrap … --  <program> …
  *
  * `timeout` is outermost, so it can stop the whole chain, and follows SIGTERM
  * with SIGKILL after its grace period; a render's runs share its time
@@ -24,7 +24,9 @@ use OCP\ITempManager;
  * inside the program, and the kernel's OOM killer is not involved; a write
  * past the file-size cap ends it with SIGXFSZ. `choom` raises the OOM score,
  * so that if memory runs short anyway the program dies before a web server
- * worker; an unprivileged process may raise it only.
+ * worker; an unprivileged process may raise it only. `bwrap`, innermost,
+ * starts the program in a sandbox that sees the system's programs and the
+ * render's own folder, and no network (Sandbox).
  *
  * The program is started with proc_open() and an argument array: no shell
  * takes part, so nothing in a path needs quoting. A user's file is handed on
@@ -62,6 +64,7 @@ class CommandRunner
 		private readonly ConfigurationService $config,
 		private readonly BinaryLocator        $binaries,
 		private readonly ITempManager         $tempManager,
+		private readonly Sandbox              $sandbox,
 	)
 	{
 	}
@@ -140,6 +143,18 @@ class CommandRunner
 		if ( $prefix instanceof RenderOutcome )
 		{
 			return $prefix;
+		}
+
+		if ( $limits->bwrapEnabled )
+		{
+			$sandbox = $this->sandbox->wrap( (string) $location->path, $options->writable );
+
+			if ( $sandbox instanceof RenderOutcome )
+			{
+				return $sandbox;
+			}
+
+			$prefix = [ ...$prefix, ...$sandbox ];
 		}
 
 		return [ ...$prefix, (string) $location->path, ...$arguments ];

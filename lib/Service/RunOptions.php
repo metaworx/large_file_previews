@@ -54,6 +54,11 @@ final readonly class RunOptions
 	 * @param Deadline|null         $deadline    the render's: the run's timeout
 	 *                                           is the time left, and it is not
 	 *                                           started once none is
+	 * @param string|null           $writable    the render's own folder, the one
+	 *                                           the program writes to; in a
+	 *                                           sandbox, the only one it can
+	 *                                           (Sandbox). None for a run that
+	 *                                           writes nothing
 	 */
 	public function __construct(
 		public bool      $keepStdout = false,
@@ -62,6 +67,7 @@ final readonly class RunOptions
 		public array     $descriptors = [],
 		public ?int      $fsizeBytes = null,
 		public ?Deadline $deadline = null,
+		public ?string   $writable = null,
 	)
 	{
 	}

@@ -65,6 +65,8 @@ class ConfigLexicon
 
 	public const CHOOM_ADJUST = 'choom_adjust';
 
+	public const BWRAP_ENABLED = 'bwrap_enabled';
+
 	public const SCAN_NATIVE_ENABLED = 'scan_native_enabled';
 
 	public const SCAN_COVERAGE_PERCENT = 'scan_coverage_percent';
@@ -209,6 +211,12 @@ class ConfigLexicon
 				'min'        => 0,
 				'max'        => 1000,
 				'definition' => 'The OOM score adjustment of a render; an unprivileged process may raise it only.',
+			],
+			// Off: bubblewrap needs user namespaces, which a container, as
+			// Nextcloud's own All-in-One, usually refuses.
+			self::BWRAP_ENABLED              => [
+				'default'    => false,
+				'definition' => 'Whether each render runs in a bubblewrap sandbox: no network, and of the file system only the system\'s programs and the render\'s own folder, not the data directory or config.php. Needs bwrap and user namespaces.',
 			],
 			self::SCAN_NATIVE_ENABLED        => [
 				'default'    => true,

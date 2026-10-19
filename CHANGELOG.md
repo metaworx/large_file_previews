@@ -11,6 +11,12 @@ the first stable release.
 
 ## [Unreleased]
 
+### Added
+
+- Each render in a bubblewrap sandbox (`bwrap_enabled`, off): no network,
+  and of the files only the system's programs and the render's own
+  folder.
+
 ### Changed
 
 - The App Store's screenshots show *Previews* and *Backup and restore*
