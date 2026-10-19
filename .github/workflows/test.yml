@@ -52,6 +52,15 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      # On a tag, the checkout fetches the tagged commit again as the tag,
+      # which replaces the annotated tag with a plain ref to the commit: the
+      # changelog check would compare the released section with the
+      # commit's message rather than the tag's notes. Fetched again from the
+      # remote, the tag is the annotated one.
+      - name: Annotated tag
+        if: github.ref_type == 'tag'
+        run: git fetch --force origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
       - name: Node dependencies
         uses: ./.github/actions/node-deps
 
