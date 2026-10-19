@@ -11,6 +11,11 @@ the first stable release.
 
 ## [Unreleased]
 
+### Fixed
+
+- 0.2.0 never reached the App Store, its install checks stopped by the
+  CI; 0.2.1 is the same app.
+
 ## [0.2.0] - 2026-10-18
 
 ### Added
