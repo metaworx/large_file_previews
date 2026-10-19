@@ -430,6 +430,12 @@ msgstr ""
 msgid "Restore from a file…"
 msgstr ""
 
+msgid "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why."
+msgstr ""
+
+msgid "Sandbox (bubblewrap)"
+msgstr ""
+
 msgid "Save"
 msgstr ""
 

@@ -62,6 +62,12 @@ const LIMITS: Limit[] = [
 			{ key: 'choom_adjust', label: t('large_file_previews', 'Adjustment, 0 to 1000') },
 		],
 	},
+	{
+		switch: 'bwrap_enabled',
+		name: t('large_file_previews', 'Sandbox (bubblewrap)'),
+		help: t('large_file_previews', 'Runs each render in a bubblewrap sandbox: no network, and of the files only the system\'s programs and the render\'s own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why.'),
+		values: [],
+	},
 ]
 </script>
 
@@ -85,7 +91,7 @@ const LIMITS: Limit[] = [
 				<HelpPopover :text="limit.help" :label="limit.name" />
 			</div>
 			<OccCommand :command="scalarCommand(limit.switch, state.scalars[limit.switch].value)" />
-			<div class="lfp-fields">
+			<div v-if="limit.values.length > 0" class="lfp-fields">
 				<div v-for="value in limit.values" :key="value.key">
 					<NumberField :id="'lfp-' + value.key"
 						:label="value.label"

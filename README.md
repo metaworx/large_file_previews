@@ -106,7 +106,8 @@ Backup and restore, a file read and its changes shown before anything is written
   and `vips`, to tell the types libvips reads and write a PDF's preview as WebP;
   optionally `tiffcp`, with `vipsheader`, for a TIFF in one large strip.
 - For the limits around each render, each needed while it is switched on:
-  `timeout`, `prlimit` and `choom`.
+  `timeout`, `prlimit` and `choom`;
+  `bwrap`, for the sandbox, with user namespaces.
 
 | Programs | Debian, Ubuntu | Fedora | RHEL and rebuilds | Alpine | Arch |
 |---|---|---|---|---|---|
@@ -115,6 +116,7 @@ Backup and restore, a file read and its changes shown before anything is written
 | `tiffcp` | libtiff-tools | libtiff-tools | libtiff-tools, CRB | tiff-tools | libtiff |
 | `timeout` | coreutils | coreutils | coreutils | coreutils | coreutils |
 | `prlimit`, `choom` | util-linux | util-linux | util-linux | util-linux-misc | util-linux |
+| `bwrap` | bubblewrap | bubblewrap | bubblewrap | bubblewrap | bubblewrap |
 
 `occ lfp:check` and the settings page name the command that installs what is missing,
 for the distribution the server runs, read from `/etc/os-release`.
@@ -228,7 +230,8 @@ Each name on the page carries the provider's class as its tooltip.
 What is listed is what is registered:
 whether a provider takes a particular file is known per file only.
 
-Each render runs under three limits, each switchable, all on by default.
+Each render runs under three limits, each switchable, all on by default,
+and, where it is switched on, in a sandbox.
 Sizes are in MiB, as the caps count them.
 
 | Limit | Switch | Values, default and range |
@@ -236,6 +239,7 @@ Sizes are in MiB, as the caps count them.
 | A timeout, shared by every program one render runs | `timeout_enabled` | `timeout_seconds` 30, 1 to 600; `timeout_kill_after_seconds` 5, 1 to 60, before SIGKILL |
 | Caps on its address space and on the largest file it writes | `prlimit_enabled` | `prlimit_as_mb` 512 and `vips_prlimit_as_mb` 1024, for libvips, which reads whole strips and runs threads, each 256 to 65536; `prlimit_fsize_mb` 1024, 64 to 65536 |
 | An out-of-memory score that has the kernel kill it before a web server worker | `choom_enabled` | `choom_adjust` 1000, 0 to 1000 |
+| A bubblewrap sandbox, off by default | `bwrap_enabled` | none |
 
 A limit switched on whose program is missing fails the render rather than run without it:
 a warning in the log, the last failure, and an error in the setup check,
@@ -418,6 +422,23 @@ libvips' untrusted decoders, not hardened against hostile files,
 stay blocked unless system config allows them.
 The only copy ever made is the re-striped TIFF, in the scratch directory,
 an unlinked file, gone once rendered.
+
+A renderer runs as the web server's user, and the limits contain a runaway,
+not an exploit: a renderer an exploit took over could read every user's files,
+`config.php` with its database password, and reach the network.
+`bwrap_enabled` runs each render in a bubblewrap sandbox instead,
+innermost, so that the limits hold for it too:
+no network, its own processes,
+and of the file system only `/usr`, `/etc` and the top-level `/bin`,
+`/sbin` and `/lib`s, read-only,
+fontconfig's cache, a private `/tmp` and the render's own folder.
+The file still arrives as a descriptor, never copied.
+A program whose path in system config lies elsewhere has its folder there too;
+libraries it loads from outside those folders do not.
+bubblewrap needs user namespaces,
+which a container such as Nextcloud All-in-One usually refuses:
+the status says whether it can start a sandbox,
+and switched on where it cannot, nothing is rendered.
 
 ## Measured
 

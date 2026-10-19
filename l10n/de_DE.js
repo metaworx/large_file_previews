@@ -134,6 +134,8 @@ OC.L10N.register(
     "Reset" : "Zurücksetzen",
     "Reset {label}" : "{label} zurücksetzen",
     "Restore from a file…" : "Aus einer Datei wiederherstellen…",
+    "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why." : "Führt jeden Rendervorgang in einer bubblewrap-Sandbox aus: kein Netzwerk, und von den Dateien nur die Programme des Systems und der eigene Ordner des Rendervorgangs, nicht das Datenverzeichnis oder config.php. Braucht bwrap und User-Namespaces, die ein Container wie Nextcloud All-in-One meist verweigert: Eingeschaltet, wo sie nicht starten kann, wird nichts gerendert, und der Status oben sagt, warum.",
+    "Sandbox (bubblewrap)" : "Sandbox (bubblewrap)",
     "Save" : "Speichern",
     "Save {label}" : "{label} speichern",
     "Saved." : "Gespeichert.",

@@ -47,6 +47,22 @@ describe('LimitsSection', () => {
 		expect(wrapper.emitted('save')).toEqual([[{ scalars: { prlimit_enabled: false } }]])
 	})
 
+	it('switches the sandbox, off as shipped, a switch with no value of its own', async () => {
+		const wrapper = section()
+		const sandbox = wrapper.find('[data-limit="bwrap_enabled"]')
+
+		expect(sandbox.text()).toContain('Sandbox (bubblewrap)')
+		expect(sandbox.text()).toContain('occ lfp:config:set bwrap_enabled false')
+		expect(sandbox.findComponent({ name: 'NcCheckboxRadioSwitch' }).props('modelValue')).toBe(false)
+		expect(sandbox.findAllComponents(NumberField)).toHaveLength(0)
+		expect(sandbox.find('.lfp-fields').exists()).toBe(false)
+		expect(sandbox.findComponent(HelpPopover).props('text')).toContain('not the data directory or config.php')
+
+		await sandbox.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', true)
+
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { bwrap_enabled: true } }]])
+	})
+
 	it('saves a value under its own key', async () => {
 		const wrapper = section()
 

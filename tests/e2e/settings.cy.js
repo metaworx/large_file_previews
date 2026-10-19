@@ -22,7 +22,7 @@ const clearRules = () => {
 	}
 	cy.occ( `lfp:config:unset --mime ${ MIME } --field min_size_mb`, { failOnNonZeroExit: false, log: false } )
 	cy.occ( 'lfp:config:unset --mime application/pdf', { failOnNonZeroExit: false, log: false } )
-	for ( const key of [ 'min_size_mb', 'timeout_seconds', 'preview_quality', 'preview_stream' ] ) {
+	for ( const key of [ 'min_size_mb', 'timeout_seconds', 'preview_quality', 'preview_stream', 'bwrap_enabled' ] ) {
 		cy.occ( `lfp:config:unset ${ key }`, { failOnNonZeroExit: false, log: false } )
 	}
 }
@@ -258,6 +258,26 @@ describe( 'The settings page', () => {
 			.find( '.lfp-named input[type="checkbox"]' ).first().click( { force: true } )
 		cy.get( '[data-setting="preview_stream"]' ).should( 'contain', 'occ lfp:config:set preview_stream false' )
 		stored( 'preview_stream' ).should( 'deep.include', { value: false, stored: true } )
+	} )
+
+	// Where bwrap cannot start a sandbox - the harness's container refuses
+	// user namespaces, CI's server may have no bwrap - the switch says so in
+	// the status, as missing; where it can, as available.
+	it( 'switches the sandbox on, and the status says whether it can start one', () => {
+		cy.get( '[data-limit="bwrap_enabled"]' ).should( 'contain', 'occ lfp:config:set bwrap_enabled false' )
+			.find( '.lfp-named input[type="checkbox"]' ).first().click( { force: true } )
+		cy.get( '[data-limit="bwrap_enabled"]' ).should( 'contain', 'occ lfp:config:set bwrap_enabled true' )
+		cy.occ( 'lfp:config:show --output=json' ).then( ( { stdout } ) => {
+			expect( JSON.parse( stdout ).stored.bwrap_enabled ).to.deep.include( { value: true, stored: true } )
+		} )
+
+		cy.reload()
+		cy.contains( '.lfp-status tbody tr', 'bwrap', { timeout: FIND_TIMEOUT } ).invoke( 'attr', 'class' ).then( ( row ) => {
+			cy.occ( 'lfp:check', { failOnNonZeroExit: false } ).its( 'stdout' ).then( ( stdout ) => {
+				const line = stdout.split( '\n' ).find( ( l ) => / bwrap /.test( l ) ) || ''
+				expect( row ).to.equal( line.includes( 'missing' ) ? 'lfp-status--missing' : 'lfp-status--ok' )
+			} )
+		} )
 	} )
 
 	it( 'keeps every help icon clear of every Save button', () => {

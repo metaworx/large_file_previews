@@ -21,6 +21,7 @@ export interface ScalarValues {
 	tiff_restrip_max_mb: number
 	choom_enabled: boolean
 	choom_adjust: number
+	bwrap_enabled: boolean
 	scan_native_enabled: boolean
 	scan_coverage_percent: number
 	vips_concurrency: number

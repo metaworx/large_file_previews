@@ -70,6 +70,7 @@ export function testState(): SettingsState {
 			tiff_restrip_max_mb: scalar(4096, 256, 1048576),
 			choom_enabled: scalar(true),
 			choom_adjust: scalar(1000, 0, 1000),
+			bwrap_enabled: scalar(false),
 			scan_native_enabled: scalar(true),
 			scan_coverage_percent: scalar(90, 50, 100),
 			vips_concurrency: scalar(1, 1, 64),
