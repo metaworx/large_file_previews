@@ -70,6 +70,15 @@ The limits each render runs under:
 
 ![The limits][shot-limits]
 
+The previews: their type, a JPEG's background, and the quality,
+the largest stored as rendered:
+
+![The previews][shot-previews]
+
+Backup and restore, a file read and its changes shown before anything is written:
+
+![Backup and restore][shot-backup]
+
 `tests/e2e/screenshots.cy.js` takes them; `tests/e2e/README.md` says how.
 
 <!-- BEGIN GENERATED RELEASE-PIN - do not edit; run "changelog.sh cut" -->
@@ -78,6 +87,8 @@ The limits each render runs under:
 [shot-mime]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/MIME-Types.png
 [shot-extensions]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Extensions.png
 [shot-limits]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Limits.png
+[shot-previews]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Previews.png
+[shot-backup]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Backup-And-Restore.png
 <!-- END GENERATED RELEASE-PIN -->
 
 ## Requirements

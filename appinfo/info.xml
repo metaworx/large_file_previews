@@ -47,6 +47,8 @@ Nur Dateien auf lokalem, unverschlüsseltem Speicher werden gerendert. Alles and
 	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/MIME-Types.png</screenshot>
 	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Extensions.png</screenshot>
 	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Limits.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Previews.png</screenshot>
+	<screenshot>https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Backup-And-Restore.png</screenshot>
 <!-- END GENERATED RELEASE-PIN -->
 	<dependencies>
 		<php min-version="8.2"/>

@@ -42,6 +42,22 @@ const CLEAR = [
 ]
 
 /**
+ * The backup the Backup-And-Restore shot reads: another server's, which
+ * differs from the rules above in a limit, a type and an extension.
+ */
+const BACKUP = {
+	app: 'large_file_previews',
+	format: 1,
+	exported: { version: '0.2.1', date: '2026-10-19T08:00:00+00:00' },
+	settings: { timeout_seconds: 45, preview_quality: 90 },
+	mimetypes: {
+		'application/pdf': { enabled: true },
+		'image/tiff': { enabled: true, min_size_mb: 100 },
+	},
+	extensions: { heic: { enabled: true, min_size_mb: 20 } },
+}
+
+/**
  * What a cropped shot should not show: the scrollbars at its edges, and the
  * navigation's toggle, which floats over the top left of the content and
  * would sit on a heading's first letter.
@@ -174,5 +190,25 @@ describe( 'Screenshots', () => {
 		// Down to the caps' last command: the section, each field with its
 		// label above it, is taller than the viewport.
 		shotBetween( 'Limits', '.lfp-limits', '.lfp-limits .lfp-occ:contains("prlimit_fsize_mb")' )
+	} )
+
+	// Down to the quality's command; Nextcloud's own settings follow, below
+	// the viewport.
+	it( 'Previews', () => {
+		openSettings()
+		shotBetween( 'Previews', '.lfp-previews h3', '[data-setting="preview_quality"]' )
+	} )
+
+	// A file read and not applied: its changes against what the rules above
+	// stored, shown before anything is written. Nothing is applied, so the
+	// instance is left as the other shots have it.
+	it( 'Backup-And-Restore', () => {
+		openSettings()
+		cy.get( 'input.lfp-backup__file' ).selectFile( {
+			contents: Cypress.Buffer.from( JSON.stringify( BACKUP ) ),
+			fileName: 'large_file_previews-config.cloud.example.com.2026-10-19.json',
+		}, { force: true } )
+		cy.get( '.lfp-backup__changes', { timeout: FIND_TIMEOUT } ).should( 'contain', 'timeout_seconds' )
+		shotBetween( 'Backup-And-Restore', '.lfp-backup h3', '.lfp-backup__apply' )
 	} )
 } )

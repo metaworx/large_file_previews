@@ -11,6 +11,11 @@ the first stable release.
 
 ## [Unreleased]
 
+### Changed
+
+- The App Store's screenshots show *Previews* and *Backup and restore*
+  too.
+
 ## [0.2.1] - 2026-10-19
 
 ### Fixed
