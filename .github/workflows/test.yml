@@ -170,11 +170,12 @@ jobs:
 
       # The renderers the integration tests run, the one-strip TIFF fallback,
       # and the limits around them: timeout is coreutils and prlimit and choom
-      # util-linux, both already on the runner.
-      - name: poppler-utils, libvips-tools, libtiff-tools
+      # util-linux, both already on the runner; bubblewrap for the sandbox,
+      # whose tests skip where the runner refuses it user namespaces.
+      - name: poppler-utils, libvips-tools, libtiff-tools, bubblewrap
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools
+          sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools bubblewrap
 
       - name: Nextcloud server
         uses: ./.github/actions/nextcloud-server

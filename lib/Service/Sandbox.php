@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Service;
 
 use OCA\LargeFilePreviews\Config\ConfigLexicon;
+use OCP\IConfig;
 
 /**
  * Each render in a bubblewrap sandbox, where `bwrap_enabled` says so: the
@@ -36,6 +37,9 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
  * outside them has its own folder bound read-only; libraries it loads from
  * elsewhere are not there. With `/var` hidden, fontconfig's cache is bound
  * read-only where it exists, rather than rebuilt by every render.
+ * Nextcloud's config and data directory are hidden under an empty folder
+ * where they lie inside what is shown, as a distribution's package may
+ * keep config.php under /etc (masks()).
  *
  * bwrap needs user namespaces, which a container usually refuses, and which
  * a distribution may restrict: whether it can start a sandbox here is
@@ -63,6 +67,7 @@ class Sandbox
 	public function __construct(
 		private readonly BinaryLocator  $binaries,
 		private readonly DetectionCache $cache,
+		private readonly IConfig        $system,
 	)
 	{
 	}
@@ -109,9 +114,56 @@ class Sandbox
 
 		return [
 			(string) $location->path,
-			...self::arguments( self::layout(), $program, $writable, is_dir( self::FONT_CACHE ) ),
+			...self::arguments( self::layout(), $program, $writable, is_dir( self::FONT_CACHE ), $this->masks() ),
 			'--',
 		];
+	}
+
+	/**
+	 * What must not be seen even where it lies inside what the sandbox
+	 * shows: Nextcloud's config, which a distribution's package may keep
+	 * under /etc, and its data directory. The config files are the ones
+	 * Nextcloud has read, `config.php` and every `*.config.php`, as this
+	 * request included them: Nextcloud has no public word for where they
+	 * are. Each folder as named and as resolved.
+	 *
+	 * @return list<string>
+	 */
+	public function masks(): array
+	{
+		$folders = [];
+
+		foreach ( get_included_files() as $file )
+		{
+			$name = basename( $file );
+
+			if ( $name === 'config.php' || str_ends_with( $name, '.config.php' ) )
+			{
+				$folders[] = dirname( $file );
+			}
+		}
+
+		$data = rtrim( $this->system->getSystemValueString( 'datadirectory', '' ), '/' );
+
+		if ( $data !== '' )
+		{
+			$folders[] = $data;
+		}
+
+		$masks = [];
+
+		foreach ( $folders as $folder )
+		{
+			$masks[] = $folder;
+			$real    = realpath( $folder );
+
+			if ( $real !== false )
+			{
+				$masks[] = $real;
+			}
+		}
+
+		return array_values( array_unique( $masks ) );
 	}
 
 	/**
@@ -137,7 +189,7 @@ class Sandbox
 			return $kept === '' ? null : $kept;
 		}
 
-		$problem = self::probe( $path );
+		$problem = self::probe( $path, $this->masks() );
 		$this->cache->set( $key, $problem ?? '' );
 
 		return $problem;
@@ -155,6 +207,8 @@ class Sandbox
 	 * @param string                $program   the program's path
 	 * @param string|null           $writable  the render's folder
 	 * @param bool                  $fontCache whether fontconfig's cache is there
+	 * @param list<string>          $masks     folders hidden where they lie
+	 *                                         inside what is shown (masks())
 	 * @return list<string>
 	 */
 	public static function arguments(
@@ -162,6 +216,7 @@ class Sandbox
 		string  $program,
 		?string $writable,
 		bool    $fontCache,
+		array   $masks = [],
 	): array
 	{
 		$arguments = [ '--unshare-all', '--die-with-parent', '--new-session', '--ro-bind', '/usr', '/usr' ];
@@ -176,6 +231,15 @@ class Sandbox
 		if ( $fontCache )
 		{
 			array_push( $arguments, '--ro-bind', self::FONT_CACHE, self::FONT_CACHE );
+		}
+
+		// An empty folder over each, where a bind above shows it.
+		foreach ( $masks as $mask )
+		{
+			if ( self::within( $mask, [ '/usr', '/etc', ...array_keys( $layout ) ] ) )
+			{
+				array_push( $arguments, '--tmpfs', $mask );
+			}
 		}
 
 		array_push( $arguments, '--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp' );
@@ -232,8 +296,13 @@ class Sandbox
 	/**
 	 * A sandbox that runs `true`: null where it starts, otherwise what bwrap
 	 * said.
+	 *
+	 * @param list<string> $masks
 	 */
-	private static function probe( string $bwrap ): ?string
+	private static function probe(
+		string $bwrap,
+		array  $masks,
+	): ?string
 	{
 		if ( ! function_exists( 'proc_open' ) )
 		{
@@ -241,7 +310,7 @@ class Sandbox
 		}
 
 		$true    = is_file( '/usr/bin/true' ) ? '/usr/bin/true' : '/bin/true';
-		$command = [ $bwrap, ...self::arguments( self::layout(), $true, null, false ), '--', $true ];
+		$command = [ $bwrap, ...self::arguments( self::layout(), $true, null, false, $masks ), '--', $true ];
 		$process = @proc_open( $command, [ 0 => [ 'file', '/dev/null', 'r' ], 1 => [ 'file', '/dev/null', 'w' ], 2 => [ 'pipe', 'w' ] ], $pipes );
 
 		if ( ! is_resource( $process ) )

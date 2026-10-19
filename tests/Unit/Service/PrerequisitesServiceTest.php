@@ -358,7 +358,7 @@ class PrerequisitesServiceTest
 			new ProgramVersions( $runner ?? $this->createMock( CommandRunner::class ), $versions ),
 			$tempManager,
 			new Platform( dirname( __DIR__, 2 ) . '/fixtures/os-release/ubuntu' ),
-			new Sandbox( $binaries, $this->detectionCache() ),
+			new Sandbox( $binaries, $this->detectionCache(), $this->systemConfig() ),
 		);
 	}
 

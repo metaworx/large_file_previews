@@ -101,7 +101,7 @@ class SandboxTest
 	 */
 	public function testTheProbesAnswerIsKept(): void
 	{
-		$sandbox = new Sandbox( $this->binaryLocator( [ 'bwrap' => '/usr/bin/bwrap' ] ), $this->detectionCache() );
+		$sandbox = $this->sandbox( [ 'bwrap' => '/usr/bin/bwrap' ] );
 
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
 		self::assertNull( $sandbox->problem() );
@@ -116,9 +116,40 @@ class SandboxTest
 
 	public function testWithoutBwrapThereIsNoSandbox(): void
 	{
-		$sandbox = new Sandbox( $this->binaryLocator( [] ), $this->detectionCache() );
+		self::assertSame( 'bwrap is not found', $this->sandbox( [] )->problem() );
+	}
 
-		self::assertSame( 'bwrap is not found', $sandbox->problem() );
+	/**
+	 * Nextcloud's config, where a package keeps it under /etc, and a data
+	 * directory under a shown folder are hidden under an empty one; where
+	 * nothing shows them, nothing is needed.
+	 */
+	public function testNextcloudsConfigAndDataAreHiddenWhereShown(): void
+	{
+		$arguments = implode( ' ', Sandbox::arguments( [ '/lib' => 'usr/lib' ], '/usr/bin/pdftoppm', null, false, [ '/etc/webapps/nextcloud/config', '/usr/share/nextcloud/data', '/var/www/nextcloud/config' ] ) );
+
+		self::assertStringContainsString( '--ro-bind /etc /etc --tmpfs /etc/webapps/nextcloud/config --tmpfs /usr/share/nextcloud/data --proc', $arguments );
+		self::assertStringNotContainsString( '/var/www', $arguments );
+	}
+
+	/**
+	 * The masks are the folders of the config files this request read, and
+	 * the data directory, each as named and as resolved.
+	 */
+	public function testTheMasksAreTheConfigFoldersAndTheDataDirectory(): void
+	{
+		$this->systemValues['datadirectory'] = sys_get_temp_dir() . '/';
+		$masks                               = $this->sandbox( [] )->masks();
+
+		self::assertContains( rtrim( sys_get_temp_dir(), '/' ), $masks );
+
+		foreach ( get_included_files() as $file )
+		{
+			if ( basename( $file ) === 'config.php' )
+			{
+				self::assertContains( dirname( $file ), $masks );
+			}
+		}
 	}
 
 	/**
@@ -126,7 +157,7 @@ class SandboxTest
 	 */
 	public function testAUsableBwrapWrapsTheProgram(): void
 	{
-		$sandbox                                                    = new Sandbox( $this->binaryLocator( [ 'bwrap' => '/usr/bin/bwrap' ] ), $this->detectionCache() );
+		$sandbox                                                    = $this->sandbox( [ 'bwrap' => '/usr/bin/bwrap' ] );
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
 		$wrapped                                                    = $sandbox->wrap( '/usr/bin/pdftoppm', '/render' );
 
@@ -134,5 +165,13 @@ class SandboxTest
 		self::assertSame( '/usr/bin/bwrap', $wrapped[0] );
 		self::assertSame( '--', $wrapped[ count( $wrapped ) - 1 ] );
 		self::assertSame( [ '--bind', '/render', '/render' ], array_slice( $wrapped, -4, 3 ) );
+	}
+
+	/**
+	 * @param array<string, string> $found
+	 */
+	private function sandbox( array $found ): Sandbox
+	{
+		return new Sandbox( $this->binaryLocator( $found ), $this->detectionCache(), $this->systemConfig() );
 	}
 }

@@ -446,7 +446,7 @@ class CommandRunnerTest
 			$this->settings(),
 			$binaries,
 			$tempManager,
-			new Sandbox( $binaries, $this->detectionCache() ),
+			new Sandbox( $binaries, $this->detectionCache(), $this->systemConfig() ),
 		);
 	}
 
