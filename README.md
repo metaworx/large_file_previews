@@ -73,11 +73,11 @@ The limits each render runs under:
 `tests/e2e/screenshots.cy.js` takes them; `tests/e2e/README.md` says how.
 
 <!-- BEGIN GENERATED RELEASE-PIN - do not edit; run "changelog.sh cut" -->
-[shot-settings]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.0/docs/Screenshots/Settings.png
-[shot-processed]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.0/docs/Screenshots/What-Is-Processed.png
-[shot-mime]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.0/docs/Screenshots/MIME-Types.png
-[shot-extensions]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.0/docs/Screenshots/Extensions.png
-[shot-limits]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.0/docs/Screenshots/Limits.png
+[shot-settings]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Settings.png
+[shot-processed]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/What-Is-Processed.png
+[shot-mime]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/MIME-Types.png
+[shot-extensions]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Extensions.png
+[shot-limits]: https://gitlab.com/metaworx/open-source/nextcloud/large_file_previews/-/raw/v0.2.1/docs/Screenshots/Limits.png
 <!-- END GENERATED RELEASE-PIN -->
 
 ## Requirements
