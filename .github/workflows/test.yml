@@ -177,6 +177,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends poppler-utils libvips-tools libtiff-tools bubblewrap
 
+      # Ubuntu 24.04 lets an unprivileged bwrap create its namespaces but not
+      # bring up their loopback ("loopback: Failed RTM_NEWADDR"), so no
+      # sandbox starts. Lifted here so the sandbox's tests run: the
+      # restriction is the host's choice, which README.md tells an
+      # administrator how to make.
+      - name: User namespaces for bubblewrap
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Nextcloud server
         uses: ./.github/actions/nextcloud-server
         with:

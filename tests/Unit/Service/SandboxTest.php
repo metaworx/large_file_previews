@@ -114,6 +114,25 @@ class SandboxTest
 		self::assertStringContainsString( 'cannot start a sandbox here: No permissions to create new namespace', $wrapped->reason );
 	}
 
+	/**
+	 * Ubuntu 24.04's refusal says where the README tells how to lift it,
+	 * in the status and in a run that fails; any other is left as it is.
+	 */
+	public function testUbuntusRefusalIsExplained(): void
+	{
+		$refusal = 'bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted';
+
+		self::assertStringContainsString( 'The sandbox on Ubuntu 24.04', Sandbox::explained( $refusal ) );
+		self::assertStringStartsWith( $refusal, Sandbox::explained( $refusal ) );
+		self::assertSame( 'No permissions to create new namespace', Sandbox::explained( 'No permissions to create new namespace' ) );
+
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = $refusal;
+		$wrapped                                                    = $this->sandbox( [ 'bwrap' => '/usr/bin/bwrap' ] )->wrap( '/usr/bin/pdftoppm', null );
+
+		self::assertInstanceOf( RenderOutcome::class, $wrapped );
+		self::assertStringContainsString( 'The sandbox on Ubuntu 24.04', $wrapped->reason );
+	}
+
 	public function testWithoutBwrapThereIsNoSandbox(): void
 	{
 		self::assertSame( 'bwrap is not found', $this->sandbox( [] )->problem() );

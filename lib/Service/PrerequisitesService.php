@@ -252,7 +252,7 @@ class PrerequisitesService
 					default           => Prerequisite::OPTIONAL,
 				},
 				$for,
-				$problem === null ? $detail : $detail . '; cannot start a sandbox here: ' . $problem,
+				$problem === null ? $detail : $detail . '; cannot start a sandbox here: ' . Sandbox::explained( $problem ),
 			);
 		}
 

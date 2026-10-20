@@ -108,7 +108,7 @@ class Sandbox
 		{
 			return new RenderOutcome(
 				Outcome::LIMIT_MISSING,
-				sprintf( 'bwrap is switched on but cannot start a sandbox here: %s; switch it off (%s)', $problem, ConfigLexicon::BWRAP_ENABLED ),
+				sprintf( 'bwrap is switched on but cannot start a sandbox here: %s; switch it off (%s)', self::explained( $problem ), ConfigLexicon::BWRAP_ENABLED ),
 			);
 		}
 
@@ -257,6 +257,18 @@ class Sandbox
 		}
 
 		return $arguments;
+	}
+
+	/**
+	 * A probe's answer with what an administrator can do about it, where
+	 * that is known: Ubuntu 24.04's AppArmor lets bwrap create its
+	 * namespaces but not bring up their loopback.
+	 */
+	public static function explained( string $problem ): string
+	{
+		return str_contains( $problem, 'RTM_NEWADDR' )
+			? $problem . ' (Ubuntu restricts user namespaces through AppArmor; the README\'s "The sandbox on Ubuntu 24.04" says how to allow them for bwrap)'
+			: $problem;
 	}
 
 	/**

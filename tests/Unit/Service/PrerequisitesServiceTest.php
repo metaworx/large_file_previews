@@ -128,6 +128,9 @@ class PrerequisitesServiceTest
 		self::assertSame( Prerequisite::MISSING, $refused->status );
 		self::assertTrue( $refused->isBlocking() );
 
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted';
+		self::assertStringContainsString( 'The sandbox on Ubuntu 24.04', self::item( $this->service( $programs )->check(), 'bwrap' )->detail );
+
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
 		self::assertSame( Prerequisite::OK, self::item( $this->service( $programs )->check(), 'bwrap' )->status );
 

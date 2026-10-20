@@ -432,6 +432,8 @@ no network, its own processes,
 and of the file system only `/usr`, `/etc` and the top-level `/bin`,
 `/sbin` and `/lib`s, read-only,
 fontconfig's cache, a private `/tmp` and the render's own folder.
+Nextcloud's config and data directory stay hidden even where they lie inside those,
+as a distribution's package may keep `config.php` under `/etc`.
 The file still arrives as a descriptor, never copied.
 A program whose path in system config lies elsewhere has its folder there too;
 libraries it loads from outside those folders do not.
@@ -439,6 +441,32 @@ bubblewrap needs user namespaces,
 which a container such as Nextcloud All-in-One usually refuses:
 the status says whether it can start a sandbox,
 and switched on where it cannot, nothing is rendered.
+
+### The sandbox on Ubuntu 24.04
+
+Ubuntu 24.04 and later restrict unprivileged user namespaces through AppArmor:
+bwrap may create them, but not set up the network inside,
+and the status reports `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`.
+A profile that lets bwrap alone use them lifts that,
+in `/etc/apparmor.d/bwrap`:
+
+```text
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+  include if exists <local/bwrap>
+}
+```
+
+```bash
+sudo apparmor_parser -r /etc/apparmor.d/bwrap
+```
+
+The other way is to lift the restriction for every program,
+`kernel.apparmor_restrict_unprivileged_userns = 0` in a file under `/etc/sysctl.d/`.
+Then `occ lfp:check --refresh` probes again.
 
 ## Measured
 
