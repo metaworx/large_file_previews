@@ -189,7 +189,7 @@ jobs:
           dev-dependencies: 'true'
 
       - name: Run PHPUnit tests
-        run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings
+        run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings --display-skipped
         working-directory: nextcloud/apps/large_file_previews
 
   # The browser tests (tests/e2e/) against the server PHP serves, with the

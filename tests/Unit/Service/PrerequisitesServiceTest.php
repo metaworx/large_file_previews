@@ -130,6 +130,10 @@ class PrerequisitesServiceTest
 
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
 		self::assertSame( Prerequisite::OK, self::item( $this->service( $programs )->check(), 'bwrap' )->status );
+
+		// Forgotten, or the path the finder found is kept, which on a machine
+		// with bwrap installed is still there.
+		$this->cacheValues = [];
 		self::assertSame( Prerequisite::MISSING, self::item( $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ] )->check(), 'bwrap' )->status );
 	}
 
