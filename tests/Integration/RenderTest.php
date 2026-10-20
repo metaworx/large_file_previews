@@ -164,22 +164,38 @@ class RenderTest
 	/**
 	 * Switched on, an image goes to libvips; where libvips is not there, the
 	 * render fails and is recorded, and Nextcloud's next provider is tried.
+	 * Where it is installed, a path in system config that does not exist
+	 * makes it missing, as an administrator's mistaken override would.
 	 */
 	public function testAnImageWithoutLibvipsIsAFailureOnRecord(): void
 	{
-		if ( Server::get( BinaryLocator::class )->locate( VipsRenderer::PROGRAM )->isFound() )
+		$system   = Server::get( IConfig::class );
+		$binaries = Server::get( BinaryLocator::class );
+		$had      = $system->getSystemValue( BinaryLocator::SYSTEM_KEY, null );
+
+		$system->setSystemValue( BinaryLocator::SYSTEM_KEY, [ ...( is_array( $had ) ? $had : [] ), VipsRenderer::PROGRAM => '/nonexistent/' . VipsRenderer::PROGRAM ] );
+		$binaries->refresh();
+
+		try
 		{
-			self::markTestSkipped( 'libvips is installed here; ImageRenderTest renders images.' );
+			self::assertFalse( $binaries->locate( VipsRenderer::PROGRAM )->isFound() );
+
+			// From 0 MB: an image type starts at 50 by default.
+			$this->settings()->setMimeRule( 'image/png', new TypeRule( true, 0 ) );
+			$file     = $this->file( 'a.png', (string) base64_decode( self::PNG ) );
+			$provider = Server::get( LargeFileProvider::class );
+
+			self::assertTrue( $provider->isAvailable( $file ) );
+			self::assertNull( $provider->getThumbnail( $file, 256, 256 ) );
+			self::assertSame( 'program_missing', $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE )['outcome'] ?? null );
 		}
-
-		// From 0 MB: an image type starts at 50 by default.
-		$this->settings()->setMimeRule( 'image/png', new TypeRule( true, 0 ) );
-		$file     = $this->file( 'a.png', (string) base64_decode( self::PNG ) );
-		$provider = Server::get( LargeFileProvider::class );
-
-		self::assertTrue( $provider->isAvailable( $file ) );
-		self::assertNull( $provider->getThumbnail( $file, 256, 256 ) );
-		self::assertSame( 'program_missing', $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE )['outcome'] ?? null );
+		finally
+		{
+			$had === null
+				? $system->deleteSystemValue( BinaryLocator::SYSTEM_KEY )
+				: $system->setSystemValue( BinaryLocator::SYSTEM_KEY, $had );
+			$binaries->refresh();
+		}
 	}
 
 	/**
