@@ -65,6 +65,22 @@ class SandboxRenderTest
 		self::assertNull( $this->appConfig()->getValueArray( Application::APP_ID, ConfigLexicon::LAST_FAILURE ) ?: null );
 	}
 
+	/**
+	 * Auto, the default, sandboxes where the process rendering can start a
+	 * sandbox, as this one can.
+	 */
+	public function testAutoSandboxesWhereItCan(): void
+	{
+		$this->settings()->setScalar( ConfigLexicon::SANDBOX, ConfigLexicon::SANDBOX_AUTO );
+
+		$command = Server::get( CommandRunner::class )->command( 'pdftoppm', [ '-v' ] );
+		$bwrap   = (string) Server::get( BinaryLocator::class )->locate( Sandbox::PROGRAM )->path;
+
+		self::assertIsArray( $command );
+		self::assertContains( $bwrap, $command );
+		self::assertNotNull( Server::get( LargeFileProvider::class )->getThumbnail( $this->file( 'auto.pdf', PdfFixture::bytes( 200, 100 ) ), 256, 256 ) );
+	}
+
 	public function testAnImageIsRenderedInTheSandbox(): void
 	{
 		if ( ! Server::get( BinaryLocator::class )->locate( VipsRenderer::PROGRAM )->isFound() )

@@ -260,24 +260,25 @@ describe( 'The settings page', () => {
 		stored( 'preview_stream' ).should( 'deep.include', { value: false, stored: true } )
 	} )
 
-	// Where bwrap cannot start a sandbox - the harness's container refuses
-	// user namespaces, CI's server may have no bwrap - the switch says so in
-	// the status, as missing; where it can, as available.
-	it( 'switches the sandbox on, and the status says whether it can start one', () => {
-		cy.get( '[data-limit="bwrap_enabled"]' ).should( 'contain', 'occ lfp:config:set bwrap_enabled false' )
-			.find( '.lfp-named input[type="checkbox"]' ).first().click( { force: true } )
-		cy.get( '[data-limit="bwrap_enabled"]' ).should( 'contain', 'occ lfp:config:set bwrap_enabled true' )
+	// Whether bwrap can start a sandbox here depends on the machine - the
+	// harness's container refuses user namespaces, CI's e2e server has no
+	// bwrap - and on the process asking, so the page's word is not occ's.
+	// Auto never blocks; on is either ready or missing.
+	it( 'offers the sandbox auto, on and off, and the status follows the choice', () => {
+		cy.get( '[data-setting="sandbox"]' ).should( 'contain', 'occ lfp:config:set sandbox auto' )
+		cy.contains( '.lfp-status tbody tr', 'bwrap', { timeout: FIND_TIMEOUT } )
+			.should( 'contain', 'where it can start (auto)' )
+			.and( 'not.have.class', 'lfp-status--missing' )
+
+		cy.get( '[data-setting="sandbox"] input[type="radio"][value="on"]' ).click( { force: true } )
+		cy.get( '[data-setting="sandbox"]' ).should( 'contain', 'occ lfp:config:set sandbox on' )
 		cy.occ( 'lfp:config:show --output=json' ).then( ( { stdout } ) => {
-			expect( JSON.parse( stdout ).stored.bwrap_enabled ).to.deep.include( { value: true, stored: true } )
+			expect( JSON.parse( stdout ).stored.sandbox ).to.deep.include( { value: 'on', stored: true } )
 		} )
 
 		cy.reload()
-		cy.contains( '.lfp-status tbody tr', 'bwrap', { timeout: FIND_TIMEOUT } ).invoke( 'attr', 'class' ).then( ( row ) => {
-			cy.occ( 'lfp:check', { failOnNonZeroExit: false } ).its( 'stdout' ).then( ( stdout ) => {
-				const line = stdout.split( '\n' ).find( ( l ) => / bwrap /.test( l ) ) || ''
-				expect( row ).to.equal( line.includes( 'missing' ) ? 'lfp-status--missing' : 'lfp-status--ok' )
-			} )
-		} )
+		cy.contains( '.lfp-status tbody tr', 'bwrap', { timeout: FIND_TIMEOUT } ).invoke( 'attr', 'class' )
+			.should( 'be.oneOf', [ 'lfp-status--missing', 'lfp-status--ok' ] )
 	} )
 
 	it( 'keeps every help icon clear of every Save button', () => {
