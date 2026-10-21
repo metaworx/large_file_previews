@@ -11,6 +11,8 @@ the first stable release.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-21
+
 ### Added
 
 - A bubblewrap sandbox for each render (*Limits*, `sandbox`: `auto`,
