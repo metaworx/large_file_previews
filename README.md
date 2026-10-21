@@ -231,7 +231,7 @@ What is listed is what is registered:
 whether a provider takes a particular file is known per file only.
 
 Each render runs under three limits, each switchable, all on by default,
-and, where it is switched on, in a sandbox.
+and in a sandbox where it can start one.
 Sizes are in MiB, as the caps count them.
 
 | Limit | Switch | Values, default and range |
@@ -239,7 +239,7 @@ Sizes are in MiB, as the caps count them.
 | A timeout, shared by every program one render runs | `timeout_enabled` | `timeout_seconds` 30, 1 to 600; `timeout_kill_after_seconds` 5, 1 to 60, before SIGKILL |
 | Caps on its address space and on the largest file it writes | `prlimit_enabled` | `prlimit_as_mb` 512 and `vips_prlimit_as_mb` 1024, for libvips, which reads whole strips and runs threads, each 256 to 65536; `prlimit_fsize_mb` 1024, 64 to 65536 |
 | An out-of-memory score that has the kernel kill it before a web server worker | `choom_enabled` | `choom_adjust` 1000, 0 to 1000 |
-| A bubblewrap sandbox, off by default | `bwrap_enabled` | none |
+| A bubblewrap sandbox | `sandbox` | `auto`, where the process rendering can start one, the default; `on`, always, or nothing is rendered; `off` |
 
 A limit switched on whose program is missing fails the render rather than run without it:
 a warning in the log, the last failure, and an error in the setup check,
@@ -426,7 +426,7 @@ an unlinked file, gone once rendered.
 A renderer runs as the web server's user, and the limits contain a runaway,
 not an exploit: a renderer an exploit took over could read every user's files,
 `config.php` with its database password, and reach the network.
-`bwrap_enabled` runs each render in a bubblewrap sandbox instead,
+The sandbox runs each render in bubblewrap instead,
 innermost, so that the limits hold for it too:
 no network, its own processes,
 and of the file system only `/usr`, `/etc` and the top-level `/bin`,
@@ -438,9 +438,22 @@ The file still arrives as a descriptor, never copied.
 A program whose path in system config lies elsewhere has its folder there too;
 libraries it loads from outside those folders do not.
 bubblewrap needs user namespaces,
-which a container such as Nextcloud All-in-One usually refuses:
-the status says whether it can start a sandbox,
-and switched on where it cannot, nothing is rendered.
+which a container such as Nextcloud All-in-One usually refuses.
+
+`sandbox` is `auto` by default:
+a render runs sandboxed where the process rendering can start a sandbox,
+and as without one where it cannot.
+Which process asks matters:
+`occ`, perhaps as root, may start one where the web server's worker may not,
+as a hardened service or a container refuses it,
+so each process's answer is its own, probed once and kept a day.
+`on` renders nothing where a sandbox cannot start,
+for a server that would rather; `off` never sandboxes.
+The status says which applies, and for which process:
+the settings page asks as the web server, `occ lfp:check` as the command line.
+Where bubblewrap works, renders are sandboxed from the upgrade to 0.3.0 on,
+with nothing to do; what a renderer read outside `/usr` and `/etc`,
+such as fonts in the web server user's home, it no longer sees.
 
 ### The sandbox on Ubuntu 24.04
 
