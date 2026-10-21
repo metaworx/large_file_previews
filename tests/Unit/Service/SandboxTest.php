@@ -143,6 +143,8 @@ class SandboxTest
 		self::assertNotSame( Sandbox::probeKey( '/usr/bin/bwrap', '33:cli' ), Sandbox::probeKey( '/usr/bin/bwrap', '33:fpm-fcgi' ) );
 		self::assertSame( Sandbox::probeKey( '/usr/bin/bwrap' ), Sandbox::probeKey( '/usr/bin/bwrap', Sandbox::process() ) );
 		self::assertStringEndsWith( ':' . PHP_SAPI, Sandbox::process() );
+		self::assertStringStartsWith( 'user ', Sandbox::describedProcess() );
+		self::assertStringContainsString( PHP_SAPI === 'cli' ? 'the command line' : 'the web server', Sandbox::describedProcess() );
 	}
 
 	public function testWithoutBwrapThereIsNoSandbox(): void

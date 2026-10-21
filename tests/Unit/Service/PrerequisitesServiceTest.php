@@ -103,6 +103,7 @@ class PrerequisitesServiceTest
 	 */
 	public function testABwrapThatCannotStartASandboxIsOptionalWhileOff(): void
 	{
+		$this->appValues[ ConfigLexicon::SANDBOX ]                  = ConfigLexicon::SANDBOX_OFF;
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'setting up uid map: Permission denied';
 		$programs                                                   = [ 'pdftoppm', 'timeout', 'prlimit', 'choom', 'bwrap' ];
 
@@ -115,8 +116,32 @@ class PrerequisitesServiceTest
 	}
 
 	/**
-	 * Switched on, a bwrap that cannot start a sandbox blocks, since every
-	 * render would fail; one that can is ready.
+	 * Auto, the default: bwrap is never needed, and the row says whether
+	 * renders are sandboxed, or why not, and for which process.
+	 */
+	public function testUnderAutoTheRowSaysWhetherRendersAreSandboxed(): void
+	{
+		$programs = [ 'pdftoppm', 'timeout', 'prlimit', 'choom', 'bwrap' ];
+
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'setting up uid map: Permission denied';
+		$without                                                    = self::item( $this->service( $programs )->check(), 'bwrap' );
+		self::assertSame( Prerequisite::OPTIONAL, $without->status );
+		self::assertFalse( $without->isBlocking() );
+		self::assertStringContainsString( 'renders without it: setting up uid map: Permission denied (as user ', $without->detail );
+		self::assertStringEndsWith( 'where it can start (auto)', $without->neededFor );
+
+		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
+		$sandboxed                                                  = self::item( $this->service( $programs )->check(), 'bwrap' );
+		self::assertSame( Prerequisite::OK, $sandboxed->status );
+		self::assertStringContainsString( 'renders sandboxed (as user ', $sandboxed->detail );
+
+		$this->cacheValues = [];
+		self::assertFalse( self::item( $this->service( [ 'pdftoppm', 'timeout', 'prlimit', 'choom' ] )->check(), 'bwrap' )->isBlocking() );
+	}
+
+	/**
+	 * On, a bwrap that cannot start a sandbox blocks, since every render
+	 * would fail; one that can is ready.
 	 */
 	public function testWhileOnTheSandboxMustStart(): void
 	{

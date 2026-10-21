@@ -207,7 +207,13 @@ class PrerequisitesService
 				$spec['limit'] === false => false,
 				default                  => $enabled[ $spec['limit'] ],
 			};
-			$for    = $spec['for'] . ( is_string( $spec['limit'] ) && ! $needed ? ', switched off' : '' );
+			$auto   = $program === Sandbox::PROGRAM && $limits->sandbox === ConfigLexicon::SANDBOX_AUTO;
+			$for    = $spec['for'] . match ( true )
+				{
+					$auto                                    => ', where it can start (auto)',
+					is_string( $spec['limit'] ) && ! $needed => ', switched off',
+					default                                  => '',
+				};
 
 			if ( ! $location->isFound() )
 			{
@@ -237,11 +243,22 @@ class PrerequisitesService
 				}
 			}
 
-			// Found is not enough: whether it can start a sandbox here, where
-			// it is needed or the versions are asked for. Missing while on.
-			$problem = $program === Sandbox::PROGRAM && ( $needed || $versions )
-				? $this->sandbox->problem()
-				: null;
+			// Found is not enough: whether it can start a sandbox, for this
+			// process, where it is on or auto or the versions are asked for.
+			// Missing while on; under auto, the render goes on without it.
+			$probed  = $program === Sandbox::PROGRAM && ( $needed || $auto || $versions );
+			$problem = $probed ? $this->sandbox->problem() : null;
+
+			if ( $probed )
+			{
+				$detail .= match ( true )
+				{
+					$problem === null => '; renders sandboxed',
+					$auto             => '; renders without it: ' . Sandbox::explained( $problem ),
+					default           => '; cannot start a sandbox here: ' . Sandbox::explained( $problem ),
+				};
+				$detail .= sprintf( ' (as %s)', Sandbox::describedProcess() );
+			}
 
 			$items[] = new Prerequisite(
 				Prerequisite::GROUP_PROGRAM,
@@ -253,7 +270,7 @@ class PrerequisitesService
 					default           => Prerequisite::OPTIONAL,
 				},
 				$for,
-				$problem === null ? $detail : $detail . '; cannot start a sandbox here: ' . Sandbox::explained( $problem ),
+				$detail,
 			);
 		}
 

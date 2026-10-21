@@ -296,7 +296,24 @@ class Sandbox
 	 */
 	public static function process(): string
 	{
-		return sprintf( '%s:%s', function_exists( 'posix_geteuid' ) ? (string) posix_geteuid() : '?', PHP_SAPI );
+		return sprintf( '%s:%s', self::user(), PHP_SAPI );
+	}
+
+	/**
+	 * The process a probe answered for, as the status names it: `occ` and
+	 * the web server may answer differently, each rightly for itself.
+	 */
+	public static function describedProcess(): string
+	{
+		return sprintf( 'user %s, %s', self::user(), PHP_SAPI === 'cli' ? 'the command line' : 'the web server (' . PHP_SAPI . ')' );
+	}
+
+	/**
+	 * The process's effective user id, or `?` without the posix extension.
+	 */
+	private static function user(): string
+	{
+		return function_exists( 'posix_geteuid' ) ? (string) posix_geteuid() : '?';
 	}
 
 	/**
