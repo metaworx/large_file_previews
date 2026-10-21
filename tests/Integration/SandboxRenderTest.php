@@ -50,7 +50,7 @@ class SandboxRenderTest
 			$this->settings()->setMimeRule( $mime, new TypeRule( true ) );
 		}
 
-		$this->settings()->setScalar( ConfigLexicon::BWRAP_ENABLED, true );
+		$this->settings()->setScalar( ConfigLexicon::SANDBOX, ConfigLexicon::SANDBOX_ON );
 	}
 
 

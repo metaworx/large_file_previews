@@ -120,6 +120,9 @@ msgstr ""
 msgid "Advanced"
 msgstr ""
 
+msgid "Always, or render nothing (on)"
+msgstr ""
+
 msgid "An extension overrides its MIME type, field by field. Processing 'enabled' selects its files even where the MIME type is disabled; 'excluded' never selects them. A minimum or maximum set here replaces the MIME type's; one left empty follows it."
 msgstr ""
 
@@ -298,6 +301,9 @@ msgstr ""
 msgid "Needed"
 msgstr ""
 
+msgid "Never (off)"
+msgstr ""
+
 msgid "Nextcloud"
 msgstr ""
 
@@ -430,7 +436,7 @@ msgstr ""
 msgid "Restore from a file…"
 msgstr ""
 
-msgid "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why."
+msgid "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses. Auto uses it where the process rendering can start one, and renders without it where not; on renders nothing where it cannot start. The status above says which applies."
 msgstr ""
 
 msgid "Sandbox (bubblewrap)"
@@ -621,6 +627,9 @@ msgid "What is processed"
 msgstr ""
 
 msgid "Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MiB more; the copy is gone once rendered."
+msgstr ""
+
+msgid "Where it can start (auto)"
 msgstr ""
 
 msgid "Which files"

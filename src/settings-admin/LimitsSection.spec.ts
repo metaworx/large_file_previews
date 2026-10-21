@@ -47,20 +47,28 @@ describe('LimitsSection', () => {
 		expect(wrapper.emitted('save')).toEqual([[{ scalars: { prlimit_enabled: false } }]])
 	})
 
-	it('switches the sandbox, off as shipped, a switch with no value of its own', async () => {
+	it('offers the sandbox auto, on and off, auto as shipped, each saying what it does', async () => {
 		const wrapper = section()
-		const sandbox = wrapper.find('[data-limit="bwrap_enabled"]')
+		const sandbox = wrapper.find('[data-setting="sandbox"]')
+		const radios = sandbox.findAllComponents({ name: 'NcCheckboxRadioSwitch' })
 
 		expect(sandbox.text()).toContain('Sandbox (bubblewrap)')
-		expect(sandbox.text()).toContain('occ lfp:config:set bwrap_enabled false')
-		expect(sandbox.findComponent({ name: 'NcCheckboxRadioSwitch' }).props('modelValue')).toBe(false)
-		expect(sandbox.findAllComponents(NumberField)).toHaveLength(0)
-		expect(sandbox.find('.lfp-fields').exists()).toBe(false)
+		expect(sandbox.text()).toContain('occ lfp:config:set sandbox auto')
+		const values: unknown[] = []
+		const labels: string[] = []
+		for (const radio of radios) {
+			values.push(radio.props('value'))
+			labels.push(radio.text())
+		}
+
+		expect(values).toEqual(['auto', 'on', 'off'])
+		expect(labels).toEqual(['Where it can start (auto)', 'Always, or render nothing (on)', 'Never (off)'])
+		expect(radios[0].props('modelValue')).toBe('auto')
 		expect(sandbox.findComponent(HelpPopover).props('text')).toContain('not the data directory or config.php')
 
-		await sandbox.findComponent({ name: 'NcCheckboxRadioSwitch' }).vm.$emit('update:modelValue', true)
+		await radios[1].vm.$emit('update:modelValue', 'on')
 
-		expect(wrapper.emitted('save')).toEqual([[{ scalars: { bwrap_enabled: true } }]])
+		expect(wrapper.emitted('save')).toEqual([[{ scalars: { sandbox: 'on' } }]])
 	})
 
 	it('saves a value under its own key', async () => {

@@ -65,7 +65,15 @@ class ConfigLexicon
 
 	public const CHOOM_ADJUST = 'choom_adjust';
 
-	public const BWRAP_ENABLED = 'bwrap_enabled';
+	public const SANDBOX = 'sandbox';
+
+	/** Where the process rendering can start a sandbox; otherwise without. */
+	public const SANDBOX_AUTO = 'auto';
+
+	/** Always; a run that cannot start one fails. */
+	public const SANDBOX_ON = 'on';
+
+	public const SANDBOX_OFF = 'off';
 
 	public const SCAN_NATIVE_ENABLED = 'scan_native_enabled';
 
@@ -112,6 +120,8 @@ class ConfigLexicon
 		 = [
 			// The untrusted-decoder switch, now in system config.
 			'vips_block_untrusted',
+			// The sandbox's switch before it shipped, now `sandbox`.
+			'bwrap_enabled',
 		];
 
 	/**
@@ -212,11 +222,13 @@ class ConfigLexicon
 				'max'        => 1000,
 				'definition' => 'The OOM score adjustment of a render; an unprivileged process may raise it only.',
 			],
-			// Off: bubblewrap needs user namespaces, which a container, as
-			// Nextcloud's own All-in-One, usually refuses.
-			self::BWRAP_ENABLED              => [
-				'default'    => false,
-				'definition' => 'Whether each render runs in a bubblewrap sandbox: no network, and of the file system only the system\'s programs and the render\'s own folder, not the data directory or config.php. Needs bwrap and user namespaces.',
+			// auto: bubblewrap needs user namespaces, which a container, as
+			// Nextcloud's own All-in-One, usually refuses, and whether the
+			// process rendering may have them only that process can tell.
+			self::SANDBOX                    => [
+				'default'    => self::SANDBOX_AUTO,
+				'choices'    => [ self::SANDBOX_AUTO, self::SANDBOX_ON, self::SANDBOX_OFF ],
+				'definition' => 'Whether each render runs in a bubblewrap sandbox: no network, and of the file system only the system\'s programs and the render\'s own folder, not the data directory or config.php. auto where the process rendering can start one, on always (a render that cannot start one fails), off never. Needs bwrap and user namespaces.',
 			],
 			self::SCAN_NATIVE_ENABLED        => [
 				'default'    => true,

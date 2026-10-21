@@ -22,7 +22,7 @@ const clearRules = () => {
 	}
 	cy.occ( `lfp:config:unset --mime ${ MIME } --field min_size_mb`, { failOnNonZeroExit: false, log: false } )
 	cy.occ( 'lfp:config:unset --mime application/pdf', { failOnNonZeroExit: false, log: false } )
-	for ( const key of [ 'min_size_mb', 'timeout_seconds', 'preview_quality', 'preview_stream', 'bwrap_enabled' ] ) {
+	for ( const key of [ 'min_size_mb', 'timeout_seconds', 'preview_quality', 'preview_stream', 'sandbox' ] ) {
 		cy.occ( `lfp:config:unset ${ key }`, { failOnNonZeroExit: false, log: false } )
 	}
 }

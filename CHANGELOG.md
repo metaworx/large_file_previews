@@ -13,9 +13,9 @@ the first stable release.
 
 ### Added
 
-- Each render in a bubblewrap sandbox (*Limits*, `bwrap_enabled`, off):
-  no network, and of the files only the system's programs and the
-  render's own folder; the status says whether it can start here.
+- A bubblewrap sandbox for each render (*Limits*, `sandbox`: `auto`,
+  `on`, `off`): no network, only the system's programs and the render's
+  own folder; `auto` where it can start; the status says which.
 
 ### Changed
 

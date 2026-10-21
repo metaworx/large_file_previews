@@ -104,7 +104,7 @@ class CommandRunnerTest
 	 */
 	public function testTheSandboxIsInnermost(): void
 	{
-		$this->appValues                                            = self::only( ConfigLexicon::CHOOM_ENABLED ) + [ ConfigLexicon::BWRAP_ENABLED => true ];
+		$this->appValues                                            = self::only( ConfigLexicon::CHOOM_ENABLED ) + [ ConfigLexicon::SANDBOX => ConfigLexicon::SANDBOX_ON ];
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = '';
 
 		self::assertSame(
@@ -119,18 +119,18 @@ class CommandRunnerTest
 	}
 
 	/**
-	 * Switched on, a bwrap that is missing, or cannot start a sandbox here,
-	 * stops the run before it starts, as a missing limit does.
+	 * On, a bwrap that is missing, or cannot start a sandbox here, stops the
+	 * run before it starts, as a missing limit does.
 	 */
-	public function testASandboxSwitchedOnButUnusableFailsClosed(): void
+	public function testASandboxOnButUnusableFailsClosed(): void
 	{
-		$this->appValues = self::only( '' ) + [ ConfigLexicon::BWRAP_ENABLED => true ];
+		$this->appValues = self::only( '' ) + [ ConfigLexicon::SANDBOX => ConfigLexicon::SANDBOX_ON ];
 
 		$missing = $this->runner( [ 'pdftoppm' => '/usr/bin/pdftoppm' ] )->command( 'pdftoppm', [] );
 
 		self::assertInstanceOf( RenderOutcome::class, $missing );
 		self::assertSame( Outcome::LIMIT_MISSING, $missing->outcome );
-		self::assertStringContainsString( 'bwrap is switched on but not found', $missing->reason );
+		self::assertStringContainsString( 'the sandbox is on but bwrap is not found', $missing->reason );
 
 		// The first runner's finder left bwrap known as missing.
 		$this->cacheValues                                           = [ Sandbox::probeKey( '/usr/bin/bwrap' ) => 'setting up uid map: Permission denied' ];
@@ -138,7 +138,31 @@ class CommandRunnerTest
 
 		self::assertInstanceOf( RenderOutcome::class, $refused );
 		self::assertSame( Outcome::LIMIT_MISSING, $refused->outcome );
-		self::assertStringContainsString( 'cannot start a sandbox here: setting up uid map: Permission denied', $refused->reason );
+		self::assertStringContainsString( 'bwrap cannot start one here: setting up uid map: Permission denied', $refused->reason );
+	}
+
+	/**
+	 * Auto, the default: sandboxed where bwrap can start one; where it is
+	 * missing or cannot, the run goes on without, as before there was one.
+	 * Off, never, even where it could.
+	 */
+	public function testAutoSandboxesWhereItCanAndOffNever(): void
+	{
+		$this->appValues = self::only( '' );
+		$programs        = [ 'bwrap' => '/usr/bin/bwrap', 'pdftoppm' => '/usr/bin/pdftoppm' ];
+
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( [ 'pdftoppm' => '/usr/bin/pdftoppm' ] )->command( 'pdftoppm', [] ) );
+
+		$this->cacheValues = [ Sandbox::probeKey( '/usr/bin/bwrap' ) => 'setting up uid map: Permission denied' ];
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [] ) );
+
+		$this->cacheValues = [ Sandbox::probeKey( '/usr/bin/bwrap' ) => '' ];
+		$sandboxed         = $this->runner( $programs )->command( 'pdftoppm', [] );
+		self::assertIsArray( $sandboxed );
+		self::assertSame( '/usr/bin/bwrap', $sandboxed[0] );
+
+		$this->appValues[ ConfigLexicon::SANDBOX ] = ConfigLexicon::SANDBOX_OFF;
+		self::assertSame( [ '/usr/bin/pdftoppm' ], $this->runner( $programs )->command( 'pdftoppm', [] ) );
 	}
 
 	/**

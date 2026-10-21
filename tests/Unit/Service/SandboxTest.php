@@ -111,7 +111,7 @@ class SandboxTest
 
 		$wrapped = $sandbox->wrap( '/usr/bin/pdftoppm', '/render' );
 		self::assertInstanceOf( RenderOutcome::class, $wrapped );
-		self::assertStringContainsString( 'cannot start a sandbox here: No permissions to create new namespace', $wrapped->reason );
+		self::assertStringContainsString( 'bwrap cannot start one here: No permissions to create new namespace', $wrapped->reason );
 	}
 
 	/**
@@ -131,6 +131,18 @@ class SandboxTest
 
 		self::assertInstanceOf( RenderOutcome::class, $wrapped );
 		self::assertStringContainsString( 'The sandbox on Ubuntu 24.04', $wrapped->reason );
+	}
+
+	/**
+	 * The probe's answer is kept for the process that gave it: occ, perhaps
+	 * as root, never answers for the web server's worker.
+	 */
+	public function testTheProbeIsKeptPerProcess(): void
+	{
+		self::assertNotSame( Sandbox::probeKey( '/usr/bin/bwrap', '0:cli' ), Sandbox::probeKey( '/usr/bin/bwrap', '33:cli' ) );
+		self::assertNotSame( Sandbox::probeKey( '/usr/bin/bwrap', '33:cli' ), Sandbox::probeKey( '/usr/bin/bwrap', '33:fpm-fcgi' ) );
+		self::assertSame( Sandbox::probeKey( '/usr/bin/bwrap' ), Sandbox::probeKey( '/usr/bin/bwrap', Sandbox::process() ) );
+		self::assertStringEndsWith( ':' . PHP_SAPI, Sandbox::process() );
 	}
 
 	public function testWithoutBwrapThereIsNoSandbox(): void

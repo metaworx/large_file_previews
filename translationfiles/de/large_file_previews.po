@@ -120,6 +120,9 @@ msgstr "Anpassung, 0 bis 1000"
 msgid "Advanced"
 msgstr "Erweitert"
 
+msgid "Always, or render nothing (on)"
+msgstr "Immer, sonst nichts rendern (on)"
+
 msgid "An extension overrides its MIME type, field by field. Processing 'enabled' selects its files even where the MIME type is disabled; 'excluded' never selects them. A minimum or maximum set here replaces the MIME type's; one left empty follows it."
 msgstr "Eine Dateiendung hat Feld für Feld Vorrang vor ihrem MIME-Typ.Verarbeitung „aktiviert“ wählt ihre Dateien auch dann aus, wenn der MIME-Typ deaktiviert ist; „ausgeschlossen“ wählt sie nie aus. Ein hier gesetztes Minimum oder Maximum ersetzt das des MIME-Typs; ein leer gelassenes folgt ihm."
 
@@ -298,6 +301,9 @@ msgstr "Name"
 msgid "Needed"
 msgstr "Benötigt"
 
+msgid "Never (off)"
+msgstr "Nie (off)"
+
 msgid "Nextcloud"
 msgstr "Nextcloud"
 
@@ -430,8 +436,8 @@ msgstr "{label} zurücksetzen"
 msgid "Restore from a file…"
 msgstr "Aus einer Datei wiederherstellen…"
 
-msgid "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why."
-msgstr "Führt jeden Rendervorgang in einer bubblewrap-Sandbox aus: kein Netzwerk, und von den Dateien nur die Programme des Systems und der eigene Ordner des Rendervorgangs, nicht das Datenverzeichnis oder config.php. Braucht bwrap und User-Namespaces, die ein Container wie Nextcloud All-in-One meist verweigert: Eingeschaltet, wo sie nicht starten kann, wird nichts gerendert, und der Status oben sagt, warum."
+msgid "Runs each render in a bubblewrap sandbox: no network, and of the files only the system's programs and the render's own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses. Auto uses it where the process rendering can start one, and renders without it where not; on renders nothing where it cannot start. The status above says which applies."
+msgstr "Führt jeden Rendervorgang in einer bubblewrap-Sandbox aus: kein Netzwerk, und von den Dateien nur die Programme des Systems und der eigene Ordner des Rendervorgangs, nicht das Datenverzeichnis oder config.php. Braucht bwrap und User-Namespaces, die ein Container wie Nextcloud All-in-One meist verweigert. Auto nutzt sie, wo der rendernde Prozess eine starten kann, und rendert sonst ohne; on rendert nichts, wo sie nicht starten kann. Der Status oben sagt, was gilt."
 
 msgid "Sandbox (bubblewrap)"
 msgstr "Sandbox (bubblewrap)"
@@ -622,6 +628,9 @@ msgstr "Was verarbeitet wird"
 
 msgid "Where a TIFF in one strip that ran out of memory is copied, uncompressed, to be rendered again, one copy at a time. It must be a writable directory on disk, not on tmpfs or ramfs, with room for the copy and 256 MiB more; the copy is gone once rendered."
 msgstr "Wohin ein TIFF in einem einzigen Streifen, dem der Speicher ausging, unkomprimiert kopiert wird, um erneut gerendert zu werden, eine Kopie nach der anderen. Es muss ein beschreibbares Verzeichnis auf der Festplatte sein, nicht auf tmpfs oder ramfs, mit Platz für die Kopie und 256 MiB mehr; die Kopie ist nach dem Rendern weg."
+
+msgid "Where it can start (auto)"
+msgstr "Wo sie starten kann (auto)"
 
 msgid "Which files"
 msgstr "Welche Dateien"

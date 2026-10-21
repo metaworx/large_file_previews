@@ -120,7 +120,7 @@ class PrerequisitesServiceTest
 	 */
 	public function testWhileOnTheSandboxMustStart(): void
 	{
-		$this->appValues[ ConfigLexicon::BWRAP_ENABLED ]            = true;
+		$this->appValues[ ConfigLexicon::SANDBOX ]                  = ConfigLexicon::SANDBOX_ON;
 		$this->cacheValues[ Sandbox::probeKey( '/usr/bin/bwrap' ) ] = 'No permissions to create new namespace';
 		$programs                                                   = [ 'pdftoppm', 'timeout', 'prlimit', 'choom', 'bwrap' ];
 

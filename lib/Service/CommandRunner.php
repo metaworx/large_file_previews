@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Service;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Config\Limits;
 use OCP\ITempManager;
 
@@ -145,16 +146,20 @@ class CommandRunner
 			return $prefix;
 		}
 
-		if ( $limits->bwrapEnabled )
+		// On, a sandbox that cannot start ends the run; auto, the run goes
+		// on without one, as it would have before there was one.
+		if ( $limits->sandbox !== ConfigLexicon::SANDBOX_OFF )
 		{
 			$sandbox = $this->sandbox->wrap( (string) $location->path, $options->writable );
 
-			if ( $sandbox instanceof RenderOutcome )
+			if ( ! $sandbox instanceof RenderOutcome )
+			{
+				$prefix = [ ...$prefix, ...$sandbox ];
+			}
+			elseif ( $limits->sandbox === ConfigLexicon::SANDBOX_ON )
 			{
 				return $sandbox;
 			}
-
-			$prefix = [ ...$prefix, ...$sandbox ];
 		}
 
 		return [ ...$prefix, (string) $location->path, ...$arguments ];

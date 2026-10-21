@@ -4,9 +4,10 @@
  * @license   AGPL-3.0-or-later
  *
  * The limits each render runs under, each switchable, each with its value,
- * and how long a file that failed is left alone. A limit switched on whose
- * program is missing stops rendering rather than let it run without; the
- * status above says which. What each does is behind its ⓘ.
+ * the sandbox, auto, on or off, and how long a file that failed is left
+ * alone. A limit switched on whose program is missing stops rendering
+ * rather than let it run without, as the sandbox does when on; the status
+ * above says which. What each does is behind its ⓘ.
  */
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import HelpPopover from './HelpPopover.vue'
@@ -62,13 +63,21 @@ const LIMITS: Limit[] = [
 			{ key: 'choom_adjust', label: t('large_file_previews', 'Adjustment, 0 to 1000') },
 		],
 	},
-	{
-		switch: 'bwrap_enabled',
-		name: t('large_file_previews', 'Sandbox (bubblewrap)'),
-		help: t('large_file_previews', 'Runs each render in a bubblewrap sandbox: no network, and of the files only the system\'s programs and the render\'s own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses: switched on where it cannot start, nothing is rendered, and the status above says why.'),
-		values: [],
-	},
 ]
+
+/** The sandbox's three choices, each with what it does. */
+const SANDBOX_LABELS: Record<string, string> = {
+	auto: t('large_file_previews', 'Where it can start (auto)'),
+	on: t('large_file_previews', 'Always, or render nothing (on)'),
+	off: t('large_file_previews', 'Never (off)'),
+}
+
+/** The radio group's name, which ties its radios together. */
+const SANDBOX_GROUP = 'lfp-sandbox'
+
+function sandboxLabel(choice: string): string {
+	return SANDBOX_LABELS[choice] ?? choice
+}
 </script>
 
 <template>
@@ -91,7 +100,7 @@ const LIMITS: Limit[] = [
 				<HelpPopover :text="limit.help" :label="limit.name" />
 			</div>
 			<OccCommand :command="scalarCommand(limit.switch, state.scalars[limit.switch].value)" />
-			<div v-if="limit.values.length > 0" class="lfp-fields">
+			<div class="lfp-fields">
 				<div v-for="value in limit.values" :key="value.key">
 					<NumberField :id="'lfp-' + value.key"
 						:label="value.label"
@@ -105,6 +114,27 @@ const LIMITS: Limit[] = [
 						@save="emit('save', scalarChange(value.key, $event))" />
 					<OccCommand :command="storedScalarCommand(value.key, state.scalars[value.key])" />
 				</div>
+			</div>
+		</div>
+
+		<div class="lfp-limit" data-setting="sandbox">
+			<h4 class="lfp-named">
+				{{ t('large_file_previews', 'Sandbox (bubblewrap)') }}
+				<HelpPopover :text="t('large_file_previews', 'Runs each render in a bubblewrap sandbox: no network, and of the files only the system\'s programs and the render\'s own folder, not the data directory or config.php. Needs bwrap and user namespaces, which a container such as Nextcloud All-in-One usually refuses. Auto uses it where the process rendering can start one, and renders without it where not; on renders nothing where it cannot start. The status above says which applies.')"
+					:label="t('large_file_previews', 'Sandbox (bubblewrap)')" />
+			</h4>
+			<div class="lfp-choices">
+				<NcCheckboxRadioSwitch v-for="choice in state.scalars.sandbox.choices ?? []"
+					:key="choice"
+					type="radio"
+					:name="SANDBOX_GROUP"
+					:value="choice"
+					:model-value="state.scalars.sandbox.value"
+					:disabled="saving"
+					@update:model-value="emit('save', scalarChange('sandbox', $event as string))">
+					{{ sandboxLabel(choice) }}
+				</NcCheckboxRadioSwitch>
+				<OccCommand :command="scalarCommand('sandbox', state.scalars.sandbox.value)" />
 			</div>
 		</div>
 

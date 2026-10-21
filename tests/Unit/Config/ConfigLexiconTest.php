@@ -52,7 +52,7 @@ class ConfigLexiconTest
 				'tiff_restrip_max_mb',
 				'choom_enabled',
 				'choom_adjust',
-				'bwrap_enabled',
+				'sandbox',
 				'scan_native_enabled',
 				'scan_coverage_percent',
 				'vips_concurrency',

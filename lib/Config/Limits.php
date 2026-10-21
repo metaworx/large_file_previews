@@ -28,8 +28,8 @@ final readonly class Limits
 		// The largest file a run may write, in bytes: its output, stderr and
 		// any spill; switched with the address-space cap (prlimit_enabled).
 		public int  $prlimitFsizeBytes = 1_073_741_824,
-		// Each run in a bubblewrap sandbox (Sandbox).
-		public bool $bwrapEnabled = false,
+		// Each run in a bubblewrap sandbox (Sandbox): auto, on or off.
+		public string $sandbox = ConfigLexicon::SANDBOX_OFF,
 	)
 	{
 	}
@@ -57,7 +57,7 @@ final readonly class Limits
 			$this->choomEnabled,
 			$this->choomAdjust,
 			$prlimitFsizeBytes ?? $this->prlimitFsizeBytes,
-			$this->bwrapEnabled,
+			$this->sandbox,
 		);
 	}
 

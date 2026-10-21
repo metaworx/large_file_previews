@@ -13,7 +13,8 @@ use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCP\IConfig;
 
 /**
- * Each render in a bubblewrap sandbox, where `bwrap_enabled` says so: the
+ * Each render in a bubblewrap sandbox, where `sandbox` says so - `auto`
+ * where the process rendering can start one, `on` always, `off` never: the
  * innermost wrapper of CommandRunner's chain, so that the caps, the OOM
  * score and the timeout hold for it too.
  *
@@ -42,9 +43,11 @@ use OCP\IConfig;
  * keep config.php under /etc (masks()).
  *
  * bwrap needs user namespaces, which a container usually refuses, and which
- * a distribution may restrict: whether it can start a sandbox here is
- * probed once and kept (DetectionCache). Switched on and unable, a run
- * fails before it starts, as a missing limit's does.
+ * a distribution may restrict: whether it can start a sandbox is probed
+ * once and kept (DetectionCache), for the process's user and PHP's mode -
+ * `occ`, perhaps as root, may where the web server's worker may not. On and
+ * unable, a run fails before it starts, as a missing limit's does; auto and
+ * unable, it runs without (CommandRunner).
  */
 class Sandbox
 {
@@ -59,7 +62,7 @@ class Sandbox
 	public const FONT_CACHE = '/var/cache/fontconfig';
 
 	/** Bumped where the arguments change, so a probe of the old ones is not kept. */
-	private const PROBE_VERSION = 1;
+	private const PROBE_VERSION = 2;
 
 
 //  constructor
@@ -95,9 +98,9 @@ class Sandbox
 			return new RenderOutcome(
 				Outcome::LIMIT_MISSING,
 				sprintf(
-					'bwrap is switched on but not found%s; switch it off (%s) or install it',
+					'the sandbox is on but bwrap is not found%s; install it, or set %s to auto or off',
 					$location->problem === null ? '' : ': ' . $location->problem,
-					ConfigLexicon::BWRAP_ENABLED,
+					ConfigLexicon::SANDBOX,
 				),
 			);
 		}
@@ -108,7 +111,7 @@ class Sandbox
 		{
 			return new RenderOutcome(
 				Outcome::LIMIT_MISSING,
-				sprintf( 'bwrap is switched on but cannot start a sandbox here: %s; switch it off (%s)', self::explained( $problem ), ConfigLexicon::BWRAP_ENABLED ),
+				sprintf( 'the sandbox is on but bwrap cannot start one here: %s; set %s to auto or off', self::explained( $problem ), ConfigLexicon::SANDBOX ),
 			);
 		}
 
@@ -169,7 +172,8 @@ class Sandbox
 	/**
 	 * Why bwrap cannot start a sandbox here, or null where it can: a
 	 * sandbox started with the arguments a render's would have, once, and
-	 * its answer kept with the program's path and change time.
+	 * its answer kept with the program's path and change time, for this
+	 * process's user and PHP's mode.
 	 */
 	public function problem(): ?string
 	{
@@ -273,11 +277,26 @@ class Sandbox
 
 	/**
 	 * Where the probe's answer for a bwrap is kept: by its path and change
-	 * time, so that another bwrap, or the same one updated, is probed again.
+	 * time, so that another bwrap, or the same one updated, is probed again,
+	 * and by the process it answers for (process()).
 	 */
-	public static function probeKey( string $bwrap ): string
+	public static function probeKey(
+		string  $bwrap,
+		?string $process = null,
+	): string
 	{
-		return sprintf( 'sandbox.%d.%s', self::PROBE_VERSION, md5( $bwrap . '|' . (string) @filemtime( $bwrap ) ) );
+		return sprintf( 'sandbox.%d.%s', self::PROBE_VERSION, md5( $bwrap . '|' . (string) @filemtime( $bwrap ) . '|' . ( $process ?? self::process() ) ) );
+	}
+
+	/**
+	 * The process a probe answers for: its effective user and PHP's mode.
+	 * Root may create user namespaces where www-data may not, and a web
+	 * server's worker may be refused them by its service's hardening where
+	 * the command line is not.
+	 */
+	public static function process(): string
+	{
+		return sprintf( '%s:%s', function_exists( 'posix_geteuid' ) ? (string) posix_geteuid() : '?', PHP_SAPI );
 	}
 
 	/**

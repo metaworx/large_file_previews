@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace OCA\LargeFilePreviews\Service;
 
+use OCA\LargeFilePreviews\Config\ConfigLexicon;
 use OCA\LargeFilePreviews\Renderer\Unsupported;
 use OCA\LargeFilePreviews\Renderer\VipsLoaders;
 use OCA\LargeFilePreviews\Renderer\VipsRenderer;
@@ -191,7 +192,7 @@ class PrerequisitesService
 			'timeout' => $limits->timeoutEnabled,
 			'prlimit' => $limits->prlimitEnabled,
 			'choom'   => $limits->choomEnabled,
-			'bwrap'   => $limits->bwrapEnabled,
+			'bwrap'   => $limits->sandbox === ConfigLexicon::SANDBOX_ON,
 			'images'  => $this->config->imagesEnabled(),
 		];
 		$items   = [];
