@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
-import OccCommand from './OccCommand.vue'
+import { OccCommand } from '@metaworx/nextcloud-vue'
 import PreviewsSection from './PreviewsSection.vue'
 import { testState } from './testState'
 

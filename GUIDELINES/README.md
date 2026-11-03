@@ -48,7 +48,7 @@ Editing a generated file is wasted work — change the fragment and re-run
 ---
 
 
-# Large File Previews — Project Contract (v1.2.3)
+# Large File Previews — Project Contract (v1.2.4)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `GUIDELINES/README.md` for people,
@@ -170,8 +170,10 @@ release:
 ### 3.4 Every user-facing text is translatable
 
 A text a person reads - a setup check's message, the settings page, a refusal it shows -
-goes through `IL10N` in PHP and `t()` in the frontend (`src/l10n.ts`),
+goes through `IL10N` in PHP and `t()` in the frontend (from `@metaworx/nextcloud-vue`),
 and ESLint's `vue/no-bare-strings-in-template` holds the templates to it.
+The texts that package's components show are the app's too:
+`src/texts.ts` translates each and hands them over in the page's entry.
 Logs and command output stay English.
 German ships, as `de` (du) and `de_DE` (Sie),
 built into `l10n/` from `translationfiles/` by `scripts/l10n.sh`:

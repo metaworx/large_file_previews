@@ -189,7 +189,7 @@ describe( 'Screenshots', () => {
 		openSettings()
 		// Down to the caps' last command: the section, each field with its
 		// label above it, is taller than the viewport.
-		shotBetween( 'Limits', '.lfp-limits', '.lfp-limits .lfp-occ:contains("prlimit_fsize_mb")' )
+		shotBetween( 'Limits', '.lfp-limits', '.lfp-limits .mwx-occ:contains("prlimit_fsize_mb")' )
 	} )
 
 	// Down to the quality's command; Nextcloud's own settings follow, below

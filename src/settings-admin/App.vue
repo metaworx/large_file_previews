@@ -12,6 +12,7 @@ import { onMounted } from 'vue'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcSettingsSection from '@nextcloud/vue/components/NcSettingsSection'
+import { t } from '@metaworx/nextcloud-vue'
 import AdvancedSection from './AdvancedSection.vue'
 import BackupSection from './BackupSection.vue'
 import LimitsSection from './LimitsSection.vue'
@@ -19,7 +20,6 @@ import PreviewsSection from './PreviewsSection.vue'
 import StatusSection from './StatusSection.vue'
 import TypesSection from './TypesSection.vue'
 import { useSettings } from './useSettings'
-import { t } from '../l10n'
 
 const { state, saving, failed, load, save, refresh } = useSettings()
 

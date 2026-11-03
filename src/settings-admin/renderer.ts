@@ -5,7 +5,7 @@
  * Why a type's renderer cannot render it here, said once for the page: the
  * sentence a type's row shows and the badge the active table shows.
  */
-import { t } from '../l10n'
+import { t } from '@metaworx/nextcloud-vue'
 import type { Renderer } from './types'
 
 export interface RendererProblem {

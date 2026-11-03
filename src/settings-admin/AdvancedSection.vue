@@ -11,13 +11,10 @@
  */
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
-import HelpPopover from './HelpPopover.vue'
+import { HelpPopover, NumberField, OccCommand, t } from '@metaworx/nextcloud-vue'
 import InstallHint from './InstallHint.vue'
-import NumberField from './NumberField.vue'
-import OccCommand from './OccCommand.vue'
 import { binaryCommand, scratchCommand, storedScalarCommand, untrustedCommand } from './occ'
 import { defaultPlaceholder, storedNumber } from './scalarField'
-import { t } from '../l10n'
 import { scalarChange } from './types'
 import type { Changes, ProgramRow, SettingsState } from './types'
 

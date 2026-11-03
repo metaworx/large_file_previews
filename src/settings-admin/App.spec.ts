@@ -7,7 +7,8 @@ vi.mock('@nextcloud/router', () => ({
 	generateOcsUrl: (url: string) => url,
 }))
 
-vi.mock('../toast', () => ({
+vi.mock('@metaworx/nextcloud-vue', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@metaworx/nextcloud-vue')>()),
 	toastSaved: vi.fn(),
 	toastError: vi.fn(),
 }))

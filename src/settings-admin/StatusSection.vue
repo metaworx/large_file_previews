@@ -9,8 +9,8 @@
  */
 import { computed } from 'vue'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
+import { t } from '@metaworx/nextcloud-vue'
 import InstallHint from './InstallHint.vue'
-import { t } from '../l10n'
 import type { PrerequisiteItem, SettingsState } from './types'
 
 const props = defineProps<{

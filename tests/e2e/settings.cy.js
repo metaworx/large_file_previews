@@ -13,7 +13,8 @@ const MIME = 'image/tiff'
 const SHIPPED_MIN = '50 (as shipped)'
 
 // @nextcloud/dialogs' toast container; its class is a CSS-module hash, so
-// it is matched by the stable half of the name, as src/toast.css does.
+// it is matched by the stable half of the name, as the placement in
+// @metaworx/nextcloud-vue's stylesheet does.
 const TOAST = '[class*="_toastContainer_"]'
 
 const clearRules = () => {
@@ -129,7 +130,7 @@ describe( 'The settings page', () => {
 		cy.get( field ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', SHIPPED_MIN )
 
 		cy.get( field ).type( '7' )
-		cy.get( field ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+		cy.get( field ).closest( '.mwx-number' ).find( '.mwx-number__save' ).click()
 		cy.get( TOAST ).should( 'contain', 'Saved.' )
 
 		cy.reload()
@@ -156,13 +157,13 @@ describe( 'The settings page', () => {
 
 		// The default: shown as it is, with a Reset while it is stored.
 		cy.get( 'input#lfp-min-size' ).should( 'have.value', '5' )
-			.closest( '.lfp-number' ).contains( 'button', 'Reset' ).click()
+			.closest( '.mwx-number' ).contains( 'button', 'Reset' ).click()
 		cy.get( 'input#lfp-min-size' ).should( 'have.value', '0' )
-			.closest( '.lfp-number' ).find( '.lfp-number__reset' ).should( 'not.exist' )
+			.closest( '.mwx-number' ).find( '.mwx-number__reset' ).should( 'not.exist' )
 
 		// A limit: emptied and saved, it follows its default again.
 		cy.get( 'input#lfp-timeout_seconds' ).should( 'have.value', '45' ).clear()
-		cy.get( 'input#lfp-timeout_seconds' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+		cy.get( 'input#lfp-timeout_seconds' ).closest( '.mwx-number' ).find( '.mwx-number__save' ).click()
 		cy.get( 'input#lfp-timeout_seconds' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '30 (default)' )
 		cy.get( '[data-limit="timeout_enabled"]' ).should( 'contain', 'occ lfp:config:unset timeout_seconds' )
 
@@ -229,12 +230,12 @@ describe( 'The settings page', () => {
 			cy.get( 'input#lfp-jpeg_quality' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '80 (default)' )
 
 			cy.get( 'input#lfp-jpeg_quality' ).type( '70' )
-			cy.get( 'input#lfp-jpeg_quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+			cy.get( 'input#lfp-jpeg_quality' ).closest( '.mwx-number' ).find( '.mwx-number__save' ).click()
 			cy.get( '[data-nextcloud="jpeg_quality"]' ).should( 'contain', 'occ config:app:set preview jpeg_quality --value=70 --type=integer' )
 			cy.occ( 'config:app:get preview jpeg_quality' ).its( 'stdout' ).invoke( 'trim' ).should( 'equal', '70' )
 
 			cy.get( 'input#lfp-jpeg_quality' ).clear()
-			cy.get( 'input#lfp-jpeg_quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+			cy.get( 'input#lfp-jpeg_quality' ).closest( '.mwx-number' ).find( '.mwx-number__save' ).click()
 			cy.get( '[data-nextcloud="jpeg_quality"]' ).should( 'contain', 'occ config:app:delete preview jpeg_quality' )
 			cy.occ( 'config:app:get preview jpeg_quality', { failOnNonZeroExit: false } ).its( 'exitCode' ).should( 'not.equal', 0 )
 
@@ -250,7 +251,7 @@ describe( 'The settings page', () => {
 
 		cy.get( 'input#lfp-preview-quality' ).should( 'have.value', '' ).and( 'have.attr', 'placeholder', '95 (default)' )
 		cy.get( 'input#lfp-preview-quality' ).type( '85' )
-		cy.get( 'input#lfp-preview-quality' ).closest( '.lfp-number' ).find( '.lfp-number__save' ).click()
+		cy.get( 'input#lfp-preview-quality' ).closest( '.mwx-number' ).find( '.mwx-number__save' ).click()
 		cy.get( '[data-setting="preview_quality"]' ).should( 'contain', 'occ lfp:config:set preview_quality 85' )
 		stored( 'preview_quality' ).should( 'deep.include', { value: 85, stored: true } )
 
@@ -282,11 +283,11 @@ describe( 'The settings page', () => {
 	} )
 
 	it( 'keeps every help icon clear of every Save button', () => {
-		cy.get( '.lfp-help-icon' ).should( 'have.length.greaterThan', 0 )
-		cy.get( '.lfp-number__save' ).should( 'have.length.greaterThan', 0 )
+		cy.get( '.mwx-help-icon' ).should( 'have.length.greaterThan', 0 )
+		cy.get( '.mwx-number__save' ).should( 'have.length.greaterThan', 0 )
 		cy.get( '#lfp-admin-settings' ).then( ( $page ) => {
-			const icons = [ ...$page[ 0 ].querySelectorAll( '.lfp-help-icon' ) ]
-			const saves = [ ...$page[ 0 ].querySelectorAll( '.lfp-number__save' ) ]
+			const icons = [ ...$page[ 0 ].querySelectorAll( '.mwx-help-icon' ) ]
+			const saves = [ ...$page[ 0 ].querySelectorAll( '.mwx-number__save' ) ]
 			const clashes = []
 			for ( const icon of icons ) {
 				for ( const save of saves ) {

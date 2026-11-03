@@ -11,6 +11,11 @@ the first stable release.
 
 ## [Unreleased]
 
+### Changed
+
+- Settings page: the shared components, toasts and helpers come from
+  the `@metaworx/nextcloud-vue` package; nothing visible changes.
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

@@ -16,12 +16,9 @@ import { computed, ref } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
-import HelpPopover from './HelpPopover.vue'
-import OccCommand from './OccCommand.vue'
+import { HelpPopover, OccCommand, t, toastSaved } from '@metaworx/nextcloud-vue'
 import { appConfigCommand, systemValueCommand } from './occ'
 import { useSettings } from './useSettings'
-import { t } from '../l10n'
-import { toastSaved } from '../toast'
 import type { ImportAnswer, TransferChange, TransferValue, TransferWarning } from './types'
 
 defineProps<{

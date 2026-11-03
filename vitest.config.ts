@@ -19,7 +19,9 @@ export default defineConfig({
 		// which knows. This is what lets a spec mount the real component
 		// rather than a stand-in, and .eslintrc.cjs holds the specs to that.
 		// @nextcloud/dialogs, which the toasts come from, imports them too.
-		server: { deps: { inline: [/@nextcloud\/vue/, /@nextcloud\/dialogs/] } },
+		// @metaworx/nextcloud-vue keeps its @nextcloud/dialogs import, so it
+		// is inlined too.
+		server: { deps: { inline: [/@nextcloud\/vue/, /@nextcloud\/dialogs/, /@metaworx\/nextcloud-vue/] } },
 		setupFiles: ['./vitest.setup.ts'],
 		include: ['src/**/*.spec.ts'],
 		exclude: [

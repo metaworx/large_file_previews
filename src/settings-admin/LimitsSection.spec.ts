@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import HelpPopover from './HelpPopover.vue'
+import { HelpPopover, NumberField } from '@metaworx/nextcloud-vue'
 import LimitsSection from './LimitsSection.vue'
-import NumberField from './NumberField.vue'
 import { testState } from './testState'
 
 function section(state = testState()) {

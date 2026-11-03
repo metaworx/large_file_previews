@@ -167,7 +167,7 @@
 }
 
 /* A size fills its column. */
-.lfp-settings .lfp-rule .lfp-rule__size .lfp-number__field {
+.lfp-settings .lfp-rule .lfp-rule__size .mwx-number__field {
 	flex: 1 1 auto;
 	width: auto;
 	min-width: 12rem;

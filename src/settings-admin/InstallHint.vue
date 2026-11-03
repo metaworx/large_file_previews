@@ -7,8 +7,7 @@
  * with one click, and a note where one is due, such as a repository to
  * enable, or that no package brings it.
  */
-import OccCommand from './OccCommand.vue'
-import { t } from '../l10n'
+import { OccCommand, t } from '@metaworx/nextcloud-vue'
 import type { Install } from './types'
 
 defineProps<{

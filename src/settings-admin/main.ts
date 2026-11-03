@@ -5,7 +5,11 @@
  * The admin settings page's entry point.
  */
 import { createApp } from 'vue'
+import { setTexts } from '@metaworx/nextcloud-vue'
+import '@metaworx/nextcloud-vue/style.css'
+import { texts } from '../texts'
 import App from './App.vue'
 import './settings-admin.css'
 
+setTexts(texts)
 createApp(App).mount('#lfp-admin-settings')

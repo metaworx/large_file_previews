@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { OccCommand } from '@metaworx/nextcloud-vue'
 import AdvancedSection from './AdvancedSection.vue'
-import OccCommand from './OccCommand.vue'
 import { cellLabels, testState } from './testState'
 
 function section(state = testState()) {

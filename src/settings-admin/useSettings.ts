@@ -10,10 +10,7 @@
  * state as it stands.
  */
 import { ref } from 'vue'
-import { getRequestToken } from '@nextcloud/auth'
-import { generateOcsUrl } from '@nextcloud/router'
-import { t } from '../l10n'
-import { toastError, toastSaved } from '../toast'
+import { ocsCall, t, toastError, toastSaved } from '@metaworx/nextcloud-vue'
 import type { Changes, ImportAnswer, SettingsState } from './types'
 
 export const SETTINGS_URL = '/apps/large_file_previews/settings'
@@ -28,27 +25,6 @@ interface Answer {
 	error: string | null
 }
 
-/**
- * One call of the settings API, with the request token, a body sent as
- * JSON; never throws. Not ok where it failed or never got there.
- */
-async function call(method: 'GET' | 'PUT' | 'POST', path: string, body?: unknown): Promise<{ ok: boolean, body: unknown }> {
-	try {
-		const response = await fetch(generateOcsUrl(SETTINGS_URL + path), {
-			method,
-			headers: {
-				requesttoken: getRequestToken() ?? '',
-				'OCS-APIRequest': 'true',
-				...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-			},
-			...(body === undefined ? {} : { body: JSON.stringify(body) }),
-		})
-		return { ok: response.ok, body: await response.json().catch(() => null) }
-	} catch (e) {
-		return { ok: false, body: null }
-	}
-}
-
 /** A refusal's reason, where the server gave one; '' where it gave none. */
 function reason(body: unknown): string {
 	const error = body !== null && typeof body === 'object' && 'error' in body ? body.error : null
@@ -60,7 +36,7 @@ function reason(body: unknown): string {
  * where it gave one.
  */
 async function request(method: 'GET' | 'PUT' | 'POST', path: string, changes?: Changes): Promise<Answer> {
-	const answer = await call(method, path, changes)
+	const answer = await ocsCall(method, SETTINGS_URL + path, changes)
 	if (answer.ok) {
 		return { state: answer.body as SettingsState, error: null }
 	}
@@ -113,7 +89,7 @@ export function useSettings() {
 
 	/** What is stored, as the file `occ lfp:config:export` writes; null where it could not be had. */
 	async function exportConfig(): Promise<Record<string, unknown> | null> {
-		const answer = await call('GET', '/export')
+		const answer = await ocsCall('GET', SETTINGS_URL + '/export')
 		if (!answer.ok || answer.body === null || typeof answer.body !== 'object') {
 			toastError(t('large_file_previews', 'The configuration could not be exported.'))
 			return null
@@ -129,7 +105,7 @@ export function useSettings() {
 	async function importConfig(document: string, replace: boolean, apply: boolean): Promise<ImportAnswer | { error: string }> {
 		saving.value = apply
 		try {
-			const answer = await call('POST', '/import', { document, replace, apply })
+			const answer = await ocsCall('POST', SETTINGS_URL + '/import', { document, replace, apply })
 			if (!answer.ok) {
 				return { error: reason(answer.body) || t('large_file_previews', 'The file could not be read.') }
 			}

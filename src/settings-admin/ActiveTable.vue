@@ -8,9 +8,9 @@
  * apply, each with the level it comes from. Computed by the server, by the
  * resolver the preview provider uses, and sent again with every save.
  */
+import { t } from '@metaworx/nextcloud-vue'
 import ProviderList from './ProviderList.vue'
 import { rendererProblem } from './renderer'
-import { t } from '../l10n'
 import type { ActiveRow, Provider, Sourced } from './types'
 
 withDefaults(defineProps<{

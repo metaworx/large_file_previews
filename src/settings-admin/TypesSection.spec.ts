@@ -91,7 +91,7 @@ describe('TypesSection', () => {
 		const labels: string[] = []
 		for (const field of row(section(), '[data-mime="application/pdf"]').findAllComponents({ name: 'NumberField' })) {
 			expect(field.props('labelOutside')).toBe(true)
-			labels.push(field.find('.lfp-number__label').text())
+			labels.push(field.find('.mwx-number__label').text())
 		}
 		expect(labels).toEqual(['Minimum, MiB', 'Maximum, MiB'])
 	})
@@ -101,7 +101,7 @@ describe('TypesSection', () => {
 
 		expect(pdf.element.parentElement?.classList.contains('lfp-rules')).toBe(true)
 		expect([...pdf.element.children].map((part) => part.classList[0]))
-			.toEqual(['lfp-rule__head', 'lfp-hint', 'lfp-number', 'lfp-number', 'lfp-occ'])
+			.toEqual(['lfp-rule__head', 'lfp-hint', 'mwx-number', 'mwx-number', 'mwx-occ'])
 		expect(pdf.find('.lfp-rule__head').findComponent({ name: 'NcCheckboxRadioSwitch' }).exists()).toBe(true)
 	})
 
@@ -175,7 +175,7 @@ describe('TypesSection', () => {
 	})
 
 	it('resets a default once it is stored, back to what it ships with', async () => {
-		const resettable = (state: SettingsState) => section(state).find('#lfp-min-size').element.closest('.lfp-number')?.querySelector('.lfp-number__reset') !== null
+		const resettable = (state: SettingsState) => section(state).find('#lfp-min-size').element.closest('.mwx-number')?.querySelector('.mwx-number__reset') !== null
 
 		expect(resettable(testState())).toBe(false)
 

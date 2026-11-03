@@ -6,7 +6,7 @@
  * value: it shows what is stored, empty where nothing is, its default as
  * the placeholder, and its command unsets it where nothing is stored.
  */
-import { t } from '../l10n'
+import { t } from '@metaworx/nextcloud-vue'
 import type { Scalar } from './types'
 
 /** What is stored, or null where the setting follows its default. */

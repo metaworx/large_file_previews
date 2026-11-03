@@ -15,12 +15,9 @@
 import { computed } from 'vue'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
-import HelpPopover from './HelpPopover.vue'
-import NumberField from './NumberField.vue'
-import OccCommand from './OccCommand.vue'
+import { HelpPopover, NumberField, OccCommand, t } from '@metaworx/nextcloud-vue'
 import { appConfigCommand, scalarCommand, storedScalarCommand, systemCommand } from './occ'
 import { defaultPlaceholder, storedNumber } from './scalarField'
-import { t } from '../l10n'
 import { scalarChange } from './types'
 import type { Changes, SettingsState } from './types'
 

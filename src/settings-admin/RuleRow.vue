@@ -20,12 +20,10 @@
 import { computed } from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
-import NumberField from './NumberField.vue'
-import OccCommand from './OccCommand.vue'
+import { NumberField, OccCommand, t } from '@metaworx/nextcloud-vue'
 import ProviderList from './ProviderList.vue'
 import { ruleCommand } from './occ'
 import { rendererProblem } from './renderer'
-import { t } from '../l10n'
 import type { Inherited, Provider, Renderer, Rule, RuleChange } from './types'
 
 const props = withDefaults(defineProps<{
