@@ -40,6 +40,7 @@ final class ServerInstaller
 
 //  getters / setters / is* / has*
 
+    #[\Override]
     public function isUpdateAvailable(
         string $appId,
         bool   $allowUnstable,
@@ -56,6 +57,7 @@ final class ServerInstaller
 
 //  other non-static methods
 
+    #[\Override]
     public function updateAppstoreApp(
         string $appId,
         bool   $allowUnstable,

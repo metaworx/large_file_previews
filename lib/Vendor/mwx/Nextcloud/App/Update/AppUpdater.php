@@ -30,6 +30,24 @@ final class AppUpdater
     public const HOLD_APP     = 'settings';
     public const HOLD_KEY     = 'appstore-fetcher-lastFailure';
 
+    /**
+     * Every class and interface of the package, loaded before the
+     * installer replaces the app's files: what it puts there is whatever
+     * the store shipped, so the rest of the run may load nothing from it.
+     *
+     * @var list<class-string>
+     */
+    public const PRELOAD = [
+        AppUpdater::class,
+        Installer::class,
+        Outcome::class,
+        Release::class,
+        Report::class,
+        ServerInstaller::class,
+        StoreRelease::class,
+        UpdateCommand::class,
+    ];
+
 
 //  constructor
 
@@ -129,6 +147,8 @@ final class AppUpdater
             return Outcome::offered( $offered );
         }
 
+        self::preload();
+
         try
         {
             $updated = $this->installer->updateAppstoreApp( $appId, $allowUnstable );
@@ -148,5 +168,19 @@ final class AppUpdater
         }
 
         return Outcome::updated( $offered );
+    }
+
+
+//  static methods
+
+    /**
+     * Loads every class and interface in `PRELOAD` that is not loaded yet.
+     */
+    public static function preload(): void
+    {
+        foreach ( self::PRELOAD as $name )
+        {
+            class_exists( $name ) || interface_exists( $name );
+        }
     }
 }

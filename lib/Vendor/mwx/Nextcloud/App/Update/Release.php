@@ -222,6 +222,8 @@ final class Release
      * The actual version, cut to as many components as the bound has,
      * compared to it; false for a bound that is not one to three numeric
      * components, on which the server's comparison throws.
+     *
+     * @param '>='|'<=' $operator
      */
     private static function compare(
         string $actual,
@@ -237,6 +239,12 @@ final class Release
         $length = count( explode( '.', $bound ) );
         $actual = implode( '.', array_slice( explode( '.', $match[0] ), 0, $length ) );
 
-        return version_compare( $actual, $bound, $operator );
+        $order = version_compare( $actual, $bound );
+
+        return match ( $operator )
+        {
+            '>=' => $order >= 0,
+            '<=' => $order <= 0,
+        };
     }
 }

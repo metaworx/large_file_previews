@@ -21,9 +21,11 @@ declare( strict_types=1 );
  * For each package in composer.json's `extra.strauss.packages`, every
  * directory of the package's own `autoload.psr-4` map is moved to its
  * namespace's path under lib/Vendor, replacing what an earlier run put
- * there; then the package's copy, Strauss's autoload.php and its
- * composer/ directory are deleted. A file it cannot place fails the run,
- * and lib/Vendor is left for Strauss to write again.
+ * there, and the package's licence, which Strauss copies whatever the
+ * exclusions say, goes to the top of that path, since the copy is still
+ * licensed as the package is; then the package's copy, Strauss's
+ * autoload.php and its composer/ directory are deleted. A file it cannot
+ * place fails the run, and lib/Vendor is left for Strauss to write again.
  *
  * Strauss writes the package from vendor/ afresh on every run, so running
  * both again changes nothing.
@@ -119,6 +121,9 @@ foreach ( $packages as $package )
 		$fail( $package . ' has no autoload.psr-4 to place its files by' );
 	}
 
+	// Where the licence goes: the top of the package's shortest namespace path.
+	$top = null;
+
 	foreach ( $psr4 as $namespace => $directories )
 	{
 		if ( trim( (string) $namespace, '\\' ) === '' )
@@ -127,6 +132,7 @@ foreach ( $packages as $package )
 		}
 
 		$place = $target . '/' . str_replace( '\\', '/', trim( (string) $namespace, '\\' ) );
+		$top   = $top === null || strlen( $place ) < strlen( $top ) ? $place : $top;
 
 		// What an earlier run placed, so that a class the package dropped
 		// goes too.
@@ -157,6 +163,14 @@ foreach ( $packages as $package )
 
 				rename( $source . '/' . $file, $to ) || $fail( 'cannot move ' . $source . '/' . $file . ' to ' . $to );
 			}
+		}
+	}
+
+	foreach ( $filesUnder( $copy ) as $file )
+	{
+		if ( preg_match( '#^(LICEN[CS]E|COPYING)(\.[A-Za-z]+)?$#', $file ) === 1 && $top !== null )
+		{
+			rename( $copy . '/' . $file, $top . '/' . $file ) || $fail( 'cannot move ' . $copy . '/' . $file . ' to ' . $top . '/' . $file );
 		}
 	}
 

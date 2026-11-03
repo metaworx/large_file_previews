@@ -69,6 +69,7 @@ abstract class UpdateCommand
 
 //  config/init/exe/run methods
 
+    #[\Override]
     protected function configure(): void
     {
         $this->setAliases( $this->commandAliases() )
@@ -86,6 +87,7 @@ abstract class UpdateCommand
         ;
     }
 
+    #[\Override]
     protected function execute(
         InputInterface  $input,
         OutputInterface $output,
