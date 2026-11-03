@@ -14,7 +14,7 @@ use OCA\LargeFilePreviews\Config\Resolution;
 use OCA\LargeFilePreviews\Config\Source;
 use OCA\LargeFilePreviews\Config\Verdict;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\Files\FileInfo;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +23,7 @@ class TypePolicyTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  other non-static methods

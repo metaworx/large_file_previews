@@ -21,7 +21,7 @@ use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\Sandbox;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\ITempManager;
@@ -31,7 +31,7 @@ class PrerequisitesServiceTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  other non-static methods

@@ -22,7 +22,7 @@ use OCA\LargeFilePreviews\Service\ConfigurationService;
 use OCA\LargeFilePreviews\Service\ProviderChain;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -44,7 +44,7 @@ class ConfigCommandsTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  private properties

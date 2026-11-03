@@ -19,7 +19,7 @@ use OCA\LargeFilePreviews\Service\BinaryLocator;
 use OCA\LargeFilePreviews\Service\ConfigTransfer;
 use OCA\LargeFilePreviews\Service\PrerequisitesService;
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\ITempManager;
@@ -30,7 +30,7 @@ class ConfigTransferTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  other non-static methods

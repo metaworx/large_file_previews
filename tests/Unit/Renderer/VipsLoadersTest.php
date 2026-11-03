@@ -15,7 +15,7 @@ use OCA\LargeFilePreviews\Service\CommandRunner;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\ProgramVersions;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryCache;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
 use PHPUnit\Framework\TestCase;
@@ -25,7 +25,7 @@ class VipsLoadersTest
     extends
     TestCase
 {
-	use MemoryCache;
+	use AppDoubles;
 
 
 //  constants

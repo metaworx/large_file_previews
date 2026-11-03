@@ -26,7 +26,7 @@ use OCA\LargeFilePreviews\Service\FailedFiles;
 use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\TypePolicy;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\Files\File;
 use OCP\Files\Storage\IStorage;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -42,7 +42,7 @@ class LargeFileProviderTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  private properties

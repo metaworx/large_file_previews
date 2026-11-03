@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Service\ScratchDirectory;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +18,7 @@ class ScratchDirectoryTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  constants

@@ -11,7 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\Sandbox;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,7 +22,7 @@ class SandboxTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 
 //  other non-static methods

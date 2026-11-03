@@ -17,7 +17,7 @@ use OCA\LargeFilePreviews\Service\Outcome;
 use OCA\LargeFilePreviews\Service\RenderOutcome;
 use OCA\LargeFilePreviews\Service\RunOptions;
 use OCA\LargeFilePreviews\Service\Sandbox;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryAppConfig;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\ITempManager;
 use PHPUnit\Framework\TestCase;
 
@@ -29,7 +29,7 @@ class CommandRunnerTest
     extends
     TestCase
 {
-	use MemoryAppConfig;
+	use AppDoubles;
 
 	/** @var list<string> */
 	private array $temporary = [];

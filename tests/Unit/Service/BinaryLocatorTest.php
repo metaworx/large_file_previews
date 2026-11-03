@@ -11,7 +11,7 @@ namespace OCA\LargeFilePreviews\Tests\Unit\Service;
 
 use OCA\LargeFilePreviews\Service\BinaryLocation;
 use OCA\LargeFilePreviews\Service\BinaryLocator;
-use OCA\LargeFilePreviews\Tests\Unit\MemoryCache;
+use OCA\LargeFilePreviews\Tests\Unit\AppDoubles;
 use OCP\IBinaryFinder;
 use OCP\IConfig;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +21,7 @@ class BinaryLocatorTest
     extends
     TestCase
 {
-	use MemoryCache;
+	use AppDoubles;
 
 
 //  other non-static methods

@@ -33,7 +33,7 @@
 		not ship: stubs for analysis, not uses of the server's code.
 	-->
 	<stubs>
-		<file name="tests/stubs/OC/Hooks/Emitter.php" />
+		<file name="vendor/mwx/nextcloud-testing/stubs/OC/Hooks/Emitter.php" />
 		<file name="tests/stubs/OC/Image.php" />
 	</stubs>
 </psalm>
