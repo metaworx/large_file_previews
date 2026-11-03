@@ -135,7 +135,7 @@ while the server's cached list of the store is stale.
 So the app updates itself:
 
 ```bash
-occ lfp:update [--check] [--stable|--nightly] [--output json]
+occ lfp:update [--check] [--stable|--nightly] [-o|--output json]
 ```
 
 reads the store, clears that cache,

@@ -48,6 +48,7 @@ class UpdateTest
 		}
 
 		self::assertSame( 'plain', $definition->getOption( 'output' )->getDefault() );
+		self::assertSame( 'o', $definition->getOption( 'output' )->getShortcut(), 'the shortcut every command of the app gives --output' );
 	}
 
 	/**
