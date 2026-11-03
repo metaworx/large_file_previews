@@ -5,6 +5,16 @@
 	outside it would be suppressed here by name, with its reason, and that
 	list is then the inventory to re-check for every Nextcloud release.
 
+	The one internal class the app depends on, OC\Installer, needs no entry:
+	the scoped package in lib/Vendor names it as a string, resolved from the
+	server's container, so analysis never looks for it. It is in the
+	contract's inventory (3.2) and pinned by tests/Integration/InstallerPinTest.php.
+
+	lib/Vendor is scanned, not analysed: it is mwx/nextcloud-app copied into
+	the app's namespace by Strauss and placed by PSR-4 (composer vendor:scope),
+	and is analysed and tested where it is written.
+	Edited here it would differ from what Strauss writes, which CI fails on.
+
 	No unused-code check: Nextcloud reaches commands and settings through
 	appinfo/info.xml and controllers through their routes, none of which Psalm
 	can see, so it would report every one of them as unused.
@@ -22,10 +32,12 @@
 		<directory name="lib" />
 		<ignoreFiles>
 			<directory name="vendor" />
+			<directory name="lib/Vendor" />
 		</ignoreFiles>
 	</projectFiles>
 	<extraFiles>
 		<directory name="vendor" />
+		<directory name="lib/Vendor" />
 	</extraFiles>
 
 	<!--

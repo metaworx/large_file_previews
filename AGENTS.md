@@ -34,7 +34,7 @@ refer to linked documents for extended guidance.
   6. Commit Policy (STRICT)
   7. Additional References
   8. Document Governance
-- Large File Previews — Project Contract (v1.2.4)
+- Large File Previews — Project Contract (v1.3.0)
   1. Project Facts
   2. Primary References
   3. Project-Specific Conventions
@@ -413,7 +413,7 @@ Their values come from `GUIDELINES/config.ini`.
 ---
 
 
-# Large File Previews — Project Contract (v1.2.4)
+# Large File Previews — Project Contract (v1.3.0)
 
 What binds work in this project, for everyone working on it.
 Inlined into `/AGENTS.md` for agents and into `GUIDELINES/README.md` for people,
@@ -496,7 +496,7 @@ Where server source trees are linked into the IDE for more than one release, it 
 ### 3.2 Public API only, and an inventory of what is not
 
 The app uses `OCP\` only. It implements `OCP\Preview\IProviderV2` directly and never
-extends `OC\Preview\ProviderV2`. Two behaviours the app depends on are internal to the
+extends `OC\Preview\ProviderV2`. Three behaviours the app depends on are internal to the
 server, and each is pinned by an integration test and re-checked for every new Nextcloud
 release:
 
@@ -504,7 +504,9 @@ release:
   (`PreviewManager::getProviders()`), so the app's regex must stay the longest of any
   provider on the instance for the types it registers;
 - a provider that throws ends the chain for that file with a server error, so the provider
-  never throws: every failure returns `null`, and the next provider is tried.
+  never throws: every failure returns `null`, and the next provider is tried;
+- `OC\Installer::isUpdateAvailable()` and `updateAppstoreApp()`, which `occ lfp:update`
+  drives through the scoped package, pinned by `tests/Integration/InstallerPinTest.php`.
 
 ### 3.3 Running external programs
 

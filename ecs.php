@@ -4,7 +4,8 @@ declare( strict_types=1 );
 
 /**
  * ECS configuration: the preset published as mwx/coding-standard, over this
- * app's PHP — lib/, tests/, appinfo/ and templates/.
+ * app's PHP — lib/, tests/, appinfo/ and templates/. Not lib/Vendor, which
+ * Strauss writes (composer vendor:scope) and CI holds to what it writes.
  *
  * @example composer cs:check
  * @example composer cs:fix
@@ -27,5 +28,9 @@ $paths = array_filter(
 );
 
 return ComposedConfig::fromFiles( $preset . '/default.php' )
-                     ->with( ECSConfig::configure()->withPaths( array_values( $paths ) ) )
+                     ->with(
+	                     ECSConfig::configure()
+	                              ->withPaths( array_values( $paths ) )
+	                              ->withSkip( [ __DIR__ . '/lib/Vendor' ] ),
+                     )
 ;

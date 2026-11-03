@@ -11,6 +11,11 @@ the first stable release.
 
 ## [Unreleased]
 
+### Added
+
+- `occ lfp:update`: the app updates itself from the store, nightlies
+  included (README, *Installing and updating*).
+
 ### Changed
 
 - Settings page: the shared components, toasts and helpers come from

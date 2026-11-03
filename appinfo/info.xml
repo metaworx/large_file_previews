@@ -76,6 +76,7 @@ Nur Dateien auf lokalem, unverschlüsseltem Speicher werden gerendert. Alles and
 		<command>OCA\LargeFilePreviews\Command\ConfigExport</command>
 		<command>OCA\LargeFilePreviews\Command\ConfigImport</command>
 		<command>OCA\LargeFilePreviews\Command\Check</command>
+		<command>OCA\LargeFilePreviews\Command\Update</command>
 	</commands>
 	<settings>
 		<admin>OCA\LargeFilePreviews\Settings\Admin</admin>

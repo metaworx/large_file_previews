@@ -121,6 +121,38 @@ Backup and restore, a file read and its changes shown before anything is written
 `occ lfp:check` and the settings page name the command that installs what is missing,
 for the distribution the server runs, read from `/etc/os-release`.
 
+## Installing and updating
+
+While the app is published as a nightly, it is installed with
+
+```bash
+occ app:install --allow-unstable large_file_previews
+```
+
+The Apps page never offers a nightly,
+and `occ app:update --allow-unstable` cannot see one
+while the server's cached list of the store is stale.
+So the app updates itself:
+
+```bash
+occ lfp:update [--check] [--stable|--nightly] [--output json]
+```
+
+reads the store, clears that cache,
+and lets the server's own installer download, verify and install.
+It takes the newest release of the kind installed,
+a nightly for a nightly and a stable release for a stable one,
+unless `--stable` or `--nightly` says otherwise;
+it never takes a version below the installed one.
+`--check` reports what it would take and installs nothing,
+but clears the cache all the same:
+after a `--nightly --check` on a server on the stable channel,
+the Apps page may list unstable releases of every app for a while.
+
+It exits 0 when it updated, or under `--check` when there is something to take;
+1 when there is nothing to take;
+2 on a failure, a usage error among them.
+
 ## When previews fail
 
 A failed render is a warning in the log,

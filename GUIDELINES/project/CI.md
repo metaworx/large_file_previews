@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.8.0)
+# CI Conventions — Large File Previews (v1.9.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -55,8 +55,12 @@ and GitHub runs the matrix for free.
 | by hand, `install-check.yml` | the install check of a release that is out |
 
 - **Lint** runs the frontend's ESLint, `vue-tsc`, Stylelint, Vitest and build,
-  then the PHP syntax check, ECS, Psalm,
-  the manifest against the app store's schema, the guideline checks of §4,
+  then the PHP syntax check, ECS,
+  the vendored package (`composer vendor:check`:
+  Strauss scopes `mwx/nextcloud-app` into `lib/Vendor/` again,
+  and a difference from what is tracked fails),
+  Psalm, the manifest against the app store's schema,
+  the guideline checks of §4,
   and `scripts/l10n.sh check`:
   the template matches the texts, every language is complete,
   and `l10n/` is what the `.po` files build.
@@ -85,6 +89,19 @@ CI runs the commands of the contract's facts table, with these differences:
 - **The tools under `vendor-bin/` are installed one by one**,
   as each job needs them, with `composer install --no-scripts`:
   the post-install hook would install all four.
+- **The vendored package step is `composer vendor:check`**,
+  the project's own script.
+  It runs `composer vendor:scope`:
+  Strauss from its phar,
+  which the script fetches at the version `composer.json` pins
+  and holds to the SHA-256 it pins beside it,
+  not from `vendor-bin/`, whose bin script cannot run from the project root;
+  then `scripts/vendor-scope.php`,
+  which moves each scoped file to its namespace's PSR-4 path under `lib/Vendor/`
+  and deletes Strauss's autoloader,
+  since the server loads the app's classes from `lib/` by PSR-4 and nothing else.
+  It fails when `git status --porcelain -- lib/Vendor` prints anything,
+  a file changed, deleted or new.
 
 ## 4. Guideline Gates
 
