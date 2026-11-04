@@ -1,4 +1,4 @@
-# CI Conventions — Large File Previews (v1.9.0)
+# CI Conventions — Large File Previews (v1.10.0)
 
 What CI does in this project, for whoever has to change it.
 `/AGENTS.md` names this file as the canonical owner of CI conventions,
@@ -196,6 +196,13 @@ What is built from master is then what the tag holds.
   On the settings page a type whose renderer is missing cannot be changed,
   and the browser tests change some.
   `timeout`, `prlimit` and `choom` come with the runner's coreutils and util-linux.
+- **The PHPUnit job sets the app's scratch directory to one in the workspace**
+  (`large_file_previews.scratch_directory` in system config):
+  the one-strip TIFF fallback copies the file there,
+  to the server's temporary directory unless set,
+  and refuses a directory in memory.
+  A runner has had `/tmp` on tmpfs, and the fallback's test failed on it;
+  the workspace is on disk.
 - **`gettext` is installed in the lint job**, for `scripts/l10n.sh check`,
   which runs PHP for Nextcloud's translation tool and gettext for the rest.
 - **`nextcloud/setup-server-action` is pinned to a commit**, not a release:

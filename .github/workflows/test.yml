@@ -204,6 +204,15 @@ jobs:
         with:
           dev-dependencies: 'true'
 
+      # The one-strip TIFF fallback copies the file to the scratch directory,
+      # the server's temporary directory unless set, and refuses one in
+      # memory. A runner has had /tmp on tmpfs; the workspace is on disk.
+      - name: Scratch directory on disk
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/lfp-scratch"
+          php occ config:system:set large_file_previews.scratch_directory --value="$GITHUB_WORKSPACE/lfp-scratch"
+        working-directory: nextcloud
+
       - name: Run PHPUnit tests
         run: php -d error_reporting='E_ALL & ~E_DEPRECATED' ./vendor/bin/phpunit -c tests/phpunit.xml --display-warnings --display-skipped
         working-directory: nextcloud/apps/large_file_previews
